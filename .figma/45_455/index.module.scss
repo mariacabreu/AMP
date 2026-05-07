@@ -1,0 +1,97 @@
+* {
+  box-sizing: border-box;
+}
+
+.inicial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  padding-top: 52px;
+  padding-bottom: 225px;
+  width: 393px;
+  height: 852px;
+  overflow: hidden;
+
+  .pItchprojetoandreza1 {
+    width: 430px;
+    height: 242px;
+  }
+
+  .sejaBemVindoAoSeuApl {
+    margin: 72px 0px 0px;
+    width: 301px;
+    text-align: center;
+    line-height: 29px;
+    letter-spacing: -0.48px;
+    color: #000000;
+    font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    text-shadow: 0px 4px 4px #00000040;
+  }
+
+  .vocJPossuiUmaConta {
+    margin: 72px 0px 0px;
+    width: 215px;
+    height: 23px;
+    text-align: center;
+    line-height: 16px;
+    letter-spacing: 0;
+    color: #000000;
+    font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+    font-size: 16px;
+  }
+
+  .buttonGroup {
+    display: flex;
+    align-items: center;
+    column-gap: 16px;
+    margin-top: 3px;
+    width: 318px;
+    height: 76px;
+
+    .button2 {
+      display: flex;
+      flex-grow: 1;
+      align-items: center;
+      justify-content: center;
+      column-gap: 8px;
+      border: 1px solid #000000;
+      border-radius: 8px;
+      padding: 11px;
+      overflow: hidden;
+
+      .button {
+        flex-shrink: 0;
+        line-height: 16px;
+        letter-spacing: 0;
+        color: var(--sds-color-text-neutral-default);
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 16px;
+      }
+    }
+
+    .button4 {
+      display: flex;
+      flex-grow: 1;
+      align-items: center;
+      justify-content: center;
+      column-gap: 8px;
+      border: 1px solid var(--sds-color-border-brand-default);
+      border-radius: 8px;
+      background: var(--sds-color-background-brand-default);
+      padding: 11px;
+      overflow: hidden;
+
+      .button3 {
+        flex-shrink: 0;
+        line-height: 16px;
+        letter-spacing: 0;
+        color: var(--sds-color-text-brand-on-brand);
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 16px;
+      }
+    }
+  }
+}

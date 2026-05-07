@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Amp Mobile",
+    "slug": "amp-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/mow16cv7-aerakpu.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./src/assets/mow16cv7-aerakpu.png"
+    }
+  }
+}
