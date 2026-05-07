@@ -1,48 +1,5 @@
-# Dependencies
-node_modules/
-.expo/
+﻿node_modules/
 dist/
-build/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env
-instance/
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# System
-.DS_Store
-Thumbs.db
-
-# Expo
-.expo-shared/
 .expo/
-web-build/
-
-# Android
-*.apk
-*.aab
-
-# iOS
-*.ipa
-
-# Mobile specifics
-mobile/node_modules/
-mobile/.expo/
-mobile/dist/
-
-# Backend specifics
-backend/__pycache__/
-backend/instance/
-backend/venv/
+.vscode/
+*.log
