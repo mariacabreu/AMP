@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView } from 'react-native';
 import axios from 'axios';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -9,34 +11,40 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleRegister = async () => {
+    console.log('Iniciando processo de cadastro...');
     if (!fullName || !email || !password || !confirmPassword) {
+      console.log('Erro: Campos não preenchidos');
       Alert.alert('Erro', 'Por favor, preencha todos os campos');
       return;
     }
 
     if (password !== confirmPassword) {
+      console.log('Erro: Senhas não coincidem');
       Alert.alert('Erro', 'As senhas não coincidem');
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/register', {
+      const apiUrl = `${API_BASE_URL}/register`;
+      console.log('Enviando requisição para:', apiUrl);
+      
+      const response = await axios.post(apiUrl, {
         full_name: fullName,
         email: email,
         password: password,
       });
       
-      const newUser = response.data.user;
-      const successMessage = response.status === 201 
-        ? 'Cadastro realizado com sucesso!' 
-        : 'Usuário já cadastrado. Entrando...';
+      console.log('Resposta do servidor:', response.data);
       
-      Alert.alert('Sucesso', successMessage, [
-        { text: 'OK', onPress: () => navigation.navigate('VehicleRegistration', { user: newUser }) }
-      ]);
+      const newUser = response.data.user;
+      
+      // No web, o Alert.alert pode ser bloqueado ou não chamar o callback.
+      // Vamos navegar diretamente se for sucesso.
+      navigation.navigate('VehicleRegistration', { user: newUser });
+      
     } catch (error) {
-      console.error('Registration Error:', error.response?.data);
-      const message = error.response?.data?.error || 'Erro ao realizar cadastro';
+      console.error('Erro no cadastro:', error.response?.data || error.message);
+      const message = error.response?.data?.error || 'Erro ao realizar cadastro. Verifique se o servidor está rodando.';
       Alert.alert('Erro', message);
     }
   };

@@ -8,6 +8,9 @@ import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import VehicleRegistrationScreen from './src/screens/VehicleRegistrationScreen';
 import VehicleHistoryScreen from './src/screens/VehicleHistoryScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import ReportScreen from './src/screens/ReportScreen';
+import ReportFormScreen from './src/screens/ReportFormScreen';
+import PartsCatalogScreen from './src/screens/PartsCatalogScreen';
 
 const Stack = createStackNavigator();
 
@@ -22,6 +25,9 @@ export default function App() {
         <Stack.Screen name="VehicleRegistration" component={VehicleRegistrationScreen} />
         <Stack.Screen name="VehicleHistory" component={VehicleHistoryScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Report" component={ReportScreen} />
+        <Stack.Screen name="ReportForm" component={ReportFormScreen} />
+        <Stack.Screen name="PartsCatalog" component={PartsCatalogScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

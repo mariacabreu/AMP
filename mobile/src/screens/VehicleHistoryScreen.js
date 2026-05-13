@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Modal, Image, Platform } from 'react-native';
+import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -10,8 +11,10 @@ const VehicleHistoryScreen = ({ navigation, route }) => {
   const [oilKm, setOilKm] = useState('');
   const [beltKm, setBeltKm] = useState('');
   const [brakeKm, setBrakeKm] = useState('');
+  const [showModal, setShowModal] = useState(false);
 
   const handleSaveHistory = async () => {
+    console.log('Salvando histórico do veículo:', vehicleId);
     if (!oilKm) {
       Alert.alert('Aviso', 'Por favor, informe pelo menos a última troca de óleo.');
       return;
@@ -25,17 +28,23 @@ const VehicleHistoryScreen = ({ navigation, route }) => {
     if (brakeKm) history.push({ item: 'Troca de Pastilhas', last_km: parseInt(brakeKm) });
 
     try {
-      await axios.post(`${API_BASE_URL}/vehicle/maintenance`, {
+      const response = await axios.post(`${API_BASE_URL}/vehicle/maintenance`, {
         vehicle_id: vehicleId,
         history: history
       });
-
-      Alert.alert('Sucesso', 'Histórico salvo! Vamos para sua Home.', [
-        { text: 'OK', onPress: () => navigation.navigate('Home', { user: user }) }
-      ]);
+      
+      console.log('Histórico salvo com sucesso:', response.data);
+      setShowModal(true);
+      
     } catch (error) {
+      console.error('Erro ao salvar histórico:', error.response?.data || error.message);
       Alert.alert('Erro', 'Não foi possível salvar o histórico.');
     }
+  };
+
+  const handleFinish = () => {
+    setShowModal(false);
+    navigation.navigate('Home', { user: user });
   };
 
   return (
@@ -85,6 +94,53 @@ const VehicleHistoryScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Image
+              source={require('../assets/mow16cv7-aerakpu.png')}
+              style={styles.modalLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.modalTitle}>Conta Criada!</Text>
+            <Text style={styles.modalText}>
+              Seu cadastro foi finalizado com sucesso. Bem-vindo ao AMP!
+            </Text>
+            <TouchableOpacity style={styles.modalButton} onPress={handleFinish}>
+              <Text style={styles.modalButtonText}>Ir para Home</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Navigation Bar */}
+      <View style={styles.navBar}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home', { user: user })}>
+          <Ionicons name="home-outline" size={24} color="#D9D9D9" />
+          <Text style={styles.navText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Report', { user: user })}>
+          <MaterialCommunityIcons name="file-document-outline" size={24} color="#D9D9D9" />
+          <Text style={styles.navText}>Relatório</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PartsCatalog', { user: user })}>
+          <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
+          <Text style={styles.navText}>Peças</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
+          <Text style={styles.navText}>Checklist</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
+          <Text style={styles.navText}>Config</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -98,26 +154,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 60,
     paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1E1E1E',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1e1e1e',
     marginBottom: 10,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 40,
+    lineHeight: 22,
   },
   formCard: {
     width: '100%',
     backgroundColor: '#ffffff',
     borderRadius: 15,
-    padding: 20,
+    padding: 24,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   inputContainer: {
     marginBottom: 20,
@@ -126,27 +190,103 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginBottom: 8,
+    fontWeight: '500',
   },
   input: {
-    height: 48,
+    height: 50,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
     fontSize: 16,
+    backgroundColor: '#F9F9F9',
   },
   saveButton: {
-    backgroundColor: '#2D2D2D',
-    height: 50,
-    borderRadius: 8,
+    backgroundColor: '#2b2b2b',
+    height: 56,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
   },
   saveButtonText: {
     color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalLogo: {
+    width: 150,
+    height: 100,
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e1e1e',
+    marginBottom: 15,
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: '#2b2b2b',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  navBar: {
+    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: '#2b2b2b',
+    height: 70,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingBottom: 10,
+    zIndex: 1000,
+  },
+  navItem: {
+    alignItems: 'center',
+  },
+  navText: {
+    fontSize: 10,
+    color: '#D9D9D9',
+    marginTop: 4,
+    fontWeight: '800',
+  },
+  navTextActive: {
+    color: '#FFCF00',
   },
 });
 

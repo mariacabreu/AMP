@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import axios from 'axios';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 
@@ -98,7 +98,7 @@ const HomeScreen = ({ navigation, route }) => {
               <Text style={styles.gridButtonTitle}>Informações OBD</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.gridButton}>
+            <TouchableOpacity style={styles.gridButton} onPress={() => navigation.navigate('Report', { user: loggedUser })}>
               <View style={styles.iconCircle}>
                 <Ionicons name="time-outline" size={50} color="#FFCF00" />
               </View>
@@ -117,11 +117,11 @@ const HomeScreen = ({ navigation, route }) => {
           <Ionicons name="home" size={24} color="#FFCF00" />
           <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Report', { user: loggedUser })}>
           <MaterialCommunityIcons name="file-document-outline" size={24} color="#D9D9D9" />
           <Text style={styles.navText}>Relatório</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PartsCatalog', { user: loggedUser })}>
           <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
           <Text style={styles.navText}>Peças</Text>
         </TouchableOpacity>
@@ -236,15 +236,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   emptySpace: {
-    height: 50,
+    height: 100,
   },
   navBar: {
+    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     backgroundColor: '#2C2C2C',
-    height: 80,
+    height: 70,
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingBottom: 10,
+    zIndex: 1000,
   },
   navItem: {
     alignItems: 'center',

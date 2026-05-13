@@ -70,6 +70,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
     }
 
     try {
+      console.log('Cadastrando veículo para o usuário:', user?.id);
       const response = await axios.post(`${API_BASE_URL}/vehicle/register`, {
         brand: selectedBrand,
         model: selectedModel,
@@ -80,10 +81,11 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
         user_id: user?.id || 1 // Use the actual user ID from the registration
       });
 
-      Alert.alert('Sucesso', 'Veículo cadastrado com sucesso!', [
-        { text: 'OK', onPress: () => navigation.navigate('VehicleHistory', { vehicleId: response.data.vehicle.id, user: user }) }
-      ]);
+      console.log('Veículo cadastrado:', response.data);
+      navigation.navigate('VehicleHistory', { vehicleId: response.data.vehicle.id, user: user });
+      
     } catch (error) {
+      console.error('Erro ao cadastrar veículo:', error.response?.data || error.message);
       const message = error.response?.data?.error || 'Erro ao cadastrar veículo';
       Alert.alert('Erro', message);
     }

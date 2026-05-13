@@ -2,21 +2,24 @@ import React, { useState } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import axios from 'axios';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
     try {
-      // Update with your machine's IP address if testing on a real device
-      const response = await axios.post('http://localhost:5000/login', {
+      console.log('Tentando login para:', email);
+      const response = await axios.post(`${API_BASE_URL}/login`, {
         email,
         password,
       });
       
-      // Alert.alert('Sucesso', 'Login realizado com sucesso!');
+      console.log('Login bem-sucedido:', response.data);
       navigation.navigate('Home', { user: response.data.user });
     } catch (error) {
+      console.error('Erro no login:', error.response?.data || error.message);
       const message = error.response?.data?.error || 'Erro ao realizar login';
       Alert.alert('Erro', message);
     }
