@@ -280,11 +280,11 @@ const ReportScreen = ({ navigation, route }) => {
           <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
           <Text style={styles.navText}>Peças</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Checklist', { user: loggedUser })}>
           <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
           <Text style={styles.navText}>Checklist</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings', { user: loggedUser })}>
           <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>

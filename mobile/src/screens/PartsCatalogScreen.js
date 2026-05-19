@@ -34,7 +34,8 @@ const PartsCatalogScreen = ({ navigation, route }) => {
       const statusRes = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
       const vehicleId = statusRes.data.vehicle?.id || 1;
       
-      const response = await axios.get(`${API_BASE_URL}/vehicle/parts/${vehicleId}`);
+      // Usando o endpoint de IA para catálogo técnico personalizado
+      const response = await axios.get(`${API_BASE_URL}/vehicle/parts/ai/${vehicleId}`);
       setData(response.data);
     } catch (error) {
       console.error('Erro ao buscar catálogo de peças:', error);
@@ -228,11 +229,11 @@ const PartsCatalogScreen = ({ navigation, route }) => {
           <MaterialCommunityIcons name="folder-open" size={24} color="#FFCF00" />
           <Text style={[styles.navText, styles.navTextActive]}>Peças</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Checklist', { user: loggedUser })}>
           <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
           <Text style={styles.navText}>Checklist</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings', { user: loggedUser })}>
           <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>

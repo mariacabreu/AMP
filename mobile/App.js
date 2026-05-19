@@ -11,6 +11,13 @@ import HomeScreen from './src/screens/HomeScreen';
 import ReportScreen from './src/screens/ReportScreen';
 import ReportFormScreen from './src/screens/ReportFormScreen';
 import PartsCatalogScreen from './src/screens/PartsCatalogScreen';
+import ChecklistScreen from './src/screens/ChecklistScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import PremiumPlanScreen from './src/screens/PremiumPlanScreen';
+import PaymentMethodsScreen from './src/screens/PaymentMethodsScreen';
+import CreditPaymentScreen from './src/screens/CreditPaymentScreen';
+import DebitPaymentScreen from './src/screens/DebitPaymentScreen';
+import QRCodeScreen from './src/screens/QRCodeScreen';
 
 const Stack = createStackNavigator();
 
@@ -28,6 +35,13 @@ export default function App() {
         <Stack.Screen name="Report" component={ReportScreen} />
         <Stack.Screen name="ReportForm" component={ReportFormScreen} />
         <Stack.Screen name="PartsCatalog" component={PartsCatalogScreen} />
+        <Stack.Screen name="Checklist" component={ChecklistScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="PremiumPlan" component={PremiumPlanScreen} />
+        <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
+        <Stack.Screen name="CreditPayment" component={CreditPaymentScreen} />
+        <Stack.Screen name="DebitPayment" component={DebitPaymentScreen} />
+        <Stack.Screen name="QRCode" component={QRCodeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

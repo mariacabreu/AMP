@@ -18,6 +18,11 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const [transmission, setTransmission] = useState('');
   const [mileage, setMileage] = useState('');
   const [fuelType, setFuelType] = useState('Gasolina');
+  
+  // Novos estados para manutenção preventiva
+  const [lastOilChange, setLastOilChange] = useState('');
+  const [lastBeltChange, setLastBeltChange] = useState('');
+  const [lastBrakeChange, setLastBrakeChange] = useState('');
 
   useEffect(() => {
     fetchBrands();
@@ -78,7 +83,10 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
         transmission,
         mileage: mileage ? parseInt(mileage) : 0,
         fuel_type: fuelType,
-        user_id: user?.id || 1 // Use the actual user ID from the registration
+        user_id: user?.id || 1,
+        last_oil_change: lastOilChange ? parseInt(lastOilChange) : 0,
+        last_belt_change: lastBeltChange ? parseInt(lastBeltChange) : 0,
+        last_brake_change: lastBrakeChange ? parseInt(lastBrakeChange) : 0
       });
 
       console.log('Veículo cadastrado:', response.data);
@@ -97,7 +105,11 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
         <Text style={styles.backButtonText}>← Voltar</Text>
       </TouchableOpacity>
       
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={{ flex: 1 }} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
         <Image
           source={require('../assets/mow16cv7-aerakpu.png')} // Using generic logo
           style={styles.logo}
@@ -205,6 +217,42 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             </View>
           </View>
 
+          <Text style={styles.sectionTitle}>Histórico de Manutenção (Preventiva)</Text>
+          <Text style={styles.sectionSub}>Deixe 0 se não souber ou nunca tiver trocado.</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>KM da última troca de ÓLEO</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 45000"
+              value={lastOilChange}
+              onChangeText={setLastOilChange}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>KM da última troca de CORREIA DENTADA</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 40000"
+              value={lastBeltChange}
+              onChangeText={setLastBeltChange}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>KM da última troca de PASTILHAS DE FREIO</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 48000"
+              value={lastBrakeChange}
+              onChangeText={setLastBrakeChange}
+              keyboardType="numeric"
+            />
+          </View>
+
           <TouchableOpacity style={styles.registerButton} onPress={handleRegisterVehicle}>
             <Text style={styles.registerButtonText}>Cadastrar Veículo</Text>
           </TouchableOpacity>
@@ -233,7 +281,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingTop: 40,
+    paddingBottom: 80, // Aumentado para garantir que o botão não fique cortado
   },
   logo: {
     width: 300,
@@ -247,6 +296,19 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFCF00',
+    marginTop: 20,
+    marginBottom: 5,
+  },
+  sectionSub: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 15,
+    fontStyle: 'italic',
   },
   infoText: {
     fontSize: 12,

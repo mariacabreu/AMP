@@ -2,9 +2,16 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
+import json
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Database configuration
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -38,6 +45,11 @@ class Vehicle(db.Model):
     mileage = db.Column(db.Integer)
     fuel_type = db.Column(db.String(20))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Novas colunas para manutenção preventiva
+    last_oil_change = db.Column(db.Integer, default=0)
+    last_belt_change = db.Column(db.Integer, default=0)
+    last_brake_change = db.Column(db.Integer, default=0)
 
     def to_dict(self):
         return {
@@ -48,6 +60,9 @@ class Vehicle(db.Model):
             'transmission': self.transmission,
             'mileage': self.mileage,
             'fuel_type': self.fuel_type,
+            'last_oil_change': self.last_oil_change,
+            'last_belt_change': self.last_belt_change,
+            'last_brake_change': self.last_brake_change,
             'maintenance_history': [h.to_dict() for h in self.maintenance_history]
         }
 
@@ -76,39 +91,94 @@ class MaintenanceHistory(db.Model):
 # Predefined "Supported" Vehicle Data (OBD-II Bluetooth + API/Doc compatible)
 SUPPORTED_BRANDS = {
     'Ford': {
-        'models': ['Fiesta', 'Focus', 'Ranger', 'Ka', 'EcoSport'],
+        'models': ['Fiesta', 'Focus', 'Ranger', 'Ka', 'EcoSport', 'Fusion', 'Edge', 'Mustang', 'Territory', 'Bronco'],
         'start_year': 2010,
         'docs': 'Ford Developer API / OpenXC'
     },
     'Chevrolet': {
-        'models': ['Onix', 'Prisma', 'Cruze', 'S10', 'Tracker'],
+        'models': ['Onix', 'Prisma', 'Cruze', 'S10', 'Tracker', 'Spin', 'Montana', 'Equinox', 'Trailblazer', 'Camaro'],
         'start_year': 2011,
         'docs': 'GM Developer Portal'
     },
     'Volkswagen': {
-        'models': ['Gol', 'Polo', 'Golf', 'T-Cross', 'Amarok'],
+        'models': ['Gol', 'Polo', 'Golf', 'T-Cross', 'Amarok', 'Virtus', 'Nivus', 'Taos', 'Jetta', 'Tiguan', 'Voyage', 'Saveiro'],
         'start_year': 2010,
         'docs': 'VW Car-Net API'
     },
     'Toyota': {
-        'models': ['Corolla', 'Hilux', 'Yaris', 'Etios', 'SW4'],
+        'models': ['Corolla', 'Hilux', 'Yaris', 'Etios', 'SW4', 'Rav4', 'Camry', 'Prius', 'Corolla Cross'],
         'start_year': 2012,
         'docs': 'Toyota Connected Services API'
     },
     'Honda': {
-        'models': ['Civic', 'Fit', 'City', 'HR-V', 'CR-V'],
+        'models': ['Civic', 'Fit', 'City', 'HR-V', 'CR-V', 'WR-V', 'Accord'],
         'start_year': 2012,
         'docs': 'Honda Developer Studio'
     },
     'Hyundai': {
-        'models': ['HB20', 'Creta', 'Tucson', 'i30'],
+        'models': ['HB20', 'Creta', 'Tucson', 'i30', 'Santa Fe', 'Azera', 'Elantra', 'Ix35'],
         'start_year': 2012,
         'docs': 'Hyundai Bluelink API'
     },
     'Fiat': {
-        'models': ['Uno', 'Palio', 'Argo', 'Cronos', 'Toro', 'Mobi'],
+        'models': ['Uno', 'Palio', 'Argo', 'Cronos', 'Toro', 'Mobi', 'Strada', 'Fastback', 'Pulse', 'Fiorino', 'Siena'],
         'start_year': 2010,
         'docs': 'FCA Developer Portal'
+    },
+    'Renault': {
+        'models': ['Sandero', 'Logan', 'Duster', 'Kwid', 'Oroch', 'Captur', 'Master', 'Stepway'],
+        'start_year': 2012,
+        'docs': 'Renault Connected Services'
+    },
+    'Jeep': {
+        'models': ['Renegade', 'Compass', 'Commander', 'Wrangler', 'Cherokee'],
+        'start_year': 2015,
+        'docs': 'FCA Developer Portal'
+    },
+    'Nissan': {
+        'models': ['March', 'Versa', 'Kicks', 'Frontier', 'Sentra', 'Leaf'],
+        'start_year': 2012,
+        'docs': 'Nissan Connect API'
+    },
+    'Mitsubishi': {
+        'models': ['L200', 'Pajero', 'ASX', 'Eclipse Cross', 'Outlander'],
+        'start_year': 2010,
+        'docs': 'Mitsubishi Motors API'
+    },
+    'Peugeot': {
+        'models': ['208', '2008', '3008', '5008', 'Partner', 'Expert'],
+        'start_year': 2015,
+        'docs': 'PSA Group API'
+    },
+    'Citroën': {
+        'models': ['C3', 'C4 Cactus', 'C4 Lounge', 'Berlingo', 'Jumpy'],
+        'start_year': 2015,
+        'docs': 'PSA Group API'
+    },
+    'BMW': {
+        'models': ['Série 3', 'Série 1', 'X1', 'X3', 'X5', 'Série 5'],
+        'start_year': 2014,
+        'docs': 'BMW ConnectedDrive API'
+    },
+    'Mercedes-Benz': {
+        'models': ['Classe A', 'Classe C', 'GLA', 'GLC', 'GLE', 'Classe E'],
+        'start_year': 2014,
+        'docs': 'Mercedes-Benz Developers'
+    },
+    'Audi': {
+        'models': ['A3', 'A4', 'Q3', 'Q5', 'A5', 'Q7'],
+        'start_year': 2014,
+        'docs': 'Audi API Portal'
+    },
+    'Kia': {
+        'models': ['Sportage', 'Cerato', 'Sorento', 'Rio', 'Picanto', 'Stonic', 'Niro'],
+        'start_year': 2012,
+        'docs': 'Kia Connect API'
+    },
+    'Chery': {
+        'models': ['Tiggo 2', 'Tiggo 5X', 'Tiggo 7', 'Tiggo 8', 'Arrizo 5', 'Arrizo 6'],
+        'start_year': 2018,
+        'docs': 'Caoa Chery API'
     }
 }
 
@@ -134,7 +204,7 @@ def get_models(brand):
 @app.route('/vehicle/years/<brand>', methods=['GET'])
 def get_years(brand):
     if brand in SUPPORTED_BRANDS:
-        current_year = 2024
+        current_year = 2026
         start_year = SUPPORTED_BRANDS[brand]['start_year']
         years = list(range(current_year, start_year - 1, -1))
         return jsonify(years), 200
@@ -151,9 +221,12 @@ def register_vehicle():
         model=data['model'],
         year=data['year'],
         transmission=data.get('transmission'),
-        mileage=data.get('mileage'),
+        mileage=data.get('mileage', 0),
         fuel_type=data.get('fuel_type'),
-        user_id=data['user_id']
+        user_id=data['user_id'],
+        last_oil_change=data.get('last_oil_change', 0),
+        last_belt_change=data.get('last_belt_change', 0),
+        last_brake_change=data.get('last_brake_change', 0)
     )
     
     try:
@@ -163,6 +236,79 @@ def register_vehicle():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/vehicle/checklist/<int:vehicle_id>', methods=['GET'])
+def get_vehicle_checklist(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Vehicle not found'}), 404
+        
+    current_km = vehicle.mileage
+    checklist = []
+    
+    # 1. Troca de Óleo (Geralmente a cada 10.000km)
+    oil_diff = current_km - vehicle.last_oil_change
+    if oil_diff >= 9000: # Alerta com 1000km de antecedência
+        checklist.append({
+            'id': 1,
+            'name': 'Troca de Óleo e Filtro',
+            'description': f'Já se passaram {oil_diff}km desde a última troca.',
+            'reason': 'O óleo perde a viscosidade e capacidade de lubrificação com o tempo/uso, podendo fundir o motor.',
+            'priority': 'URGENTE' if oil_diff >= 10000 else 'PRÓXIMOS 30 DIAS',
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_912115-MLB25154378775_112016-O.webp'
+        })
+
+    # 2. Correia Dentada (Geralmente a cada 50.000km ou 60.000km)
+    belt_diff = current_km - vehicle.last_belt_change
+    if belt_diff >= 45000:
+        checklist.append({
+            'id': 2,
+            'name': 'Correia Dentada',
+            'description': f'Seu carro rodou {belt_diff}km com a correia atual.',
+            'reason': 'A quebra da correia causa o atropelamento de válvulas, um dano gravíssimo e caro no cabeçote.',
+            'priority': 'URGENTE' if belt_diff >= 55000 else 'PRÓXIMOS 60 DIAS',
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_612115-MLB25154378775_112016-O.webp'
+        })
+
+    # 3. Pastilhas de Freio (Geralmente a cada 20.000km)
+    brake_diff = current_km - vehicle.last_brake_change
+    if brake_diff >= 18000:
+        checklist.append({
+            'id': 3,
+            'name': 'Pastilhas de Freio',
+            'description': f'Última revisão foi há {brake_diff}km.',
+            'reason': 'Pastilhas gastas perdem eficiência de frenagem e podem danificar os discos de freio.',
+            'priority': 'URGENTE' if brake_diff >= 22000 else 'PRÓXIMOS 30 DIAS',
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_633894-MLB46665792225_072021-O.webp'
+        })
+
+    # 4. Filtro de Ar (Geralmente a cada 10.000km junto com o óleo)
+    if oil_diff >= 9000:
+        checklist.append({
+            'id': 4,
+            'name': 'Filtro de Ar do Motor',
+            'description': 'Recomendado trocar junto com o óleo.',
+            'reason': 'Filtro sujo aumenta o consumo e diminui o desempenho do motor.',
+            'priority': 'PRÓXIMOS 30 DIAS',
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_673894-MLB46665792225_072021-O.webp'
+        })
+
+    # 5. Fluido de Arrefecimento (Anual ou a cada 30.000km)
+    if current_km >= 30000:
+        checklist.append({
+            'id': 5,
+            'name': 'Fluido do Radiador',
+            'description': 'Verificar nível e aditivo.',
+            'reason': 'Evita oxidação interna e superaquecimento do motor.',
+            'priority': 'PRÓXIMOS 90 DIAS',
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_727142-MLB46665787680_072021-O.webp'
+        })
+
+    return jsonify({
+        'vehicle': f"{vehicle.brand} {vehicle.model}",
+        'mileage': current_km,
+        'checklist': checklist
+    }), 200
 
 @app.route('/vehicle/maintenance', methods=['POST'])
 def save_maintenance():
@@ -247,18 +393,130 @@ def get_user_status(user_id):
         'recommendation': "Nenhuma recomendação no momento."
     }
     
-    if vehicle and vehicle.maintenance_history:
-        # Simple recommendation logic
-        for history in vehicle.maintenance_history:
-            if history.item == "Troca de Óleo":
-                # Assuming oil change every 10,000km
-                next_change = history.last_km + 10000
-                if vehicle.mileage >= next_change - 1000:
-                    status['recommendation'] = f"Seu carro está com {vehicle.mileage} km. Está na hora da próxima troca de óleo?"
-                else:
-                    status['recommendation'] = f"Próxima troca de óleo estimada aos {next_change} km."
-    
+    if vehicle:
+        current_km = vehicle.mileage
+        
+        # Lógica baseada no novo campo last_oil_change
+        oil_diff = current_km - vehicle.last_oil_change
+        if oil_diff >= 9000:
+            status['recommendation'] = f"Seu carro está com {current_km} km. Troca de óleo necessária (última há {oil_diff} km)!"
+        else:
+            next_change = vehicle.last_oil_change + 10000
+            status['recommendation'] = f"Próxima troca de óleo estimada aos {next_change} km."
+            
+        # Prioridade para Correia Dentada se estiver crítica
+        belt_diff = current_km - vehicle.last_belt_change
+        if belt_diff >= 45000:
+            status['recommendation'] = f"ALERTA CRÍTICO: Correia dentada rodou {belt_diff} km. Troque agora para evitar danos!"
+
     return jsonify(status), 200
+
+# --- AI Powered Endpoints ---
+
+@app.route('/vehicle/checklist/ai/<int:vehicle_id>', methods=['GET'])
+def get_vehicle_checklist_ai(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Vehicle not found'}), 404
+        
+    current_km = vehicle.mileage
+    
+    # Check if API Key is configured
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key or api_key == "your_openai_api_key_here":
+        print("OpenAI API Key missing. Falling back to static checklist.")
+        return get_vehicle_checklist(vehicle_id)
+
+    prompt = f"""
+    Como um mecânico especialista em manutenção preventiva, gere um checklist de manutenção para um {vehicle.brand} {vehicle.model} ano {vehicle.year} com {current_km}km rodados.
+    Retorne APENAS um JSON no seguinte formato:
+    {{
+        "checklist": [
+            {{
+                "id": 1,
+                "name": "Nome da Peça/Serviço",
+                "description": "Explicação curta do que deve ser verificado",
+                "reason": "Por que isso é importante para este modelo específico?",
+                "priority": "URGENTE" | "PRÓXIMOS 30 DIAS" | "PRÓXIMOS 60 DIAS" | "PRÓXIMOS 90 DIAS",
+                "image_url": "URL placeholder para imagem"
+            }}
+        ]
+    }}
+    Lógica de prioridade:
+    - Se precisar ser feito IMEDIATAMENTE ou em menos de 30 dias: use "URGENTE".
+    - Se puder esperar entre 30 e 60 dias: use "PRÓXIMOS 60 DIAS".
+    - Se puder esperar entre 60 e 90 dias: use "PRÓXIMOS 90 DIAS".
+    Considere o histórico: última troca de óleo com {vehicle.last_oil_change}km, correia com {vehicle.last_belt_change}km e freios com {vehicle.last_brake_change}km.
+    Gere pelo menos 5 itens relevantes.
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={ "type": "json_object" }
+        )
+        ai_data = json.loads(response.choices[0].message.content)
+        return jsonify({
+            'vehicle': f"{vehicle.brand} {vehicle.model}",
+            'mileage': current_km,
+            'checklist': ai_data['checklist']
+        }), 200
+    except Exception as e:
+        print(f"AI Checklist Error: {str(e)}. Falling back to static data.")
+        return get_vehicle_checklist(vehicle_id)
+
+@app.route('/vehicle/parts/ai/<int:vehicle_id>', methods=['GET'])
+def get_vehicle_parts_ai(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Vehicle not found'}), 404
+
+    # Check if API Key is configured
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key or api_key == "your_openai_api_key_here":
+        print("OpenAI API Key missing. Falling back to static parts catalog.")
+        return get_vehicle_parts(vehicle_id)
+
+    prompt = f"""
+    Gere um catálogo de peças técnicas para um {vehicle.brand} {vehicle.model} {vehicle.year}.
+    Divida em categorias: 'Motor e Sistema de alimentação', 'Transmissão e Embreagem', 'Sistema de suspensão', 'Sistema de Freios', 'Direção', 'Sistema Elétrico', 'Sistema de Arrefecimento'.
+    Para cada peça, inclua detalhes técnicos: finalidade, localização no carro e problemas comuns.
+    Retorne APENAS um JSON no seguinte formato:
+    {{
+        "parts": [
+            {{
+                "id": 1,
+                "name": "Nome da Peça",
+                "category": "Categoria",
+                "subcategory": "Subcategoria",
+                "description": "Descrição técnica",
+                "image_url": "URL placeholder",
+                "details": {{
+                    "purpose": "Para que serve",
+                    "location": "Onde fica",
+                    "common_problems": "Problemas comuns"
+                }}
+            }}
+        ]
+    }}
+    Gere pelo menos 2 peças importantes para cada categoria.
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={ "type": "json_object" }
+        )
+        ai_data = json.loads(response.choices[0].message.content)
+        return jsonify({
+            'vehicle': f"{vehicle.brand} {vehicle.model}",
+            'parts': ai_data['parts']
+        }), 200
+    except Exception as e:
+        print(f"AI Parts Error: {str(e)}. Falling back to static data.")
+        return get_vehicle_parts(vehicle_id)
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -348,117 +606,146 @@ def get_vehicle_parts(vehicle_id):
     if not vehicle:
         return jsonify({'error': 'Vehicle not found'}), 404
         
-    # Catálogo de peças estruturado como guia de instrução técnica profunda
-    # Exemplo focado no Onix 2023 conforme solicitado
-    parts_catalog = [
+    transmission_type = vehicle.transmission.lower() if vehicle.transmission else 'manual'
+    is_automatic = 'autom' in transmission_type
+    
+    parts_catalog = []
+    
+    # --- Peças de Motor (Comum a todos) ---
+    parts_catalog.extend([
         {
-            'id': 100,
-            'name': 'Caixa de câmbio F17/F176HR',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Manual',
-            'description': 'Unidade de transmissão manual robusta da Chevrolet.',
+            'id': 1,
+            'name': 'Filtro de Óleo',
+            'category': 'Motor e Sistema de alimentação',
+            'subcategory': 'Lubrificação',
+            'description': f'Filtro de alta eficiência para {vehicle.brand} {vehicle.model}.',
             'details': {
-                'purpose': 'Gerenciar as relações de marcha e torque para as rodas.',
-                'location': 'Acoplada ao motor no lado do motorista.',
-                'common_problems': 'Dificuldade em engates ou ruídos em marchas altas.'
+                'purpose': 'Reter impurezas do óleo lubrificante.',
+                'location': 'Bloco do motor.',
+                'common_problems': 'Obstrução por falta de troca, causando queda de pressão.'
             },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_612115-MLB25154378775_112016-O.webp'
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_912115-MLB25154378775_112016-O.webp'
         },
         {
-            'id': 101,
-            'name': 'Semi-eixos',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Manual',
-            'description': 'Eixos de transmissão de força.',
+            'id': 2,
+            'name': 'Velas de Ignição',
+            'category': 'Motor e Sistema de alimentação',
+            'subcategory': 'Ignição',
+            'description': f'Conjunto de velas originais para {vehicle.brand}.',
             'details': {
-                'purpose': 'Levar o torque da caixa para os cubos de roda.',
-                'location': 'Entre o câmbio e as rodas dianteiras.',
-                'common_problems': 'Vibração ao acelerar ou empenamento.'
+                'purpose': 'Gerar a centelha para combustão.',
+                'location': 'Cabeçote do motor.',
+                'common_problems': 'Dificuldade na partida e alto consumo.'
+            },
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_812115-MLB25154378775_112016-O.webp'
+        }
+    ])
+
+    # --- Peças de Transmissão (Depende do Câmbio) ---
+    if is_automatic:
+        parts_catalog.extend([
+            {
+                'id': 104,
+                'name': 'Conversor de Torque',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': f'Automático ({vehicle.transmission})',
+                'description': f'Acoplamento fluído para o câmbio automático do {vehicle.model}.',
+                'details': {
+                    'purpose': 'Transmitir o torque do motor para a caixa sem embreagem mecânica.',
+                    'location': 'Entre o motor e a transmissão.',
+                    'common_problems': 'Patinamento ou vibração excessiva.'
+                },
+                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_727142-MLB46665787680_072021-O.webp'
+            },
+            {
+                'id': 105,
+                'name': 'Corpo de Válvulas',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': f'Automático ({vehicle.transmission})',
+                'description': 'Cérebro hidráulico da transmissão automática.',
+                'details': {
+                    'purpose': 'Controlar o fluxo de fluído para as trocas de marcha.',
+                    'location': 'Interior da caixa de câmbio.',
+                    'common_problems': 'Trancos ou atrasos nas trocas.'
+                },
+                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_921115-MLB25154378775_112016-O.webp'
+            },
+            {
+                'id': 107,
+                'name': 'Fluido ATF Dexron VI',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': f'Automático ({vehicle.transmission})',
+                'description': 'Fluído de transmissão de alto desempenho.',
+                'details': {
+                    'purpose': 'Lubrificação e controle hidráulico.',
+                    'location': 'Sistema de transmissão.',
+                    'common_problems': 'Escurecimento e perda de viscosidade.'
+                },
+                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_712115-MLB25154378775_112016-O.webp'
+            }
+        ])
+    else:
+        parts_catalog.extend([
+            {
+                'id': 100,
+                'name': 'Kit de Embreagem',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': 'Manual',
+                'description': f'Kit completo (platô, disco e rolamento) para {vehicle.brand}.',
+                'details': {
+                    'purpose': 'Acoplamento e desacoplamento do motor com o câmbio.',
+                    'location': 'Entre o motor e a caixa de câmbio.',
+                    'common_problems': 'Embreagem "patinando" ou pedal pesado.'
+                },
+                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_612115-MLB25154378775_112016-O.webp'
+            },
+            {
+                'id': 103,
+                'name': 'Cabo de Seleção/Trambulador',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': 'Manual',
+                'description': 'Sistema de seleção de marchas manual.',
+                'details': {
+                    'purpose': 'Transmitir o movimento da alavanca para o câmbio.',
+                    'location': 'Entre a alavanca e a caixa.',
+                    'common_problems': 'Dificuldade de engate ou folga excessiva.'
+                },
+                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_721115-MLB25154378775_112016-O.webp'
+            }
+        ])
+
+    # --- Peças de Suspensão e Freios (Comum) ---
+    parts_catalog.extend([
+        {
+            'id': 200,
+            'name': 'Pastilhas de Freio Dianteiras',
+            'category': 'Sistema de Freios',
+            'subcategory': 'Frenagem',
+            'description': f'Pastilhas cerâmicas de alta durabilidade para {vehicle.model}.',
+            'details': {
+                'purpose': 'Gerar atrito com o disco para parar o veículo.',
+                'location': 'Pinças de freio dianteiras.',
+                'common_problems': 'Ruído metálico (aviso de desgaste).'
+            },
+            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_633894-MLB46665792225_072021-O.webp'
+        },
+        {
+            'id': 300,
+            'name': 'Amortecedores Dianteiros',
+            'category': 'Sistema de suspensão',
+            'subcategory': 'Amortecimento',
+            'description': f'Amortecedores pressurizados para {vehicle.brand}.',
+            'details': {
+                'purpose': 'Controlar as oscilações da mola e manter o pneu no chão.',
+                'location': 'Torres de suspensão dianteiras.',
+                'common_problems': 'Vazamento de óleo ou perda de ação.'
             },
             'image_url': 'https://http2.mlstatic.com/D_NQ_NP_833894-MLB46665792225_072021-O.webp'
-        },
-        {
-            'id': 102,
-            'name': 'Homocinéticas',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Manual',
-            'description': 'Juntas de velocidade constante.',
-            'details': {
-                'purpose': 'Permitir a tração mesmo com as rodas esterçadas.',
-                'location': 'Nas pontas dos semi-eixos.',
-                'common_problems': 'Estalos metálicos ao fazer curvas.'
-            },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_673894-MLB46665792225_072021-O.webp'
-        },
-        {
-            'id': 103,
-            'name': 'Trambulador',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Manual',
-            'description': 'Sistema de seleção de marchas.',
-            'details': {
-                'purpose': 'Transmitir o movimento da alavanca para o câmbio.',
-                'location': 'Topo da caixa de câmbio.',
-                'common_problems': 'Folga na alavanca ou marchas que não entram.'
-            },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_721115-MLB25154378775_112016-O.webp'
-        },
-        {
-            'id': 104,
-            'name': 'Conversor de Torque',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Automático (6 marchas)',
-            'description': 'Acoplamento fluído da transmissão automática.',
-            'details': {
-                'purpose': 'Substituir a embreagem manual, permitindo paradas sem apagar o motor.',
-                'location': 'Entre o motor e a transmissão automática.',
-                'common_problems': 'Patinamento ou vibração excessiva em baixas rotações.'
-            },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_727142-MLB46665787680_072021-O.webp'
-        },
-        {
-            'id': 105,
-            'name': 'Corpo de Válvulas',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Automático (6 marchas)',
-            'description': 'Cérebro hidráulico do câmbio.',
-            'details': {
-                'purpose': 'Direcionar o fluído para os pacotes de disco corretos.',
-                'location': 'Parte frontal interna da transmissão.',
-                'common_problems': 'Trancos nas trocas de marcha.'
-            },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_921115-MLB25154378775_112016-O.webp'
-        },
-        {
-            'id': 106,
-            'name': 'Módulo TCM',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Automático (6 marchas)',
-            'description': 'Módulo de controle da transmissão.',
-            'details': {
-                'purpose': 'Gerenciar eletronicamente as trocas de marcha.',
-                'location': 'Geralmente fixado à própria carcaça do câmbio.',
-                'common_problems': 'Perda de comunicação ou modo de emergência.'
-            },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_821115-MLB25154378775_112016-O.webp'
-        },
-        {
-            'id': 107,
-            'name': 'Fluido ATF',
-            'category': 'Transmissão e Embreagem',
-            'subcategory': 'Automático (6 marchas)',
-            'description': 'Óleo específico para câmbios automáticos.',
-            'details': {
-                'purpose': 'Lubrificação, limpeza e pressão hidráulica.',
-                'location': 'Interior de todo o sistema de transmissão.',
-                'common_problems': 'Escurecimento e perda de viscosidade (causa patinamento).'
-            },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_712115-MLB25154378775_112016-O.webp'
         }
-    ]
+    ])
     
     return jsonify({
-        'vehicle': f"{vehicle.brand} {vehicle.model} ({vehicle.year})",
+        'vehicle': f"{vehicle.brand} {vehicle.model} ({vehicle.year}) - {vehicle.transmission}",
         'parts': parts_catalog
     }), 200
 

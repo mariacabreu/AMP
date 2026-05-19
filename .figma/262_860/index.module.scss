@@ -1,0 +1,401 @@
+* {
+  box-sizing: border-box;
+}
+
+.planoPremium {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  background: #ffffff;
+  padding-top: 26px;
+  width: 393px;
+  height: 852px;
+  overflow-y: auto;
+
+  .autoWrapper3 {
+    position: absolute;
+    top: 186px;
+    left: 16px;
+    width: 369px;
+    height: 684px;
+
+    .component1 {
+      display: flex;
+      position: absolute;
+      top: 0;
+      left: 0;
+      flex-direction: column;
+      align-items: center;
+      width: 360px;
+      height: 684px;
+
+      .assinar {
+        line-height: 16px;
+        letter-spacing: 0;
+        color: #ffffff;
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 16px;
+      }
+
+      .planoMensal {
+        line-height: 29px;
+        letter-spacing: -0.48px;
+        color: #000000;
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+      }
+
+      .group352 {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        width: 79px;
+        min-width: 79px;
+
+        .r {
+          width: 26px;
+          height: 28px;
+          line-height: 22px;
+          letter-spacing: -0.43px;
+          color: #000000;
+          font-family: "SF Pro", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+          font-size: 17px;
+          font-weight: 600;
+        }
+
+        .a0000 {
+          margin: 11px 0px 0px;
+          line-height: 25px;
+          letter-spacing: -0.45px;
+          color: #000000;
+          font-family: "SF Pro", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+          font-size: 20px;
+        }
+      }
+
+      .autoWrapper {
+        display: flex;
+        align-items: flex-start;
+        align-self: stretch;
+        justify-content: space-between;
+        padding-right: 6px;
+        padding-left: 7px;
+      }
+
+      .frame57 {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        align-self: stretch;
+        border: 2px solid #00000045;
+        border-radius: 10px;
+        box-shadow: 2px 4px 4px 0px #00000040;
+        background: #ffffff;
+        padding: 18px 16px 16px 15px;
+        overflow: hidden;
+
+        .semAnNciosPlanejamen {
+          margin: 0px 0px 0px 7px;
+          width: 229px;
+          line-height: 20px;
+          letter-spacing: 0.1px;
+          color: #00000099;
+          font-family: Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .frame310 {
+          display: flex;
+          align-items: center;
+          align-self: stretch;
+          margin-top: 7px;
+          border-radius: 8px;
+          background: #2c2c2c;
+          padding: 11px 134px 12px 135px;
+          overflow: hidden;
+        }
+      }
+
+      .frame54 {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        align-self: stretch;
+        margin-top: 42px;
+        border: 2px solid #00000045;
+        border-radius: 10px;
+        box-shadow: 2px 4px 4px 0px #00000040;
+        background: #ffffff;
+        padding: 18px 16px 16px 15px;
+        overflow: hidden;
+
+        .descontoDe5CaptaODeD {
+          margin: 9px 0px 0px 7px;
+          width: 219px;
+          line-height: 20px;
+          letter-spacing: 0.1px;
+          color: #00000099;
+          font-family: Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .frame3102 {
+          display: flex;
+          align-items: center;
+          align-self: stretch;
+          margin-top: 18px;
+          border-radius: 8px;
+          background: #2c2c2c;
+          padding: 11px 134px 12px 135px;
+          overflow: hidden;
+        }
+      }
+
+      .frame55 {
+        display: flex;
+        align-items: flex-start;
+        align-self: stretch;
+        justify-content: space-between;
+        margin-top: 24px;
+        border: 2px solid #00000045;
+        border-radius: 10px;
+        box-shadow: 2px 4px 4px 0px #00000040;
+        background: #ffffff;
+        padding: 18px 22px 163px;
+        min-width: 360px;
+        overflow: hidden;
+
+        .autoWrapper2 {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          align-self: stretch;
+
+          .descontoDe10TudoIncl {
+            margin: 16px 0px 0px;
+            width: 229px;
+            line-height: 20px;
+            letter-spacing: 0.1px;
+            color: #00000099;
+            font-family: Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+
+    .image66 {
+      position: absolute;
+      top: 475px;
+      left: 320px;
+      border-radius: 50px;
+      width: 49px;
+      height: 51px;
+    }
+  }
+
+  .autoWrapper5 {
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: stretch;
+    padding-right: -1px;
+    padding-left: -1px;
+
+    .frame24 {
+      display: flex;
+      align-items: flex-start;
+      align-self: stretch;
+      background: #ffffff;
+      padding-right: 13px;
+      height: 62px;
+      overflow: hidden;
+
+      .pItchprojetoandreza1 {
+        width: 105px;
+        height: 59px;
+      }
+
+      .group336 {
+        position: relative;
+        margin-top: 8px;
+        margin-left: 174px;
+        width: 103px;
+        height: 71px;
+
+        .group334 {
+          display: flex;
+          position: absolute;
+          top: 6px;
+          left: 0;
+          align-items: flex-start;
+          padding-right: 69px;
+          padding-bottom: 35px;
+          width: 103px;
+          height: 65px;
+
+          .image28 {
+            width: 34px;
+            height: 30px;
+          }
+        }
+
+        .image29 {
+          position: absolute;
+          top: 0;
+          left: 61px;
+          width: 42px;
+          height: 43px;
+        }
+      }
+    }
+
+    .autoWrapper4 {
+      display: flex;
+      align-items: center;
+      align-self: stretch;
+      justify-content: space-between;
+      margin-top: 15px;
+      padding-right: 78px;
+      padding-left: 33px;
+
+      .iconlyBoldArrowLeftS {
+        width: 20px;
+        height: 20px;
+      }
+
+      .pLanopremium {
+        width: 239px;
+        text-align: center;
+        line-height: 25px;
+        letter-spacing: 0;
+        color: #000000;
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 18px;
+        font-weight: 600;
+      }
+    }
+
+    .cuideDoSeuCarroGasta {
+      margin: 9px 0px 0px 40px;
+      width: 313px;
+      height: 18px;
+      text-align: center;
+      line-height: 16px;
+      letter-spacing: 0;
+      color: #000000;
+      font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+      font-size: 16px;
+    }
+
+    .barraDeNavegaO {
+      display: flex;
+      align-items: center;
+      margin-top: 621px;
+      margin-left: 1px;
+      background: #2c2c2c;
+      padding-right: 20px;
+      padding-left: 20px;
+      width: 393px;
+
+      .home2 {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 53px;
+        height: 18px;
+        line-height: 13px;
+        letter-spacing: 0;
+        color: #ffffff;
+        font-family: "Coda Caption", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      .home3 {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(
+          --M3-Elevation-Dark-5,
+          0px 8px 12px 6px #00000026,
+          0px 4px 4px 0px #0000004d
+        );
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+        .home {
+          flex-shrink: 0;
+          width: 47px;
+          height: 48px;
+          overflow: hidden;
+        }
+      }
+
+      .home4 {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(
+          --M3-Elevation-Dark-5,
+          0px 8px 12px 6px #00000026,
+          0px 4px 4px 0px #0000004d
+        );
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+        .iconPeAs {
+          position: relative;
+          flex-shrink: 0;
+          width: 47px;
+          height: 48px;
+
+          .peAs {
+            display: flex;
+            position: absolute;
+            top: 22px;
+            left: 0;
+            align-items: center;
+            justify-content: center;
+            width: 47px;
+            height: 26px;
+            line-height: 13px;
+            letter-spacing: 0;
+            color: #000000;
+            font-family: "Coda Caption", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+            font-size: 9px;
+            font-weight: 800;
+          }
+
+          .settings {
+            position: absolute;
+            top: 26px;
+            left: 24px;
+            width: 18px;
+            height: 17px;
+            overflow: hidden;
+          }
+
+          .group351 {
+            position: absolute;
+            top: 10px;
+            left: 5px;
+            width: 38px;
+            height: 35px;
+          }
+        }
+      }
+    }
+  }
+}

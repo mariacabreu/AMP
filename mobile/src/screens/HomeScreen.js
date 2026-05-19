@@ -58,7 +58,10 @@ const HomeScreen = ({ navigation, route }) => {
 
         <View style={styles.buttonGrid}>
           <View style={styles.row}>
-            <TouchableOpacity style={styles.gridButton}>
+            <TouchableOpacity 
+              style={styles.gridButton}
+              onPress={() => navigation.navigate('PremiumPlan', { user: loggedUser })}
+            >
               <View style={styles.iconCircle}>
                 <MaterialCommunityIcons name="engine-outline" size={50} color="#FFCF00" />
               </View>
@@ -66,7 +69,10 @@ const HomeScreen = ({ navigation, route }) => {
               <Text style={styles.gridButtonSub}>Diagnóstico de Bordo</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.gridButton}>
+            <TouchableOpacity 
+              style={styles.gridButton}
+              onPress={() => navigation.navigate('PremiumPlan', { user: loggedUser })}
+            >
               <View style={styles.iconCircle}>
                 <FontAwesome5 name="route" size={45} color="#FFCF00" />
               </View>
@@ -91,7 +97,10 @@ const HomeScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.row}>
-            <TouchableOpacity style={styles.gridButton}>
+            <TouchableOpacity 
+              style={styles.gridButton}
+              onPress={() => navigation.navigate('PremiumPlan', { user: loggedUser })}
+            >
               <View style={styles.iconCircle}>
                 <MaterialIcons name="settings-input-component" size={50} color="#FFCF00" />
               </View>
@@ -125,11 +134,11 @@ const HomeScreen = ({ navigation, route }) => {
           <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
           <Text style={styles.navText}>Peças</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Checklist', { user: loggedUser })}>
           <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
           <Text style={styles.navText}>Checklist</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings', { user: loggedUser })}>
           <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>
