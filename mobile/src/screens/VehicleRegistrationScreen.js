@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
 
@@ -100,18 +100,19 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backButtonText}>← Voltar</Text>
-      </TouchableOpacity>
-      
+    <View style={styles.container}>
       <ScrollView 
-        style={{ flex: 1 }} 
+        style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
       >
+        <TouchableOpacity style={styles.backButtonInside} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>← Voltar</Text>
+        </TouchableOpacity>
+
         <Image
-          source={require('../assets/mow16cv7-aerakpu.png')} // Using generic logo
+          source={require('../assets/mow16cv7-aerakpu.png')} 
           style={styles.logo}
           resizeMode="contain"
         />
@@ -258,20 +259,43 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+      },
+      default: {
+        flex: 1,
+      }
+    })
   },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    zIndex: 1,
+  scrollView: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+        height: '100%',
+      }
+    })
+  },
+  backButtonInside: {
+    alignSelf: 'flex-start',
+    marginTop: 40,
+    marginLeft: 20,
+    marginBottom: 10,
     padding: 10,
   },
   backButtonText: {
@@ -280,9 +304,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 80, // Aumentado para garantir que o botão não fique cortado
+    paddingBottom: 100,
   },
   logo: {
     width: 300,

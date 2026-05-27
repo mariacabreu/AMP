@@ -255,7 +255,7 @@ def get_vehicle_checklist(vehicle_id):
             'description': f'Já se passaram {oil_diff}km desde a última troca.',
             'reason': 'O óleo perde a viscosidade e capacidade de lubrificação com o tempo/uso, podendo fundir o motor.',
             'priority': 'URGENTE' if oil_diff >= 10000 else 'PRÓXIMOS 30 DIAS',
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_912115-MLB25154378775_112016-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
         })
 
     # 2. Correia Dentada (Geralmente a cada 50.000km ou 60.000km)
@@ -267,7 +267,7 @@ def get_vehicle_checklist(vehicle_id):
             'description': f'Seu carro rodou {belt_diff}km com a correia atual.',
             'reason': 'A quebra da correia causa o atropelamento de válvulas, um dano gravíssimo e caro no cabeçote.',
             'priority': 'URGENTE' if belt_diff >= 55000 else 'PRÓXIMOS 60 DIAS',
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_612115-MLB25154378775_112016-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Timing_belt.jpg/800px-Timing_belt.jpg'
         })
 
     # 3. Pastilhas de Freio (Geralmente a cada 20.000km)
@@ -279,7 +279,7 @@ def get_vehicle_checklist(vehicle_id):
             'description': f'Última revisão foi há {brake_diff}km.',
             'reason': 'Pastilhas gastas perdem eficiência de frenagem e podem danificar os discos de freio.',
             'priority': 'URGENTE' if brake_diff >= 22000 else 'PRÓXIMOS 30 DIAS',
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_633894-MLB46665792225_072021-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Brake_pad.jpg/800px-Brake_pad.jpg'
         })
 
     # 4. Filtro de Ar (Geralmente a cada 10.000km junto com o óleo)
@@ -290,7 +290,7 @@ def get_vehicle_checklist(vehicle_id):
             'description': 'Recomendado trocar junto com o óleo.',
             'reason': 'Filtro sujo aumenta o consumo e diminui o desempenho do motor.',
             'priority': 'PRÓXIMOS 30 DIAS',
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_673894-MLB46665792225_072021-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Air_filter.jpg/800px-Air_filter.jpg'
         })
 
     # 5. Fluido de Arrefecimento (Anual ou a cada 30.000km)
@@ -301,7 +301,7 @@ def get_vehicle_checklist(vehicle_id):
             'description': 'Verificar nível e aditivo.',
             'reason': 'Evita oxidação interna e superaquecimento do motor.',
             'priority': 'PRÓXIMOS 90 DIAS',
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_727142-MLB46665787680_072021-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Radiator_fluid.jpg/800px-Radiator_fluid.jpg'
         })
 
     return jsonify({
@@ -413,6 +413,97 @@ def get_user_status(user_id):
 
 # --- AI Powered Endpoints ---
 
+def validate_and_fix_images(data, key):
+    """Garante que todos os links de imagem sejam da Wikimedia Commons."""
+    fallback_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg"
+    valid_prefix = "https://upload.wikimedia.org"
+    
+    if key in data:
+        for item in data[key]:
+            img_url = item.get('image_url', '')
+            if not img_url.startswith(valid_prefix):
+                print(f"Fixing invalid image URL: {img_url}")
+                item['image_url'] = fallback_image
+    return data
+
+@app.route('/vehicle/parts/ai/<int:vehicle_id>', methods=['GET'])
+def get_vehicle_parts_ai(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Vehicle not found'}), 404
+
+    # Check if API Key is configured
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key or api_key == "your_openai_api_key_here":
+        print("OpenAI API Key missing. Falling back to static parts catalog.")
+        return get_vehicle_parts(vehicle_id)
+
+    prompt = f"""
+    Como um engenheiro mecânico automotivo sênior, gere um catálogo TÉCNICO COMPLETO e EXAUSTIVO de peças para um {vehicle.brand} {vehicle.model} {vehicle.year} com câmbio {vehicle.transmission}.
+    O catálogo deve ser ultra-específico para este modelo exato.
+    
+    Divida obrigatoriamente nas seguintes categorias e gere o máximo de peças possível para cada uma (mínimo de 6 peças por categoria):
+    1. 'Motor e Sistema de alimentação' (Ex: Pistões, bicos injetores, correias, filtros, velas, juntas, bomba de combustível, etc)
+    2. 'Transmissão e Embreagem' (Específico para câmbio {vehicle.transmission})
+    3. 'Sistema de suspensão' (Amortecedores, bandejas, buchas, pivôs, etc)
+    4. 'Sistema de Freios' (Discos, pastilhas, cilindro mestre, ABS, servo freio, etc)
+    5. 'Direção' (Caixa de direção, terminais, coluna, bomba hidráulica/elétrica)
+    6. 'Sistema Elétrico' (Alternador, motor de arranque, bateria, bobinas, sensores)
+    7. 'Sistema de Arrefecimento' (Radiador, bomba d'água, válvula termostática, mangueiras)
+    8. 'Acabamento e Carroceria' (Faróis, lanternas, retrovisores, palhetas)
+
+    Para cada peça, inclua:
+    - Descrição técnica detalhada.
+    - Finalidade específica para este carro.
+    - Localização exata no veículo.
+    - Problemas comuns relatados por proprietários deste modelo.
+    
+    IMPORTANTE PARA AS IMAGENS:
+    Para o campo 'image_url', use EXCLUSIVAMENTE links reais do Wikimedia Commons (upload.wikimedia.org).
+    PROIBIDO: Não use links da Amazon ou Unsplash.
+    Se não encontrar um link específico, use este link padrão da Wikimedia para peças: https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg
+    
+    Retorne APENAS um JSON no seguinte formato:
+    {{
+        "parts": [
+            {{
+                "id": increment_id,
+                "name": "Nome da Peça",
+                "category": "Categoria",
+                "subcategory": "Subcategoria",
+                "description": "Descrição técnica",
+                "image_url": "URL da imagem da peça",
+                "details": {{
+                    "purpose": "Para que serve especificamente neste carro",
+                    "location": "Onde fica localizado neste modelo",
+                    "common_problems": "Quais defeitos costumam dar neste modelo de carro"
+                }}
+            }}
+        ]
+    }}
+    Gere o máximo de peças que conseguir dentro do limite de tokens, priorizando a precisão técnica para o {vehicle.brand} {vehicle.model} {vehicle.year}.
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=[{"role": "system", "content": "Você é um engenheiro mecânico automotivo sênior especialista em catálogos técnicos."},
+                      {"role": "user", "content": prompt}],
+            response_format={ "type": "json_object" }
+        )
+        ai_data = json.loads(response.choices[0].message.content)
+        
+        # Validar e corrigir imagens da IA
+        ai_data = validate_and_fix_images(ai_data, 'parts')
+        
+        return jsonify({
+            'vehicle': f"{vehicle.brand} {vehicle.model} ({vehicle.year}) - {vehicle.transmission}",
+            'parts': ai_data['parts']
+        }), 200
+    except Exception as e:
+        print(f"AI Parts Error: {str(e)}. Falling back to static data.")
+        return get_vehicle_parts(vehicle_id)
+
 @app.route('/vehicle/checklist/ai/<int:vehicle_id>', methods=['GET'])
 def get_vehicle_checklist_ai(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
@@ -428,35 +519,52 @@ def get_vehicle_checklist_ai(vehicle_id):
         return get_vehicle_checklist(vehicle_id)
 
     prompt = f"""
-    Como um mecânico especialista em manutenção preventiva, gere um checklist de manutenção para um {vehicle.brand} {vehicle.model} ano {vehicle.year} com {current_km}km rodados.
+    Como um mecânico especialista em manutenção preventiva, gere um checklist de manutenção para um {vehicle.brand} {vehicle.model} ano {vehicle.year} com {current_km}km rodados e câmbio {vehicle.transmission}.
+    Considere o histórico informado pelo usuário: 
+    - Última troca de óleo: {vehicle.last_oil_change}km (há {current_km - vehicle.last_oil_change}km)
+    - Última troca de correia: {vehicle.last_belt_change}km (há {current_km - vehicle.last_belt_change}km)
+    - Última troca de freios: {vehicle.last_brake_change}km (há {current_km - vehicle.last_brake_change}km)
+
+    Gere um checklist personalizado com o que deve ser feito AGORA ou EM BREVE para este carro específico.
+
+    IMPORTANTE PARA AS IMAGENS:
+    Para o campo 'image_url', use EXCLUSIVAMENTE links reais do Wikimedia Commons (upload.wikimedia.org) que mostrem a peça ou o serviço de manutenção.
+    PROIBIDO: Nunca use links da Amazon (m.media-amazon.com).
+    Se não encontrar um link, use: https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg
+    NÃO use links da Amazon, Unsplash ou LoremFlickr.
+
     Retorne APENAS um JSON no seguinte formato:
     {{
         "checklist": [
             {{
                 "id": 1,
                 "name": "Nome da Peça/Serviço",
-                "description": "Explicação curta do que deve ser verificado",
-                "reason": "Por que isso é importante para este modelo específico?",
+                "description": "Explicação do que deve ser verificado/trocado",
+                "reason": "Por que isso é crítico para este modelo/km?",
                 "priority": "URGENTE" | "PRÓXIMOS 30 DIAS" | "PRÓXIMOS 60 DIAS" | "PRÓXIMOS 90 DIAS",
-                "image_url": "URL placeholder para imagem"
+                "image_url": "URL da imagem da peça ou serviço"
             }}
         ]
     }}
     Lógica de prioridade:
-    - Se precisar ser feito IMEDIATAMENTE ou em menos de 30 dias: use "URGENTE".
-    - Se puder esperar entre 30 e 60 dias: use "PRÓXIMOS 60 DIAS".
-    - Se puder esperar entre 60 e 90 dias: use "PRÓXIMOS 90 DIAS".
-    Considere o histórico: última troca de óleo com {vehicle.last_oil_change}km, correia com {vehicle.last_belt_change}km e freios com {vehicle.last_brake_change}km.
-    Gere pelo menos 5 itens relevantes.
+    - Se ultrapassou o prazo (ex: óleo > 10k km, correia > 50k km): use "URGENTE".
+    - Se está perto do prazo: use "PRÓXIMOS 30 DIAS".
+    - Se for inspeção de rotina: use "PRÓXIMOS 60 DIAS" ou "90 DIAS".
+    Gere pelo menos 8 itens relevantes, incluindo itens específicos do modelo {vehicle.model} e do câmbio {vehicle.transmission}.
     """
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4-turbo-preview",
+            messages=[{"role": "system", "content": "Você é um mecânico master de concessionária especialista em manutenção preventiva."},
+                      {"role": "user", "content": prompt}],
             response_format={ "type": "json_object" }
         )
         ai_data = json.loads(response.choices[0].message.content)
+        
+        # Validar e corrigir imagens da IA
+        ai_data = validate_and_fix_images(ai_data, 'checklist')
+
         return jsonify({
             'vehicle': f"{vehicle.brand} {vehicle.model}",
             'mileage': current_km,
@@ -465,58 +573,6 @@ def get_vehicle_checklist_ai(vehicle_id):
     except Exception as e:
         print(f"AI Checklist Error: {str(e)}. Falling back to static data.")
         return get_vehicle_checklist(vehicle_id)
-
-@app.route('/vehicle/parts/ai/<int:vehicle_id>', methods=['GET'])
-def get_vehicle_parts_ai(vehicle_id):
-    vehicle = Vehicle.query.get(vehicle_id)
-    if not vehicle:
-        return jsonify({'error': 'Vehicle not found'}), 404
-
-    # Check if API Key is configured
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key == "your_openai_api_key_here":
-        print("OpenAI API Key missing. Falling back to static parts catalog.")
-        return get_vehicle_parts(vehicle_id)
-
-    prompt = f"""
-    Gere um catálogo de peças técnicas para um {vehicle.brand} {vehicle.model} {vehicle.year}.
-    Divida em categorias: 'Motor e Sistema de alimentação', 'Transmissão e Embreagem', 'Sistema de suspensão', 'Sistema de Freios', 'Direção', 'Sistema Elétrico', 'Sistema de Arrefecimento'.
-    Para cada peça, inclua detalhes técnicos: finalidade, localização no carro e problemas comuns.
-    Retorne APENAS um JSON no seguinte formato:
-    {{
-        "parts": [
-            {{
-                "id": 1,
-                "name": "Nome da Peça",
-                "category": "Categoria",
-                "subcategory": "Subcategoria",
-                "description": "Descrição técnica",
-                "image_url": "URL placeholder",
-                "details": {{
-                    "purpose": "Para que serve",
-                    "location": "Onde fica",
-                    "common_problems": "Problemas comuns"
-                }}
-            }}
-        ]
-    }}
-    Gere pelo menos 2 peças importantes para cada categoria.
-    """
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={ "type": "json_object" }
-        )
-        ai_data = json.loads(response.choices[0].message.content)
-        return jsonify({
-            'vehicle': f"{vehicle.brand} {vehicle.model}",
-            'parts': ai_data['parts']
-        }), 200
-    except Exception as e:
-        print(f"AI Parts Error: {str(e)}. Falling back to static data.")
-        return get_vehicle_parts(vehicle_id)
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -624,7 +680,7 @@ def get_vehicle_parts(vehicle_id):
                 'location': 'Bloco do motor.',
                 'common_problems': 'Obstrução por falta de troca, causando queda de pressão.'
             },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_912115-MLB25154378775_112016-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
         },
         {
             'id': 2,
@@ -637,7 +693,7 @@ def get_vehicle_parts(vehicle_id):
                 'location': 'Cabeçote do motor.',
                 'common_problems': 'Dificuldade na partida e alto consumo.'
             },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_812115-MLB25154378775_112016-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Sparkplug.jpg/800px-Sparkplug.jpg'
         }
     ])
 
@@ -655,7 +711,7 @@ def get_vehicle_parts(vehicle_id):
                     'location': 'Entre o motor e a transmissão.',
                     'common_problems': 'Patinamento ou vibração excessiva.'
                 },
-                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_727142-MLB46665787680_072021-O.webp'
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Torque_converter.jpg/800px-Torque_converter.jpg'
             },
             {
                 'id': 105,
@@ -668,20 +724,7 @@ def get_vehicle_parts(vehicle_id):
                     'location': 'Interior da caixa de câmbio.',
                     'common_problems': 'Trancos ou atrasos nas trocas.'
                 },
-                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_921115-MLB25154378775_112016-O.webp'
-            },
-            {
-                'id': 107,
-                'name': 'Fluido ATF Dexron VI',
-                'category': 'Transmissão e Embreagem',
-                'subcategory': f'Automático ({vehicle.transmission})',
-                'description': 'Fluído de transmissão de alto desempenho.',
-                'details': {
-                    'purpose': 'Lubrificação e controle hidráulico.',
-                    'location': 'Sistema de transmissão.',
-                    'common_problems': 'Escurecimento e perda de viscosidade.'
-                },
-                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_712115-MLB25154378775_112016-O.webp'
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Hydraulic_valve_block.jpg/800px-Hydraulic_valve_block.jpg'
             }
         ])
     else:
@@ -697,20 +740,7 @@ def get_vehicle_parts(vehicle_id):
                     'location': 'Entre o motor e a caixa de câmbio.',
                     'common_problems': 'Embreagem "patinando" ou pedal pesado.'
                 },
-                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_612115-MLB25154378775_112016-O.webp'
-            },
-            {
-                'id': 103,
-                'name': 'Cabo de Seleção/Trambulador',
-                'category': 'Transmissão e Embreagem',
-                'subcategory': 'Manual',
-                'description': 'Sistema de seleção de marchas manual.',
-                'details': {
-                    'purpose': 'Transmitir o movimento da alavanca para o câmbio.',
-                    'location': 'Entre a alavanca e a caixa.',
-                    'common_problems': 'Dificuldade de engate ou folga excessiva.'
-                },
-                'image_url': 'https://http2.mlstatic.com/D_NQ_NP_721115-MLB25154378775_112016-O.webp'
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Clutch_plate.jpg/800px-Clutch_plate.jpg'
             }
         ])
 
@@ -727,7 +757,7 @@ def get_vehicle_parts(vehicle_id):
                 'location': 'Pinças de freio dianteiras.',
                 'common_problems': 'Ruído metálico (aviso de desgaste).'
             },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_633894-MLB46665792225_072021-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Brake_pad.jpg/800px-Brake_pad.jpg'
         },
         {
             'id': 300,
@@ -740,7 +770,7 @@ def get_vehicle_parts(vehicle_id):
                 'location': 'Torres de suspensão dianteiras.',
                 'common_problems': 'Vazamento de óleo ou perda de ação.'
             },
-            'image_url': 'https://http2.mlstatic.com/D_NQ_NP_833894-MLB46665792225_072021-O.webp'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/MacPherson_strut.jpg/800px-MacPherson_strut.jpg'
         }
     ])
     

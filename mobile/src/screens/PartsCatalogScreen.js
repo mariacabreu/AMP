@@ -9,12 +9,13 @@ const PartsCatalogScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Motor e Sistema de alimentação');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [data, setData] = useState({ vehicle: '', parts: [] });
   const [selectedPart, setSelectedPart] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   const categories = [
+    'Todos',
     'Motor e Sistema de alimentação',
     'Transmissão e Embreagem',
     'Sistema de suspensão',
@@ -50,7 +51,7 @@ const PartsCatalogScreen = ({ navigation, route }) => {
   };
 
   const filteredParts = data.parts.filter(part => {
-    const matchesCategory = part.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'Todos' || part.category === selectedCategory;
     const matchesSearch = part.name.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -65,14 +66,14 @@ const PartsCatalogScreen = ({ navigation, route }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.centered]}>
+      <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color="#FFCF00" />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Image
@@ -90,7 +91,12 @@ const PartsCatalogScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={true}
+        scrollEnabled={true}
+      >
         <Text style={styles.screenTitle}>CATÁLOGO DE PEÇAS</Text>
         
         {/* Search Bar */}
@@ -238,14 +244,37 @@ const PartsCatalogScreen = ({ navigation, route }) => {
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
+  },
+  scrollView: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+      }
+    })
   },
   centered: {
     justifyContent: 'center',

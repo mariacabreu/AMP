@@ -48,8 +48,14 @@ const VehicleHistoryScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <View style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={true}
+      >
         <Text style={styles.title}>Histórico do Veículo</Text>
         <Text style={styles.subtitle}>
           Para recomendações precisas, precisamos saber quando foram as últimas manutenções.
@@ -141,21 +147,45 @@ const VehicleHistoryScreen = ({ navigation, route }) => {
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+      },
+      default: {
+        flex: 1,
+      }
+    })
+  },
+  scrollView: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+        height: '100%',
+      }
+    })
   },
   scrollContent: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
+     flexGrow: 1,
+     paddingHorizontal: 20,
+     paddingVertical: 60,
+     paddingBottom: 100,
+     alignItems: 'center',
+   },
   title: {
     fontSize: 28,
     fontWeight: '700',

@@ -114,7 +114,7 @@ const ReportScreen = ({ navigation, route }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Image
@@ -132,7 +132,12 @@ const ReportScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        scrollEnabled={true}
+      >
         <Text style={styles.screenTitle}>RELATORIO</Text>
 
         {/* Chart Section */}
@@ -289,14 +294,29 @@ const ReportScreen = ({ navigation, route }) => {
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
   },
   centered: {
     justifyContent: 'center',
@@ -323,6 +343,14 @@ const styles = StyleSheet.create({
   topIcon: {
     width: 30,
     height: 30,
+  },
+  scrollView: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+      }
+    })
   },
   scrollContent: {
     paddingHorizontal: 20,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -50,11 +50,17 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>← Voltar</Text>
       </TouchableOpacity>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={true}
+      >
         <Image
           source={require('../assets/mow16cuz-sf57r2w.png')}
           style={styles.logo}
@@ -111,21 +117,46 @@ const RegisterScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
+  },
+  scrollView: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+      }
+    })
   },
   backButton: {
     position: 'absolute',
     top: 50,
     left: 20,
-    zIndex: 1,
+    zIndex: 10,
     padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 20,
   },
   backButtonText: {
     fontSize: 16,
@@ -133,8 +164,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingTop: 100,
+    paddingBottom: 40,
   },
   logo: {
     width: 300,

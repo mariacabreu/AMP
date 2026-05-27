@@ -26,11 +26,17 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>← Voltar</Text>
       </TouchableOpacity>
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={true}
+      >
         <Image
           source={require('../assets/mow16cvf-h8ooki9.png')}
           style={styles.logo}
@@ -69,32 +75,56 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.forgotPassword}>Esqueceu sua senha?</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </SafeAreaView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
+  },
+  scrollView: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+      }
+    })
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 40,
   },
   backButton: {
     position: 'absolute',
     top: 50,
     left: 20,
-    zIndex: 1,
+    zIndex: 10,
     padding: 10,
   },
   backButtonText: {
     fontSize: 16,
     color: '#333',
     fontWeight: '600',
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: 50,
   },
   logo: {
     width: 300,

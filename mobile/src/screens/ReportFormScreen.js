@@ -97,7 +97,12 @@ const ReportFormScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.screenTitle}>
           {editItem ? 'EDITAR CUSTO - COMBUSTÍVEL' : 'ADICIONAR CUSTO - COMBUSTÍVEL'}
         </Text>
@@ -227,8 +232,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row', 
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -253,10 +262,11 @@ const styles = StyleSheet.create({
     height: 30,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 100, // Espaço para não cobrir pela sidebar
-    alignItems: 'center',
+    alignItems: 'center', 
   },
   screenTitle: {
     fontSize: 20,

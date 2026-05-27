@@ -29,7 +29,7 @@ const HomeScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Image
           source={require('../assets/mow376om-iempala.png')} // New Logo from Figma
@@ -46,7 +46,12 @@ const HomeScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={true}
+        scrollEnabled={true}
+      >
         <Text style={styles.welcomeText}>BEM VINDO, {status.user_name.toUpperCase()}!</Text>
 
         <View style={styles.recommendationCard}>
@@ -143,25 +148,49 @@ const HomeScreen = ({ navigation, route }) => {
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
+  },
+  scrollView: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+      }
+    })
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10,
-    height: 70,
+    paddingTop: 40,
+    paddingBottom: 20,
+    backgroundColor: '#ffffff',
   },
   logo: {
-    width: 100,
+    width: 150,
     height: 50,
   },
   headerIcons: {
@@ -171,12 +200,13 @@ const styles = StyleSheet.create({
     marginLeft: 15,
   },
   topIcon: {
-    width: 30,
-    height: 30,
+    width: 24,
+    height: 24,
   },
   content: {
+    flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingBottom: 100, // Espaço para não cobrir pela sidebar
     alignItems: 'center',
   },
   welcomeText: {
