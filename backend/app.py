@@ -44,6 +44,8 @@ class Vehicle(db.Model):
     transmission = db.Column(db.String(20))
     mileage = db.Column(db.Integer)
     fuel_type = db.Column(db.String(20))
+    engine_type = db.Column(db.String(50)) # Ex: 1.3 Firefly, 1.0 Turbo 200
+    usage_type = db.Column(db.String(50))  # Ex: Urbano, Rodoviário, Misto
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Novas colunas para manutenção preventiva
@@ -60,6 +62,8 @@ class Vehicle(db.Model):
             'transmission': self.transmission,
             'mileage': self.mileage,
             'fuel_type': self.fuel_type,
+            'engine_type': self.engine_type,
+            'usage_type': self.usage_type,
             'last_oil_change': self.last_oil_change,
             'last_belt_change': self.last_belt_change,
             'last_brake_change': self.last_brake_change,
@@ -92,91 +96,174 @@ class MaintenanceHistory(db.Model):
 SUPPORTED_BRANDS = {
     'Ford': {
         'models': ['Fiesta', 'Focus', 'Ranger', 'Ka', 'EcoSport', 'Fusion', 'Edge', 'Mustang', 'Territory', 'Bronco'],
+        'engines': {
+            'Fiesta': ['1.0 Rocam', '1.6 Rocam', '1.0 EcoBoost', '1.5 Sigma'],
+            'Focus': ['1.6 Sigma', '2.0 Duratec', '2.0 GDI'],
+            'Ranger': ['2.2 Diesel', '3.2 Diesel', '2.5 Flex']
+        },
         'start_year': 2010,
         'docs': 'Ford Developer API / OpenXC'
     },
     'Chevrolet': {
         'models': ['Onix', 'Prisma', 'Cruze', 'S10', 'Tracker', 'Spin', 'Montana', 'Equinox', 'Trailblazer', 'Camaro'],
+        'engines': {
+            'Onix': ['1.0 Aspirado', '1.0 Turbo', '1.4 Aspirado'],
+            'S10': ['2.4 Flex', '2.5 Flex', '2.8 Diesel']
+        },
         'start_year': 2011,
         'docs': 'GM Developer Portal'
     },
     'Volkswagen': {
         'models': ['Gol', 'Polo', 'Golf', 'T-Cross', 'Amarok', 'Virtus', 'Nivus', 'Taos', 'Jetta', 'Tiguan', 'Voyage', 'Saveiro'],
+        'engines': {
+            'Polo': ['1.0 MPI', '1.6 MSI', '1.0 TSI (200 TSI)', '1.4 TSI (GTS)'],
+            'Golf': ['1.4 TSI', '2.0 TSI (GTI)', '1.6 MSI'],
+            'T-Cross': ['1.0 TSI (200 TSI)', '1.4 TSI (250 TSI)']
+        },
         'start_year': 2010,
         'docs': 'VW Car-Net API'
     },
     'Toyota': {
         'models': ['Corolla', 'Hilux', 'Yaris', 'Etios', 'SW4', 'Rav4', 'Camry', 'Prius', 'Corolla Cross'],
+        'engines': {
+            'Corolla': ['1.8 Hybrid', '2.0 Dynamic Force', '1.8 Dual VVT-i', '2.0 Dual VVT-i'],
+            'Hilux': ['2.7 Flex', '2.8 Diesel', '3.0 Diesel']
+        },
         'start_year': 2012,
         'docs': 'Toyota Connected Services API'
     },
     'Honda': {
         'models': ['Civic', 'Fit', 'City', 'HR-V', 'CR-V', 'WR-V', 'Accord'],
+        'engines': {
+            'Civic': ['2.0 i-VTEC', '1.5 Turbo', '1.8 i-VTEC'],
+            'HR-V': ['1.8 i-VTEC', '1.5 Turbo']
+        },
         'start_year': 2012,
         'docs': 'Honda Developer Studio'
     },
     'Hyundai': {
         'models': ['HB20', 'Creta', 'Tucson', 'i30', 'Santa Fe', 'Azera', 'Elantra', 'Ix35'],
+        'engines': {
+            'HB20': ['1.0 Aspirado', '1.0 Turbo (TGDI)', '1.6 Aspirado'],
+            'Creta': ['1.6 Aspirado', '2.0 Aspirado', '1.0 Turbo (TGDI)', '2.0 Smartstream']
+        },
         'start_year': 2012,
         'docs': 'Hyundai Bluelink API'
     },
     'Fiat': {
         'models': ['Uno', 'Palio', 'Argo', 'Cronos', 'Toro', 'Mobi', 'Strada', 'Fastback', 'Pulse', 'Fiorino', 'Siena'],
+        'engines': {
+            'Pulse': ['1.3 Firefly', '1.0 Turbo 200', '1.3 Turbo 270 (Abarth)'],
+            'Fastback': ['1.0 Turbo 200', '1.3 Turbo 270'],
+            'Argo': ['1.0 Firefly', '1.3 Firefly', '1.8 E.torQ'],
+            'Toro': ['1.8 E.torQ', '2.4 Tigershark', '2.0 Diesel', '1.3 Turbo 270'],
+            'Strada': ['1.4 Fire', '1.3 Firefly', '1.0 Turbo 200']
+        },
+        'model_start_years': {
+            'Pulse': 2021,
+            'Fastback': 2022,
+            'Argo': 2017,
+            'Cronos': 2018,
+            'Mobi': 2016,
+            'Toro': 2016
+        },
         'start_year': 2010,
         'docs': 'FCA Developer Portal'
     },
     'Renault': {
         'models': ['Sandero', 'Logan', 'Duster', 'Kwid', 'Oroch', 'Captur', 'Master', 'Stepway'],
+        'engines': {
+            'Duster': ['1.6 SCe', '2.0 Hi-Flex', '1.3 Turbo TCe'],
+            'Sandero': ['1.0 SCe', '1.6 SCe', '2.0 (R.S.)']
+        },
         'start_year': 2012,
         'docs': 'Renault Connected Services'
     },
     'Jeep': {
         'models': ['Renegade', 'Compass', 'Commander', 'Wrangler', 'Cherokee'],
+        'engines': {
+            'Renegade': ['1.8 E.torQ', '2.0 Diesel', '1.3 Turbo 270'],
+            'Compass': ['2.0 Flex', '2.0 Diesel', '1.3 Turbo 270', '1.3 Turbo Hybrid (4xe)']
+        },
         'start_year': 2015,
         'docs': 'FCA Developer Portal'
     },
     'Nissan': {
         'models': ['March', 'Versa', 'Kicks', 'Frontier', 'Sentra', 'Leaf'],
+        'engines': {
+            'Kicks': ['1.6 16V Flex'],
+            'Frontier': ['2.3 Diesel Turbo', '2.3 Diesel Bi-Turbo', '2.5 Diesel']
+        },
         'start_year': 2012,
         'docs': 'Nissan Connect API'
     },
     'Mitsubishi': {
         'models': ['L200', 'Pajero', 'ASX', 'Eclipse Cross', 'Outlander'],
+        'engines': {
+            'L200': ['2.4 Diesel', '3.2 Diesel', '3.5 Flex'],
+            'ASX': ['2.0 MIVEC Flex']
+        },
         'start_year': 2010,
         'docs': 'Mitsubishi Motors API'
     },
     'Peugeot': {
         'models': ['208', '2008', '3008', '5008', 'Partner', 'Expert'],
+        'engines': {
+            '208': ['1.2 PureTech', '1.6 Flex', '1.0 Firefly'],
+            '3008': ['1.6 THP']
+        },
         'start_year': 2015,
         'docs': 'PSA Group API'
     },
     'Citroën': {
         'models': ['C3', 'C4 Cactus', 'C4 Lounge', 'Berlingo', 'Jumpy'],
+        'engines': {
+            'C3': ['1.2 PureTech', '1.6 Flex', '1.0 Firefly'],
+            'C4 Cactus': ['1.6 Flex', '1.6 THP']
+        },
         'start_year': 2015,
         'docs': 'PSA Group API'
     },
     'BMW': {
         'models': ['Série 3', 'Série 1', 'X1', 'X3', 'X5', 'Série 5'],
+        'engines': {
+            'Série 3': ['2.0 Turbo (320i)', '3.0 Turbo (M340i)', '2.0 Hybrid (330e)']
+        },
         'start_year': 2014,
         'docs': 'BMW ConnectedDrive API'
     },
     'Mercedes-Benz': {
         'models': ['Classe A', 'Classe C', 'GLA', 'GLC', 'GLE', 'Classe E'],
+        'engines': {
+            'Classe C': ['1.5 Turbo', '1.6 Turbo', '2.0 Turbo']
+        },
         'start_year': 2014,
         'docs': 'Mercedes-Benz Developers'
     },
     'Audi': {
         'models': ['A3', 'A4', 'Q3', 'Q5', 'A5', 'Q7'],
+        'engines': {
+            'A3': ['1.4 TFSI', '2.0 TFSI'],
+            'Q3': ['1.4 TFSI', '2.0 TFSI']
+        },
         'start_year': 2014,
         'docs': 'Audi API Portal'
     },
     'Kia': {
         'models': ['Sportage', 'Cerato', 'Sorento', 'Rio', 'Picanto', 'Stonic', 'Niro'],
+        'engines': {
+            'Sportage': ['2.0 Flex', '1.6 Turbo Hybrid'],
+            'Cerato': ['1.6 Flex', '2.0 Flex']
+        },
         'start_year': 2012,
         'docs': 'Kia Connect API'
     },
     'Chery': {
         'models': ['Tiggo 2', 'Tiggo 5X', 'Tiggo 7', 'Tiggo 8', 'Arrizo 5', 'Arrizo 6'],
+        'engines': {
+            'Tiggo 5X': ['1.5 Turbo Flex'],
+            'Tiggo 8': ['1.6 Turbo GDI']
+        },
         'start_year': 2018,
         'docs': 'Caoa Chery API'
     }
@@ -201,11 +288,27 @@ def get_models(brand):
         return jsonify(SUPPORTED_BRANDS[brand]['models']), 200
     return jsonify({'error': 'Brand not supported'}), 404
 
-@app.route('/vehicle/years/<brand>', methods=['GET'])
-def get_years(brand):
+@app.route('/vehicle/engines/<brand>/<model>', methods=['GET'])
+def get_engines(brand, model):
     if brand in SUPPORTED_BRANDS:
+        brand_data = SUPPORTED_BRANDS[brand]
+        if 'engines' in brand_data and model in brand_data['engines']:
+            return jsonify(brand_data['engines'][model]), 200
+        # Default engines if specific model not found
+        return jsonify(['1.0 Aspirado', '1.6 Aspirado', '2.0 Aspirado', '1.0 Turbo', '1.3 Turbo', '2.0 Turbo', 'Diesel']), 200
+    return jsonify({'error': 'Brand not supported'}), 404
+
+@app.route('/vehicle/years/<brand>/<model>', methods=['GET'])
+def get_years(brand, model):
+    if brand in SUPPORTED_BRANDS:
+        brand_data = SUPPORTED_BRANDS[brand]
         current_year = 2026
-        start_year = SUPPORTED_BRANDS[brand]['start_year']
+        
+        # Check for specific model start year
+        start_year = brand_data.get('start_year', 2010)
+        if 'model_start_years' in brand_data and model in brand_data['model_start_years']:
+            start_year = brand_data['model_start_years'][model]
+            
         years = list(range(current_year, start_year - 1, -1))
         return jsonify(years), 200
     return jsonify({'error': 'Brand not supported'}), 404
@@ -223,6 +326,8 @@ def register_vehicle():
         transmission=data.get('transmission'),
         mileage=data.get('mileage', 0),
         fuel_type=data.get('fuel_type'),
+        engine_type=data.get('engine_type'),
+        usage_type=data.get('usage_type'),
         user_id=data['user_id'],
         last_oil_change=data.get('last_oil_change', 0),
         last_belt_change=data.get('last_belt_change', 0),
@@ -439,49 +544,54 @@ def get_vehicle_parts_ai(vehicle_id):
         return get_vehicle_parts(vehicle_id)
 
     prompt = f"""
-    Como um engenheiro mecânico automotivo sênior, gere um catálogo TÉCNICO COMPLETO e EXAUSTIVO de peças para um {vehicle.brand} {vehicle.model} {vehicle.year} com câmbio {vehicle.transmission}.
-    O catálogo deve ser ultra-específico para este modelo exato.
-    
-    Divida obrigatoriamente nas seguintes categorias e gere o máximo de peças possível para cada uma (mínimo de 6 peças por categoria):
-    1. 'Motor e Sistema de alimentação' (Ex: Pistões, bicos injetores, correias, filtros, velas, juntas, bomba de combustível, etc)
-    2. 'Transmissão e Embreagem' (Específico para câmbio {vehicle.transmission})
-    3. 'Sistema de suspensão' (Amortecedores, bandejas, buchas, pivôs, etc)
-    4. 'Sistema de Freios' (Discos, pastilhas, cilindro mestre, ABS, servo freio, etc)
-    5. 'Direção' (Caixa de direção, terminais, coluna, bomba hidráulica/elétrica)
-    6. 'Sistema Elétrico' (Alternador, motor de arranque, bateria, bobinas, sensores)
-    7. 'Sistema de Arrefecimento' (Radiador, bomba d'água, válvula termostática, mangueiras)
-    8. 'Acabamento e Carroceria' (Faróis, lanternas, retrovisores, palhetas)
+    Como um engenheiro mecânico automotivo sênior com vasto conhecimento em manuais de oficina e diagramas de explosão de peças, gere um catálogo TÉCNICO COMPLETO e ULTRA-ESPECÍFICO de peças para o veículo abaixo.
 
-    Para cada peça, inclua:
-    - Descrição técnica detalhada.
-    - Finalidade específica para este carro.
-    - Localização exata no veículo.
-    - Problemas comuns relatados por proprietários deste modelo.
-    
-    IMPORTANTE PARA AS IMAGENS:
-    Para o campo 'image_url', use EXCLUSIVAMENTE links reais do Wikimedia Commons (upload.wikimedia.org).
-    PROIBIDO: Não use links da Amazon ou Unsplash.
-    Se não encontrar um link específico, use este link padrão da Wikimedia para peças: https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg
-    
-    Retorne APENAS um JSON no seguinte formato:
+    DADOS DO VEÍCULO:
+    - Marca/Modelo: {vehicle.brand} {vehicle.model}
+    - Ano de Fabricação: {vehicle.year}
+    - Motorização: {vehicle.engine_type}
+    - Transmissão: {vehicle.transmission}
+    - Combustível: {vehicle.fuel_type}
+
+    REQUISITO DE FIDELIDADE TÉCNICA:
+    Você deve ignorar peças genéricas. O catálogo deve refletir a engenharia REAL deste modelo específico. 
+    Exemplos de precisão esperada:
+    - Se for um Volkswagen com motor TSI, deve listar Turbocompressor, Intercooler e Bomba de Alta Pressão.
+    - Se for um Toyota Corolla Hybrid, deve listar Motor Elétrico, Inversor e Bateria de Alta Voltagem.
+    - Se for um Jeep com câmbio Aisin, deve detalhar os componentes específicos dessa caixa.
+    - Se for um motor com Correia Banhada a Óleo (ex: Ford 1.0 3cil), isso deve ser mencionado nos problemas comuns e na descrição.
+
+    ORGANIZAÇÃO RIGOROSA EM 10 CATEGORIAS:
+    1. 'Bloco do motor': Virabrequim, bielas, pistões, anéis, bronzinas e bloco.
+    2. 'Cabeçote': Válvulas, comando, tuchos, juntas e o cabeçote em si.
+    3. 'Sistema de admissão': Filtro de ar, TBI, coletor, sensores MAP/MAF e componentes de Turbo (se houver).
+    4. 'Sistema de combustível': Bicos, bomba de alta/baixa, filtro, flauta e regulador.
+    5. 'Sistema de ignição': Velas específicas (Iridium/Platinum se original), bobinas e chicote de ignição.
+    6. 'Sistema de arrefecimento': Radiador, bomba d'água, válvula termostática, reservatório e mangueiras.
+    7. 'Sistema de lubrificação': Filtro de óleo, bomba, cárter e especificação exata do óleo (ex: 0W20, 5W30).
+    8. 'Sistema de escape': Coletor, catalisador, silencioso e todas as sondas lambda.
+    9. 'Transmissão e Câmbio': Componentes internos específicos da caixa (Manual, AT, CVT, Dualogic, DSG, etc).
+    10. 'Componentes Externos': Pastilhas, discos, amortecedores, correias de acessórios, palhetas e coxins.
+
+    Retorne APENAS um JSON no formato:
     {{
         "parts": [
             {{
                 "id": increment_id,
-                "name": "Nome da Peça",
-                "category": "Categoria",
-                "subcategory": "Subcategoria",
-                "description": "Descrição técnica",
-                "image_url": "URL da imagem da peça",
+                "name": "Nome Técnico da Peça",
+                "category": "Uma das 10 categorias acima",
+                "subcategory": "Subcategoria de engenharia",
+                "description": "Descrição técnica ultra-detalhada",
+                "image_url": "URL da imagem (Wikimedia Commons)",
                 "details": {{
-                    "purpose": "Para que serve especificamente neste carro",
-                    "location": "Onde fica localizado neste modelo",
-                    "common_problems": "Quais defeitos costumam dar neste modelo de carro"
+                    "purpose": "Finalidade técnica específica neste motor/veículo",
+                    "location": "Localização exata para o mecânico",
+                    "common_problems": "Defeitos crônicos conhecidos deste modelo/ano"
                 }}
             }}
         ]
     }}
-    Gere o máximo de peças que conseguir dentro do limite de tokens, priorizando a precisão técnica para o {vehicle.brand} {vehicle.model} {vehicle.year}.
+    Gere o maior número de peças possível para garantir um catálogo profissional e exaustivo.
     """
 
     try:
@@ -519,13 +629,16 @@ def get_vehicle_checklist_ai(vehicle_id):
         return get_vehicle_checklist(vehicle_id)
 
     prompt = f"""
-    Como um mecânico especialista em manutenção preventiva, gere um checklist de manutenção para um {vehicle.brand} {vehicle.model} ano {vehicle.year} com {current_km}km rodados e câmbio {vehicle.transmission}.
+    Como um mecânico especialista em manutenção preventiva, gere um checklist de manutenção para um {vehicle.brand} {vehicle.model} ano {vehicle.year} com {current_km}km rodados, câmbio {vehicle.transmission}, motor {vehicle.engine_type} e perfil de uso {vehicle.usage_type}.
+    
+    Perfil de Uso: {vehicle.usage_type} (IMPORTANTE: Se o uso for 'Urbano/Severo', antecipe as trocas de óleo e filtros em 50%).
+    
     Considere o histórico informado pelo usuário: 
     - Última troca de óleo: {vehicle.last_oil_change}km (há {current_km - vehicle.last_oil_change}km)
     - Última troca de correia: {vehicle.last_belt_change}km (há {current_km - vehicle.last_belt_change}km)
     - Última troca de freios: {vehicle.last_brake_change}km (há {current_km - vehicle.last_brake_change}km)
 
-    Gere um checklist personalizado com o que deve ser feito AGORA ou EM BREVE para este carro específico.
+    Gere um checklist personalizado com o que deve ser feito AGORA ou EM BREVE para este carro específico, considerando as particularidades do motor {vehicle.engine_type}.
 
     IMPORTANTE PARA AS IMAGENS:
     Para o campo 'image_url', use EXCLUSIVAMENTE links reais do Wikimedia Commons (upload.wikimedia.org) que mostrem a peça ou o serviço de manutenção.
@@ -665,37 +778,48 @@ def get_vehicle_parts(vehicle_id):
     transmission_type = vehicle.transmission.lower() if vehicle.transmission else 'manual'
     is_automatic = 'autom' in transmission_type
     
-    parts_catalog = []
-    
-    # --- Peças de Motor (Comum a todos) ---
-    parts_catalog.extend([
+    # --- Fallback: Catálogo Estático de Segurança (Caso a IA falhe ou não tenha chave) ---
+    parts_catalog = [
         {
             'id': 1,
             'name': 'Filtro de Óleo',
-            'category': 'Motor e Sistema de alimentação',
+            'category': 'Sistema de lubrificação',
             'subcategory': 'Lubrificação',
             'description': f'Filtro de alta eficiência para {vehicle.brand} {vehicle.model}.',
             'details': {
-                'purpose': 'Reter impurezas do óleo lubrificante.',
-                'location': 'Bloco do motor.',
-                'common_problems': 'Obstrução por falta de troca, causando queda de pressão.'
+                'purpose': 'Reter impurezas do óleo lubrificante para proteger as partes internas do motor.',
+                'location': 'Acoplado ao bloco do motor.',
+                'common_problems': 'Saturação por falta de troca, causando perda de pressão.'
             },
             'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
         },
         {
             'id': 2,
             'name': 'Velas de Ignição',
-            'category': 'Motor e Sistema de alimentação',
+            'category': 'Sistema de ignição',
             'subcategory': 'Ignição',
             'description': f'Conjunto de velas originais para {vehicle.brand}.',
             'details': {
-                'purpose': 'Gerar a centelha para combustão.',
-                'location': 'Cabeçote do motor.',
-                'common_problems': 'Dificuldade na partida e alto consumo.'
+                'purpose': 'Gerar a centelha para a combustão interna.',
+                'location': 'No cabeçote do motor.',
+                'common_problems': 'Carbonização ou desgaste dos eletrodos.'
             },
             'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Sparkplug.jpg/800px-Sparkplug.jpg'
+        },
+        {
+            'id': 3,
+            'name': 'Pastilhas de Freio Dianteiras',
+            'category': 'Componentes Externos',
+            'subcategory': 'Freios',
+            'description': 'Pastilhas de composto semi-metálico.',
+            'details': {
+                'purpose': 'Gerar atrito com o disco para frenagem.',
+                'location': 'Pinças de freio dianteiras.',
+                'common_problems': 'Desgaste natural ou ruídos por vitrificação.'
+            },
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Brake_pads.jpg/800px-Brake_pads.jpg'
         }
-    ])
+    ]
 
     # --- Peças de Transmissão (Depende do Câmbio) ---
     if is_automatic:
@@ -703,7 +827,7 @@ def get_vehicle_parts(vehicle_id):
             {
                 'id': 104,
                 'name': 'Conversor de Torque',
-                'category': 'Transmissão e Embreagem',
+                'category': 'Transmissão e Câmbio',
                 'subcategory': f'Automático ({vehicle.transmission})',
                 'description': f'Acoplamento fluído para o câmbio automático do {vehicle.model}.',
                 'details': {
@@ -725,6 +849,32 @@ def get_vehicle_parts(vehicle_id):
                     'common_problems': 'Trancos ou atrasos nas trocas.'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Hydraulic_valve_block.jpg/800px-Hydraulic_valve_block.jpg'
+            },
+            {
+                'id': 106,
+                'name': 'Filtro do Câmbio Automático',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': f'Automático ({vehicle.transmission})',
+                'description': 'Filtro interno responsável pela limpeza do fluído ATF.',
+                'details': {
+                    'purpose': 'Reter limalhas e impurezas do sistema hidráulico do câmbio.',
+                    'location': 'Dentro do cárter da transmissão.',
+                    'common_problems': 'Entupimento causando perda de pressão e queima dos discos.'
+                },
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
+            },
+            {
+                'id': 107,
+                'name': 'Fluído de Transmissão ATF',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': f'Automático ({vehicle.transmission})',
+                'description': 'Óleo específico para transmissões automáticas.',
+                'details': {
+                    'purpose': 'Lubrificação, arrefecimento e transferência de força hidráulica.',
+                    'location': 'Sistema de transmissão.',
+                    'common_problems': 'Degradação por calor, causando patinação.'
+                },
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
             }
         ])
     else:
@@ -741,6 +891,32 @@ def get_vehicle_parts(vehicle_id):
                     'common_problems': 'Embreagem "patinando" ou pedal pesado.'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Clutch_plate.jpg/800px-Clutch_plate.jpg'
+            },
+            {
+                'id': 101,
+                'name': 'Atuador Hidráulico de Embreagem',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': 'Manual',
+                'description': 'Componente que aciona a embreagem via pressão hidráulica.',
+                'details': {
+                    'purpose': 'Empurrar o platô para liberar o disco de embreagem.',
+                    'location': 'Acoplado ao câmbio ou dentro da caixa seca.',
+                    'common_problems': 'Vazamento de fluído de freio e pedal bobo.'
+                },
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
+            },
+            {
+                'id': 102,
+                'name': 'Cabo de Seleção de Marchas',
+                'category': 'Transmissão e Embreagem',
+                'subcategory': 'Manual',
+                'description': 'Cabo que transmite o movimento da alavanca para o câmbio.',
+                'details': {
+                    'purpose': 'Selecionar e engatar as marchas mecanicamente.',
+                    'location': 'Entre a alavanca de câmbio e a caixa.',
+                    'common_problems': 'Rompimento ou folga excessiva nas buchas.'
+                },
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
             }
         ])
 
@@ -771,6 +947,32 @@ def get_vehicle_parts(vehicle_id):
                 'common_problems': 'Vazamento de óleo ou perda de ação.'
             },
             'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/MacPherson_strut.jpg/800px-MacPherson_strut.jpg'
+        },
+        {
+            'id': 400,
+            'name': 'Bomba d\'Água',
+            'category': 'Sistema de Arrefecimento',
+            'subcategory': 'Arrefecimento',
+            'description': f'Bomba de circulação do fluído de arrefecimento para {vehicle.model}.',
+            'details': {
+                'purpose': 'Fazer o líquido de arrefecimento circular pelo motor e radiador.',
+                'location': 'Acoplada ao bloco do motor, movida pela correia.',
+                'common_problems': 'Vazamentos no selo mecânico ou ruído no rolamento.'
+            },
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Automotive_water_pump.jpg/800px-Automotive_water_pump.jpg'
+        },
+        {
+            'id': 500,
+            'name': 'Alternador',
+            'category': 'Sistema Elétrico',
+            'subcategory': 'Geração de Energia',
+            'description': 'Gerador de energia elétrica para o veículo e carga da bateria.',
+            'details': {
+                'purpose': 'Transformar energia mecânica em elétrica.',
+                'location': 'Frente do motor, movido pela correia de acessórios.',
+                'common_problems': 'Desgaste das escovas ou falha no regulador de voltagem.'
+            },
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Alternator.jpg/800px-Alternator.jpg'
         }
     ])
     

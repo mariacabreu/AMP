@@ -3,26 +3,24 @@ import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaVie
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000'; // Replace with your IP for physical devices
+const API_BASE_URL = 'http://127.0.0.1:5000'; // Replace with your IP for physical devices
 
 const VehicleRegistrationScreen = ({ navigation, route }) => {
   const user = route.params?.user;
   
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
+  const [engines, setEngines] = useState([]);
   const [years, setYears] = useState([]);
   
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [transmission, setTransmission] = useState('');
+  const [engineType, setEngineType] = useState('');
+  const [usageType, setUsageType] = useState('Misto');
   const [mileage, setMileage] = useState('');
   const [fuelType, setFuelType] = useState('Gasolina');
-  
-  // Novos estados para manutenção preventiva
-  const [lastOilChange, setLastOilChange] = useState('');
-  const [lastBeltChange, setLastBeltChange] = useState('');
-  const [lastBrakeChange, setLastBrakeChange] = useState('');
 
   useEffect(() => {
     fetchBrands();
@@ -46,9 +44,18 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
     }
   };
 
-  const fetchYears = async (brand) => {
+  const fetchEngines = async (brand, model) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/vehicle/years/${brand}`);
+      const response = await axios.get(`${API_BASE_URL}/vehicle/engines/${brand}/${model}`);
+      setEngines(response.data);
+    } catch (error) {
+      console.error('Error fetching engines:', error);
+    }
+  };
+
+  const fetchYears = async (brand, model) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/vehicle/years/${brand}/${model}`);
       setYears(response.data);
     } catch (error) {
       console.error('Error fetching years:', error);
@@ -58,12 +65,26 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const handleBrandChange = (brand) => {
     setSelectedBrand(brand);
     setSelectedModel('');
+    setEngineType('');
     setSelectedYear('');
     if (brand) {
       fetchModels(brand);
-      fetchYears(brand);
     } else {
       setModels([]);
+      setEngines([]);
+      setYears([]);
+    }
+  };
+
+  const handleModelChange = (model) => {
+    setSelectedModel(model);
+    setEngineType('');
+    setSelectedYear('');
+    if (model) {
+      fetchEngines(selectedBrand, model);
+      fetchYears(selectedBrand, model);
+    } else {
+      setEngines([]);
       setYears([]);
     }
   };
@@ -81,12 +102,11 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
         model: selectedModel,
         year: parseInt(selectedYear),
         transmission,
+        engine_type: engineType,
+        usage_type: usageType,
         mileage: mileage ? parseInt(mileage) : 0,
         fuel_type: fuelType,
-        user_id: user?.id || 1,
-        last_oil_change: lastOilChange ? parseInt(lastOilChange) : 0,
-        last_belt_change: lastBeltChange ? parseInt(lastBeltChange) : 0,
-        last_brake_change: lastBrakeChange ? parseInt(lastBrakeChange) : 0
+        user_id: user?.id || 1
       });
 
       console.log('Veículo cadastrado:', response.data);
@@ -143,7 +163,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={selectedModel}
-                onValueChange={setSelectedModel}
+                onValueChange={handleModelChange}
                 enabled={!!selectedBrand}
                 style={styles.picker}
               >
@@ -161,7 +181,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
               <Picker
                 selectedValue={selectedYear}
                 onValueChange={setSelectedYear}
-                enabled={!!selectedBrand}
+                enabled={!!selectedModel}
                 style={styles.picker}
               >
                 <Picker.Item label="Selecione o Ano" value="" />
@@ -185,6 +205,39 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
                 <Picker.Item label="Automático" value="Automático" />
                 <Picker.Item label="Automatizado" value="Automatizado" />
                 <Picker.Item label="CVT" value="CVT" />
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Motorização (Contexto para IA)</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={engineType}
+                onValueChange={setEngineType}
+                enabled={!!selectedModel}
+                style={styles.picker}
+              >
+                <Picker.Item label="Selecione a Motorização" value="" />
+                {engines.map(engine => (
+                  <Picker.Item key={engine} label={engine} value={engine} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Perfil de Uso (Recomendações IA)</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={usageType}
+                onValueChange={setUsageType}
+                style={styles.picker}
+              >
+                <Picker.Item label="Urbano (Cidade/Trânsito)" value="Urbano" />
+                <Picker.Item label="Rodoviário (Estrada)" value="Rodoviário" />
+                <Picker.Item label="Misto (Cidade e Estrada)" value="Misto" />
+                <Picker.Item label="Trabalho/Severo (Uber/Entrega)" value="Severo" />
               </Picker>
             </View>
           </View>
@@ -216,42 +269,6 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
                 <Picker.Item label="Elétrico" value="Elétrico" />
               </Picker>
             </View>
-          </View>
-
-          <Text style={styles.sectionTitle}>Histórico de Manutenção (Preventiva)</Text>
-          <Text style={styles.sectionSub}>Deixe 0 se não souber ou nunca tiver trocado.</Text>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>KM da última troca de ÓLEO</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: 45000"
-              value={lastOilChange}
-              onChangeText={setLastOilChange}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>KM da última troca de CORREIA DENTADA</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: 40000"
-              value={lastBeltChange}
-              onChangeText={setLastBeltChange}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>KM da última troca de PASTILHAS DE FREIO</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: 48000"
-              value={lastBrakeChange}
-              onChangeText={setLastBrakeChange}
-              keyboardType="numeric"
-            />
           </View>
 
           <TouchableOpacity style={styles.registerButton} onPress={handleRegisterVehicle}>
@@ -320,19 +337,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFCF00',
-    marginTop: 20,
-    marginBottom: 5,
-  },
-  sectionSub: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 15,
-    fontStyle: 'italic',
   },
   infoText: {
     fontSize: 12,

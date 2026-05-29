@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Aler
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const VehicleHistoryScreen = ({ navigation, route }) => {
   const { vehicleId, user } = route.params || { vehicleId: 1, user: null };

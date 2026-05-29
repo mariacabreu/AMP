@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollVi
 import axios from 'axios';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const HomeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;

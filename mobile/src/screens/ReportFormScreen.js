@@ -6,7 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 
 const { width } = Dimensions.get('window');
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const ReportFormScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;

@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollVi
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const PartsCatalogScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -16,13 +16,16 @@ const PartsCatalogScreen = ({ navigation, route }) => {
 
   const categories = [
     'Todos',
-    'Motor e Sistema de alimentação',
-    'Transmissão e Embreagem',
-    'Sistema de suspensão',
-    'Sistema de Freios',
-    'Direção',
-    'Sistema Elétrico',
-    'Sistema de Arrefecimento'
+    'Bloco do motor',
+    'Cabeçote',
+    'Sistema de admissão',
+    'Sistema de combustível',
+    'Sistema de ignição',
+    'Sistema de arrefecimento',
+    'Sistema de lubrificação',
+    'Sistema de escape',
+    'Transmissão e Câmbio',
+    'Componentes Externos'
   ];
 
   useEffect(() => {
@@ -51,16 +54,21 @@ const PartsCatalogScreen = ({ navigation, route }) => {
   };
 
   const filteredParts = data.parts.filter(part => {
-    const matchesCategory = selectedCategory === 'Todos' || part.category === selectedCategory;
-    const matchesSearch = part.name.toLowerCase().includes(search.toLowerCase());
+    // Normalização para comparação (remove espaços extras e garante case-insensitive)
+    const partCategory = (part.category || '').trim().toLowerCase();
+    const currentFilter = selectedCategory.trim().toLowerCase();
+    
+    const matchesCategory = selectedCategory === 'Todos' || partCategory === currentFilter;
+    const matchesSearch = (part.name || '').toLowerCase().includes(search.toLowerCase());
+    
     return matchesCategory && matchesSearch;
   });
 
-  // Agrupa as peças por subcategoria para visualização de instrução
+  // Agrupa as peças por categoria para visualização (Título da Seção)
   const groupedParts = filteredParts.reduce((acc, part) => {
-    const sub = part.subcategory || 'Geral';
-    if (!acc[sub]) acc[sub] = [];
-    acc[sub].push(part);
+    const cat = part.category || 'Geral';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(part);
     return acc;
   }, {});
 
@@ -127,20 +135,37 @@ const PartsCatalogScreen = ({ navigation, route }) => {
 
         <Text style={styles.vehicleInfo}>Peças para: {data.vehicle}</Text>
 
-        {/* Parts List com Agrupamento */}
-        {Object.keys(groupedParts).length === 0 ? (
+        {/* Parts List */}
+        {filteredParts.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="package-variant-closed" size={50} color="#D9D9D9" />
-            <Text style={styles.emptyStateText}>Nenhuma peça encontrada nesta categoria.</Text>
+            <Text style={styles.emptyStateText}>Nenhuma peça encontrada.</Text>
           </View>
         ) : (
-          Object.keys(groupedParts).map((subcat) => (
-            <View key={subcat} style={styles.subcategorySection}>
+          selectedCategory === 'Todos' ? (
+            // Visualização em "Todos": Lista contínua de cards sem títulos de seção
+            filteredParts.map((part) => (
+              <TouchableOpacity 
+                key={part.id} 
+                style={styles.partCard}
+                onPress={() => handlePartPress(part)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.partInfo}>
+                  <Text style={styles.partName}>{part.name}</Text>
+                  <Text style={styles.partDescription}>{part.description}</Text>
+                </View>
+                <Image source={{ uri: part.image_url }} style={styles.partImage} resizeMode="contain" />
+              </TouchableOpacity>
+            ))
+          ) : (
+            // Visualização com Filtro Selecionado: Exibe o título da categoria e as peças dela
+            <View style={styles.subcategorySection}>
               <View style={styles.subcategoryHeader}>
-                <Text style={styles.subcategoryTitle}>{subcat.toUpperCase()}</Text>
+                <Text style={styles.subcategoryTitle}>{selectedCategory.toUpperCase()}</Text>
                 <View style={styles.subcategoryLine} />
               </View>
-              {groupedParts[subcat].map((part) => (
+              {filteredParts.map((part) => (
                 <TouchableOpacity 
                   key={part.id} 
                   style={styles.partCard}
@@ -155,7 +180,7 @@ const PartsCatalogScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               ))}
             </View>
-          ))
+          )
         )}
 
         <View style={styles.emptySpace} />

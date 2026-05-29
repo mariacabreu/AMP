@@ -4,7 +4,7 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const ReportScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;

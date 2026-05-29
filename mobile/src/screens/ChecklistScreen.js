@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollVi
 import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const ChecklistScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
