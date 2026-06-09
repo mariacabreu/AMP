@@ -4,9 +4,9 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
+import API_BASE_URL from '../api';
 
 const { width } = Dimensions.get('window');
-const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const ReportFormScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;

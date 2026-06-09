@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
-
-const API_BASE_URL = 'http://127.0.0.1:5000'; // Replace with your IP for physical devices
+import API_BASE_URL from '../api';
 
 const VehicleRegistrationScreen = ({ navigation, route }) => {
   const user = route.params?.user;

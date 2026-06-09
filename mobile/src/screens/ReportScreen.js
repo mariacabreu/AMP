@@ -3,8 +3,7 @@ import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollVi
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
-
-const API_BASE_URL = 'http://127.0.0.1:5000';
+import API_BASE_URL from '../api';
 
 const ReportScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;

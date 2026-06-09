@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Platform, Modal } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
-
-const API_BASE_URL = 'http://127.0.0.1:5000';
+import API_BASE_URL from '../api';
 
 const PartsCatalogScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -14,19 +13,8 @@ const PartsCatalogScreen = ({ navigation, route }) => {
   const [selectedPart, setSelectedPart] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const categories = [
-    'Todos',
-    'Bloco do motor',
-    'Cabeçote',
-    'Sistema de admissão',
-    'Sistema de combustível',
-    'Sistema de ignição',
-    'Sistema de arrefecimento',
-    'Sistema de lubrificação',
-    'Sistema de escape',
-    'Transmissão e Câmbio',
-    'Componentes Externos'
-  ];
+  // Categorias dinâmicas baseadas nas peças recebidas
+  const [categories, setCategories] = useState(['Todos']);
 
   useEffect(() => {
     fetchParts();
@@ -41,6 +29,20 @@ const PartsCatalogScreen = ({ navigation, route }) => {
       // Usando o endpoint de IA para catálogo técnico personalizado
       const response = await axios.get(`${API_BASE_URL}/vehicle/parts/ai/${vehicleId}`);
       setData(response.data);
+
+      // Extrair categorias únicas das peças
+      if (response.data.parts && response.data.parts.length > 0) {
+        const uniqueCategories = [
+          'Todos',
+          ...new Set(response.data.parts.map(part => part.category || 'Geral'))
+        ];
+        setCategories(uniqueCategories);
+        
+        // Resetar filtro se a categoria selecionada não existir mais nos novos dados
+        if (selectedCategory !== 'Todos' && !uniqueCategories.includes(selectedCategory)) {
+          setSelectedCategory('Todos');
+        }
+      }
     } catch (error) {
       console.error('Erro ao buscar catálogo de peças:', error);
     } finally {
@@ -54,11 +56,7 @@ const PartsCatalogScreen = ({ navigation, route }) => {
   };
 
   const filteredParts = data.parts.filter(part => {
-    // Normalização para comparação (remove espaços extras e garante case-insensitive)
-    const partCategory = (part.category || '').trim().toLowerCase();
-    const currentFilter = selectedCategory.trim().toLowerCase();
-    
-    const matchesCategory = selectedCategory === 'Todos' || partCategory === currentFilter;
+    const matchesCategory = selectedCategory === 'Todos' || (part.category || 'Geral') === selectedCategory;
     const matchesSearch = (part.name || '').toLowerCase().includes(search.toLowerCase());
     
     return matchesCategory && matchesSearch;
@@ -227,6 +225,13 @@ const PartsCatalogScreen = ({ navigation, route }) => {
                     <Text style={styles.detailLabel}>PROBLEMAS COMUNS:</Text>
                     <Text style={styles.detailText}>{selectedPart.details?.common_problems || 'Informação não disponível.'}</Text>
                   </View>
+
+                  {selectedPart.details?.maintenance_interval && (
+                    <View style={[styles.detailItem, { backgroundColor: '#FFF9E6', padding: 10, borderRadius: 8 }]}>
+                      <Text style={[styles.detailLabel, { color: '#B8860B' }]}>INTERVALO RECOMENDADO:</Text>
+                      <Text style={[styles.detailText, { fontWeight: '700' }]}>{selectedPart.details.maintenance_interval}</Text>
+                    </View>
+                  )}
                 </View>
 
                 <TouchableOpacity 

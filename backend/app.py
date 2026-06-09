@@ -544,7 +544,7 @@ def get_vehicle_parts_ai(vehicle_id):
         return get_vehicle_parts(vehicle_id)
 
     prompt = f"""
-    Como um engenheiro mecânico automotivo sênior com vasto conhecimento em manuais de oficina e diagramas de explosão de peças, gere um catálogo TÉCNICO COMPLETO e ULTRA-ESPECÍFICO de peças para o veículo abaixo.
+    Como um engenheiro mecânico automotivo sênior especialista em manutenção preventiva, gere um catálogo focado EXCLUSIVAMENTE em PEÇAS DE MANUTENÇÃO para o veículo abaixo. O objetivo é ajudar o usuário a entender a função de cada peça e a importância de trocá-la preventivamente para evitar danos maiores.
 
     DADOS DO VEÍCULO:
     - Marca/Modelo: {vehicle.brand} {vehicle.model}
@@ -553,51 +553,45 @@ def get_vehicle_parts_ai(vehicle_id):
     - Transmissão: {vehicle.transmission}
     - Combustível: {vehicle.fuel_type}
 
-    REQUISITO DE FIDELIDADE TÉCNICA:
-    Você deve ignorar peças genéricas. O catálogo deve refletir a engenharia REAL deste modelo específico. 
-    Exemplos de precisão esperada:
-    - Se for um Volkswagen com motor TSI, deve listar Turbocompressor, Intercooler e Bomba de Alta Pressão.
-    - Se for um Toyota Corolla Hybrid, deve listar Motor Elétrico, Inversor e Bateria de Alta Voltagem.
-    - Se for um Jeep com câmbio Aisin, deve detalhar os componentes específicos dessa caixa.
-    - Se for um motor com Correia Banhada a Óleo (ex: Ford 1.0 3cil), isso deve ser mencionado nos problemas comuns e na descrição.
+    REQUISITO DE FOCO EM MANUTENÇÃO:
+    Não liste componentes estruturais ou peças que não requerem manutenção periódica. Foque em:
+    1. 'Filtros': Óleo, Ar, Cabine, Combustível.
+    2. 'Lubrificantes e Fluidos': Óleo do motor, Fluido de freio, Aditivo de arrefecimento, Óleo de câmbio.
+    3. 'Sistema de Freios': Pastilhas, Discos, Fluido.
+    4. 'Suspensão e Direção': Amortecedores, Buchas, Pivôs, Terminais.
+    5. 'Ignição e Correias': Velas, Bobinas, Correia de acessórios, Corrente/Correia dentada.
+    6. 'Arrefecimento': Bomba d'água, Válvula termostática, Mangueiras críticas.
 
-    ORGANIZAÇÃO RIGOROSA EM 10 CATEGORIAS:
-    1. 'Bloco do motor': Virabrequim, bielas, pistões, anéis, bronzinas e bloco.
-    2. 'Cabeçote': Válvulas, comando, tuchos, juntas e o cabeçote em si.
-    3. 'Sistema de admissão': Filtro de ar, TBI, coletor, sensores MAP/MAF e componentes de Turbo (se houver).
-    4. 'Sistema de combustível': Bicos, bomba de alta/baixa, filtro, flauta e regulador.
-    5. 'Sistema de ignição': Velas específicas (Iridium/Platinum se original), bobinas e chicote de ignição.
-    6. 'Sistema de arrefecimento': Radiador, bomba d'água, válvula termostática, reservatório e mangueiras.
-    7. 'Sistema de lubrificação': Filtro de óleo, bomba, cárter e especificação exata do óleo (ex: 0W20, 5W30).
-    8. 'Sistema de escape': Coletor, catalisador, silencioso e todas as sondas lambda.
-    9. 'Transmissão e Câmbio': Componentes internos específicos da caixa (Manual, AT, CVT, Dualogic, DSG, etc).
-    10. 'Componentes Externos': Pastilhas, discos, amortecedores, correias de acessórios, palhetas e coxins.
+    Para cada peça, a descrição deve enfatizar:
+    - O QUE ELA FAZ (Função técnica clara).
+    - POR QUE PREVENIR (O que acontece se não trocar? Qual o prejuízo financeiro ou risco à segurança?).
 
     Retorne APENAS um JSON no formato:
     {{
         "parts": [
             {{
                 "id": increment_id,
-                "name": "Nome Técnico da Peça",
-                "category": "Uma das 10 categorias acima",
-                "subcategory": "Subcategoria de engenharia",
-                "description": "Descrição técnica ultra-detalhada",
+                "name": "Nome da Peça de Manutenção",
+                "category": "Uma das categorias acima",
+                "subcategory": "Tipo de manutenção (Preventiva/Corretiva)",
+                "description": "Explicação clara da função e o risco de não realizar a manutenção",
                 "image_url": "URL da imagem (Wikimedia Commons)",
                 "details": {{
-                    "purpose": "Finalidade técnica específica neste motor/veículo",
-                    "location": "Localização exata para o mecânico",
-                    "common_problems": "Defeitos crônicos conhecidos deste modelo/ano"
+                    "purpose": "Finalidade técnica no contexto deste veículo",
+                    "location": "Onde se encontra no carro",
+                    "common_problems": "Sinais de que a peça está falhando",
+                    "maintenance_interval": "Intervalo recomendado (ex: 10.000km ou 1 ano)"
                 }}
             }}
         ]
     }}
-    Gere o maior número de peças possível para garantir um catálogo profissional e exaustivo.
+    Gere uma lista rica e educativa com pelo menos 15-20 itens essenciais.
     """
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4-turbo-preview",
-            messages=[{"role": "system", "content": "Você é um engenheiro mecânico automotivo sênior especialista em catálogos técnicos."},
+            model="gpt-4o",
+            messages=[{"role": "system", "content": "Você é um engenheiro mecânico sênior especialista em catálogo de peças automotivas."},
                       {"role": "user", "content": prompt}],
             response_format={ "type": "json_object" }
         )
@@ -668,7 +662,7 @@ def get_vehicle_checklist_ai(vehicle_id):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4-turbo-preview",
+            model="gpt-4o",
             messages=[{"role": "system", "content": "Você é um mecânico master de concessionária especialista em manutenção preventiva."},
                       {"role": "user", "content": prompt}],
             response_format={ "type": "json_object" }
@@ -780,44 +774,64 @@ def get_vehicle_parts(vehicle_id):
     
     # --- Fallback: Catálogo Estático de Segurança (Caso a IA falhe ou não tenha chave) ---
     parts_catalog = [
+        # 1. Filtros
         {
             'id': 1,
             'name': 'Filtro de Óleo',
-            'category': 'Sistema de lubrificação',
-            'subcategory': 'Lubrificação',
-            'description': f'Filtro de alta eficiência para {vehicle.brand} {vehicle.model}.',
+            'category': 'Filtros',
+            'subcategory': 'Manutenção Preventiva',
+            'description': f'Filtra as impurezas do óleo. Se não trocado, o óleo sujo causa atrito excessivo e pode fundir o motor {vehicle.engine_type}.',
             'details': {
-                'purpose': 'Reter impurezas do óleo lubrificante para proteger as partes internas do motor.',
-                'location': 'Acoplado ao bloco do motor.',
-                'common_problems': 'Saturação por falta de troca, causando perda de pressão.'
+                'purpose': 'Manter a pureza do lubrificante para proteger bronzinas e pistões.',
+                'location': 'Parte inferior do motor, próximo ao cárter.',
+                'common_problems': 'Luz de óleo piscando ou ruídos metálicos no motor.',
+                'maintenance_interval': '10.000km ou 1 ano'
             },
             'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
         },
         {
+            'id': 11,
+            'name': 'Filtro de Ar do Motor',
+            'category': 'Filtros',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Impede que poeira entre no motor. O acúmulo de sujeira aumenta o consumo e reduz a vida útil dos cilindros.',
+            'details': {
+                'purpose': 'Garantir que apenas ar limpo entre na câmara de combustão.',
+                'location': 'Caixa plástica conectada à admissão do motor.',
+                'common_problems': 'Perda de potência e aumento do consumo de combustível.',
+                'maintenance_interval': '20.000km'
+            },
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Air_filter_car.jpg/800px-Air_filter_car.jpg'
+        },
+        # 3. Ignição
+        {
             'id': 2,
             'name': 'Velas de Ignição',
-            'category': 'Sistema de ignição',
-            'subcategory': 'Ignição',
-            'description': f'Conjunto de velas originais para {vehicle.brand}.',
+            'category': 'Ignição e Correias',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Responsáveis pela faísca que queima o combustível. Velas gastas forçam as bobinas e podem causar falhas graves na injeção.',
             'details': {
-                'purpose': 'Gerar a centelha para a combustão interna.',
-                'location': 'No cabeçote do motor.',
-                'common_problems': 'Carbonização ou desgaste dos eletrodos.'
+                'purpose': 'Iniciar a combustão de forma eficiente e sincronizada.',
+                'location': 'No cabeçote, conectadas às bobinas.',
+                'common_problems': 'Dificuldade na partida e motor "falhando" em marcha lenta.',
+                'maintenance_interval': '40.000km a 60.000km'
             },
             'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Sparkplug.jpg/800px-Sparkplug.jpg'
         },
+        # 4. Freios
         {
             'id': 3,
-            'name': 'Pastilhas de Freio Dianteiras',
-            'category': 'Componentes Externos',
-            'subcategory': 'Freios',
-            'description': 'Pastilhas de composto semi-metálico.',
+            'name': 'Pastilhas de Freio',
+            'category': 'Sistema de Freios',
+            'subcategory': 'Manutenção Corretiva/Preventiva',
+            'description': 'Componente de atrito que para o carro. Ignorar o desgaste pode destruir os discos de freio e causar acidentes.',
             'details': {
-                'purpose': 'Gerar atrito com o disco para frenagem.',
-                'location': 'Pinças de freio dianteiras.',
-                'common_problems': 'Desgaste natural ou ruídos por vitrificação.'
+                'purpose': 'Transformar energia cinética em calor para frear o veículo.',
+                'location': 'Dentro das pinças de freio nas rodas.',
+                'common_problems': 'Assobio agudo ao frear ou perda de eficiência na frenagem.',
+                'maintenance_interval': 'Verificar a cada 10.000km'
             },
-            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Brake_pads.jpg/800px-Brake_pads.jpg'
+            'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Brake_pad.jpg/800px-Brake_pad.jpg'
         }
     ]
 
@@ -827,52 +841,56 @@ def get_vehicle_parts(vehicle_id):
             {
                 'id': 104,
                 'name': 'Conversor de Torque',
-                'category': 'Transmissão e Câmbio',
+                'category': 'Correias e Transmissão',
                 'subcategory': f'Automático ({vehicle.transmission})',
                 'description': f'Acoplamento fluído para o câmbio automático do {vehicle.model}.',
                 'details': {
                     'purpose': 'Transmitir o torque do motor para a caixa sem embreagem mecânica.',
                     'location': 'Entre o motor e a transmissão.',
-                    'common_problems': 'Patinamento ou vibração excessiva.'
+                    'common_problems': 'Patinamento ou vibração excessiva.',
+                    'maintenance_interval': 'Troca de fluido a cada 60.000km'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Torque_converter.jpg/800px-Torque_converter.jpg'
             },
             {
                 'id': 105,
                 'name': 'Corpo de Válvulas',
-                'category': 'Transmissão e Embreagem',
+                'category': 'Correias e Transmissão',
                 'subcategory': f'Automático ({vehicle.transmission})',
                 'description': 'Cérebro hidráulico da transmissão automática.',
                 'details': {
                     'purpose': 'Controlar o fluxo de fluído para as trocas de marcha.',
                     'location': 'Interior da caixa de câmbio.',
-                    'common_problems': 'Trancos ou atrasos nas trocas.'
+                    'common_problems': 'Trancos ou atrasos nas trocas.',
+                    'maintenance_interval': 'Inspecionar a cada 40.000km'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Hydraulic_valve_block.jpg/800px-Hydraulic_valve_block.jpg'
             },
             {
                 'id': 106,
                 'name': 'Filtro do Câmbio Automático',
-                'category': 'Transmissão e Embreagem',
+                'category': 'Filtros',
                 'subcategory': f'Automático ({vehicle.transmission})',
                 'description': 'Filtro interno responsável pela limpeza do fluído ATF.',
                 'details': {
                     'purpose': 'Reter limalhas e impurezas do sistema hidráulico do câmbio.',
                     'location': 'Dentro do cárter da transmissão.',
-                    'common_problems': 'Entupimento causando perda de pressão e queima dos discos.'
+                    'common_problems': 'Entupimento causando perda de pressão e queima dos discos.',
+                    'maintenance_interval': 'Troca a cada 60.000km'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
             },
             {
                 'id': 107,
                 'name': 'Fluído de Transmissão ATF',
-                'category': 'Transmissão e Embreagem',
+                'category': 'Lubrificantes e Fluidos',
                 'subcategory': f'Automático ({vehicle.transmission})',
                 'description': 'Óleo específico para transmissões automáticas.',
                 'details': {
                     'purpose': 'Lubrificação, arrefecimento e transferência de força hidráulica.',
                     'location': 'Sistema de transmissão.',
-                    'common_problems': 'Degradação por calor, causando patinação.'
+                    'common_problems': 'Degradação por calor, causando patinação.',
+                    'maintenance_interval': '60.000km'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
             }
@@ -882,39 +900,42 @@ def get_vehicle_parts(vehicle_id):
             {
                 'id': 100,
                 'name': 'Kit de Embreagem',
-                'category': 'Transmissão e Embreagem',
+                'category': 'Correias e Transmissão',
                 'subcategory': 'Manual',
                 'description': f'Kit completo (platô, disco e rolamento) para {vehicle.brand}.',
                 'details': {
                     'purpose': 'Acoplamento e desacoplamento do motor com o câmbio.',
                     'location': 'Entre o motor e a caixa de câmbio.',
-                    'common_problems': 'Embreagem "patinando" ou pedal pesado.'
+                    'common_problems': 'Embreagem "patinando" ou pedal pesado.',
+                    'maintenance_interval': '80.000km a 100.000km'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Clutch_plate.jpg/800px-Clutch_plate.jpg'
             },
             {
                 'id': 101,
                 'name': 'Atuador Hidráulico de Embreagem',
-                'category': 'Transmissão e Embreagem',
+                'category': 'Correias e Transmissão',
                 'subcategory': 'Manual',
                 'description': 'Componente que aciona a embreagem via pressão hidráulica.',
                 'details': {
                     'purpose': 'Empurrar o platô para liberar o disco de embreagem.',
                     'location': 'Acoplado ao câmbio ou dentro da caixa seca.',
-                    'common_problems': 'Vazamento de fluído de freio e pedal bobo.'
+                    'common_problems': 'Vazamento de fluído de freio e pedal bobo.',
+                    'maintenance_interval': 'Troca com o kit de embreagem'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
             },
             {
                 'id': 102,
                 'name': 'Cabo de Seleção de Marchas',
-                'category': 'Transmissão e Embreagem',
+                'category': 'Correias e Transmissão',
                 'subcategory': 'Manual',
                 'description': 'Cabo que transmite o movimento da alavanca para o câmbio.',
                 'details': {
                     'purpose': 'Selecionar e engatar as marchas mecanicamente.',
                     'location': 'Entre a alavanca de câmbio e a caixa.',
-                    'common_problems': 'Rompimento ou folga excessiva nas buchas.'
+                    'common_problems': 'Rompimento ou folga excessiva nas buchas.',
+                    'maintenance_interval': 'Inspecionar a cada 40.000km'
                 },
                 'image_url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Oil_filter_2.jpg/800px-Oil_filter_2.jpg'
             }

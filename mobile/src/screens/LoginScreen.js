@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
 import axios from 'axios';
-
-const API_BASE_URL = 'http://127.0.0.1:5000';
+import API_BASE_URL from '../api';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');

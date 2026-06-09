@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import axios from 'axios';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
-
-const API_BASE_URL = 'http://127.0.0.1:5000';
+import API_BASE_URL from '../api';
 
 const HomeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
