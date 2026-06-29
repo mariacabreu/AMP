@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform, TextInput } from 'react-native';
+import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform, TextInput, Alert } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import API_BASE_URL from '../api';
 
 const CreditPaymentScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -10,8 +12,20 @@ const CreditPaymentScreen = ({ navigation, route }) => {
   const [fullName, setFullName] = useState('');
   const [cpf, setCpf] = useState('');
 
+  const handlePaymentConfirm = async () => {
+    try {
+      // Call backend to activate premium
+      const response = await axios.post(`${API_BASE_URL}/user/activate-premium/${loggedUser.id}`);
+      // Navigate back to Home with updated user data
+      navigation.navigate('Home', { user: response.data.user });
+    } catch (error) {
+      console.error('Error activating premium:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao confirmar o pagamento.');
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header Fixo */}
       <View style={styles.header}>
         <Image
@@ -33,6 +47,8 @@ const CreditPaymentScreen = ({ navigation, route }) => {
         <ScrollView 
           style={styles.scrollView} 
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+          scrollEnabled={true}
         >
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -82,10 +98,7 @@ const CreditPaymentScreen = ({ navigation, route }) => {
                     keyboardType="numeric"
                     secureTextEntry
                   />
-                  <Image 
-                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1611/1611179.png' }} 
-                    style={styles.cvvIcon}
-                  />
+                  <View style={styles.cvvIcon} />
                 </View>
               </View>
             </View>
@@ -111,7 +124,7 @@ const CreditPaymentScreen = ({ navigation, route }) => {
               Ao clicar no botão abaixo você concorda com nossos <Text style={styles.linkText}>termos</Text> e <Text style={styles.linkText}>Políticas de Privacidade</Text>
             </Text>
 
-            <TouchableOpacity style={styles.finalBtn} onPress={() => alert('Pagamento Processado!')}>
+            <TouchableOpacity style={styles.finalBtn} onPress={handlePaymentConfirm}>
               <Text style={styles.finalBtnText}>Finalizar Compra</Text>
               <MaterialCommunityIcons name="check-decagram" size={24} color="#FFFFFF" />
             </TouchableOpacity>
@@ -127,15 +140,29 @@ const CreditPaymentScreen = ({ navigation, route }) => {
           <MaterialCommunityIcons name="steering" size={24} color="#FFCF00" />
         </View>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
-    height: Platform.OS === 'web' ? '100vh' : '100%',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
   },
   header: {
     flexDirection: 'row',

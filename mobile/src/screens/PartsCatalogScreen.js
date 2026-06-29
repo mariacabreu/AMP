@@ -153,7 +153,6 @@ const PartsCatalogScreen = ({ navigation, route }) => {
                   <Text style={styles.partName}>{part.name}</Text>
                   <Text style={styles.partDescription}>{part.description}</Text>
                 </View>
-                <Image source={{ uri: part.image_url }} style={styles.partImage} resizeMode="contain" />
               </TouchableOpacity>
             ))
           ) : (
@@ -174,7 +173,7 @@ const PartsCatalogScreen = ({ navigation, route }) => {
                     <Text style={styles.partName}>{part.name}</Text>
                     <Text style={styles.partDescription}>{part.description}</Text>
                   </View>
-                  <Image source={{ uri: part.image_url }} style={styles.partImage} resizeMode="contain" />
+
                 </TouchableOpacity>
               ))}
             </View>
@@ -202,11 +201,6 @@ const PartsCatalogScreen = ({ navigation, route }) => {
 
             {selectedPart && (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Image 
-                  source={{ uri: selectedPart.image_url }} 
-                  style={styles.modalImage} 
-                  resizeMode="contain" 
-                />
                 <Text style={styles.modalPartName}>{selectedPart.name.toUpperCase()}</Text>
                 <Text style={styles.modalCategory}>{selectedPart.category}</Text>
 
@@ -363,6 +357,13 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     marginBottom: 20,
+    ...Platform.select({
+      web: {
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        whiteSpace: 'nowrap',
+      }
+    })
   },
   categoryButton: {
     backgroundColor: '#fff',
@@ -374,6 +375,11 @@ const styles = StyleSheet.create({
     borderColor: '#2c2c2c',
     height: 40,
     justifyContent: 'center',
+    ...Platform.select({
+      web: {
+        display: 'inline-flex',
+      }
+    })
   },
   categoryButtonActive: {
     backgroundColor: '#2c2c2c',

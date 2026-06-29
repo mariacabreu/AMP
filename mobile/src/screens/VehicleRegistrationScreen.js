@@ -1,8 +1,146 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+﻿﻿import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform, TouchableWithoutFeedback, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
+
+const CustomDropdown = ({ label, items, selectedValue, onSelect, placeholder, enabled = true, onOpen, isOpen, setIsOpen }) => {
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (Platform.OS === 'web' && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
+    return () => {
+      if (Platform.OS === 'web') {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
+      }
+    };
+  }, [setIsOpen]);
+
+  const displayLabel = items.find(item => {
+    const itemValue = typeof item === 'object' ? item.value : item;
+    return itemValue === selectedValue;
+  })?.label || selectedValue || placeholder;
+
+  return (
+    <View style={[styles.inputContainer, isOpen && styles.inputContainerOpen]} ref={dropdownRef}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.customPickerContainer, !enabled && styles.disabledPicker, isOpen && styles.customPickerContainerOpen]}>
+        <TouchableOpacity
+          style={styles.customPickerButton}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (enabled) {
+              console.log('Dropdown button pressed, current isOpen:', isOpen);
+              if (onOpen) onOpen();
+              setIsOpen(!isOpen);
+            }
+          }}
+          disabled={!enabled}
+        >
+          <Text style={[styles.customPickerText, !selectedValue && styles.placeholderText]}>
+            {displayLabel}
+          </Text>
+          <Ionicons 
+            name={isOpen ? 'chevron-up' : 'chevron-down'} 
+            size={20} 
+            color="#666" 
+          />
+        </TouchableOpacity>
+        {isOpen && Platform.select({
+          web: (
+            <div style={{
+              position: 'absolute',
+              top: 52,
+              left: 0,
+              right: 0,
+              backgroundColor: '#ffffff',
+              borderRadius: 8,
+              border: '1px solid #E0E0E0',
+              maxHeight: 200,
+              overflowY: 'auto',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+              zIndex: 1000000
+            }}>
+              {items.map((item, index) => {
+                const itemValue = typeof item === 'object' ? item.value : item;
+                const itemLabel = typeof item === 'object' ? item.label : item;
+                return (
+                  <div
+                    key={index}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('Web div clicked', itemValue, itemLabel);
+                      onSelect(itemValue);
+                      setIsOpen(false);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      backgroundColor: selectedValue === itemValue ? '#F5F5F5' : '#ffffff',
+                      padding: '12px 16px',
+                      borderBottom: '1px solid #F0F0F0',
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      color: '#333',
+                      userSelect: 'none'
+                    }}
+                  >
+                    {itemLabel}
+                  </div>
+                );
+              })}
+            </div>
+          ),
+          default: (
+            <View style={styles.dropdownList}>
+              <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                {items.map((item, index) => {
+                  const itemValue = typeof item === 'object' ? item.value : item;
+                  const itemLabel = typeof item === 'object' ? item.label : item;
+                  return (
+                    <Pressable
+                      key={index}
+                      style={({ pressed }) => [
+                        styles.dropdownItem,
+                        selectedValue === itemValue && styles.selectedDropdownItem,
+                        pressed && { backgroundColor: '#F0F0F0' }
+                      ]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        console.log('Pressable item clicked', itemValue, itemLabel, e);
+                        onSelect(itemValue);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        selectedValue === itemValue && styles.selectedDropdownItemText
+                      ]}>
+                        {itemLabel}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )
+        })}
+      </View>
+    </View>
+  );
+};
 
 const VehicleRegistrationScreen = ({ navigation, route }) => {
   const user = route.params?.user;
@@ -21,6 +159,32 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const [mileage, setMileage] = useState('');
   const [fuelType, setFuelType] = useState('Gasolina');
 
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+  const transmissionOptions = [
+    { label: 'Selecione o Câmbio', value: '' },
+    { label: 'Manual', value: 'Manual' },
+    { label: 'Automático', value: 'Automático' },
+    { label: 'Automatizado', value: 'Automatizado' },
+    { label: 'CVT', value: 'CVT' }
+  ];
+
+  const usageTypeOptions = [
+    { label: 'Urbano (Cidade/Trânsito)', value: 'Urbano' },
+    { label: 'Rodoviário (Estrada)', value: 'Rodoviário' },
+    { label: 'Misto (Cidade e Estrada)', value: 'Misto' },
+    { label: 'Trabalho/Severo (Uber/Entrega)', value: 'Severo' }
+  ];
+
+  const fuelTypeOptions = [
+    { label: 'Gasolina', value: 'Gasolina' },
+    { label: 'Etanol', value: 'Etanol' },
+    { label: 'Flex', value: 'Flex' },
+    { label: 'Diesel', value: 'Diesel' },
+    { label: 'Híbrido', value: 'Híbrido' },
+    { label: 'Elétrico', value: 'Elétrico' }
+  ];
+
   useEffect(() => {
     fetchBrands();
   }, []);
@@ -28,7 +192,10 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const fetchBrands = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/vehicle/brands`);
-      setBrands(response.data);
+      console.log('Fetched brands:', response.data);
+      const formattedBrands = [{ label: 'Selecione a Marca', value: '' }, ...response.data.map(b => ({ label: b, value: b }))];
+      console.log('Formatted brands:', formattedBrands);
+      setBrands(formattedBrands);
     } catch (error) {
       console.error('Error fetching brands:', error);
     }
@@ -37,7 +204,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const fetchModels = async (brand) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/vehicle/models/${brand}`);
-      setModels(response.data);
+      setModels([{ label: 'Selecione o Modelo', value: '' }, ...response.data.map(m => ({ label: m, value: m }))]);
     } catch (error) {
       console.error('Error fetching models:', error);
     }
@@ -46,7 +213,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const fetchEngines = async (brand, model) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/vehicle/engines/${brand}/${model}`);
-      setEngines(response.data);
+      setEngines([{ label: 'Selecione a Motorização', value: '' }, ...response.data.map(e => ({ label: e, value: e }))]);
     } catch (error) {
       console.error('Error fetching engines:', error);
     }
@@ -55,13 +222,14 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const fetchYears = async (brand, model) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/vehicle/years/${brand}/${model}`);
-      setYears(response.data);
+      setYears([{ label: 'Selecione o Ano', value: '' }, ...response.data.map(y => ({ label: y.toString(), value: y.toString() }))]);
     } catch (error) {
       console.error('Error fetching years:', error);
     }
   };
 
   const handleBrandChange = (brand) => {
+    console.log('handleBrandChange called with:', brand);
     setSelectedBrand(brand);
     setSelectedModel('');
     setEngineType('');
@@ -85,6 +253,15 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
     } else {
       setEngines([]);
       setYears([]);
+    }
+  };
+
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+    setEngineType('');
+    // Re-fetch engines to ensure we have correct list
+    if (selectedBrand && selectedModel) {
+      fetchEngines(selectedBrand, selectedModel);
     }
   };
 
@@ -127,7 +304,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity style={styles.backButtonInside} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
 
         <Image
@@ -141,105 +318,74 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             Apenas veículos compatíveis com OBD-II Bluetooth e com documentação de API disponível são listados.
           </Text>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Marca do Carro</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedBrand}
-                onValueChange={handleBrandChange}
-                style={styles.picker}
-              >
-                <Picker.Item label="Selecione a Marca" value="" />
-                {brands.map(brand => (
-                  <Picker.Item key={brand} label={brand} value={brand} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+          <CustomDropdown
+            label="Marca do Carro"
+            items={brands}
+            selectedValue={selectedBrand}
+            onSelect={handleBrandChange}
+            placeholder="Selecione a Marca"
+            isOpen={openDropdown === 'brand'}
+            setIsOpen={(open) => setOpenDropdown(open ? 'brand' : null)}
+            onOpen={() => setOpenDropdown('brand')}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Modelo do Carro</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedModel}
-                onValueChange={handleModelChange}
-                enabled={!!selectedBrand}
-                style={styles.picker}
-              >
-                <Picker.Item label="Selecione o Modelo" value="" />
-                {models.map(model => (
-                  <Picker.Item key={model} label={model} value={model} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+          <CustomDropdown
+            label="Modelo do Carro"
+            items={models}
+            selectedValue={selectedModel}
+            onSelect={handleModelChange}
+            placeholder="Selecione o Modelo"
+            enabled={!!selectedBrand}
+            isOpen={openDropdown === 'model'}
+            setIsOpen={(open) => setOpenDropdown(open ? 'model' : null)}
+            onOpen={() => setOpenDropdown('model')}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Ano do Carro</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedYear}
-                onValueChange={setSelectedYear}
-                enabled={!!selectedModel}
-                style={styles.picker}
-              >
-                <Picker.Item label="Selecione o Ano" value="" />
-                {years.map(year => (
-                  <Picker.Item key={year} label={year.toString()} value={year.toString()} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+          <CustomDropdown
+            label="Ano do Carro"
+            items={years}
+            selectedValue={selectedYear}
+            onSelect={handleYearChange}
+            placeholder="Selecione o Ano"
+            enabled={!!selectedModel}
+            isOpen={openDropdown === 'year'}
+            setIsOpen={(open) => setOpenDropdown(open ? 'year' : null)}
+            onOpen={() => setOpenDropdown('year')}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Câmbio</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={transmission}
-                onValueChange={setTransmission}
-                style={styles.picker}
-              >
-                <Picker.Item label="Selecione o Câmbio" value="" />
-                <Picker.Item label="Manual" value="Manual" />
-                <Picker.Item label="Automático" value="Automático" />
-                <Picker.Item label="Automatizado" value="Automatizado" />
-                <Picker.Item label="CVT" value="CVT" />
-              </Picker>
-            </View>
-          </View>
+          <CustomDropdown
+            label="Câmbio"
+            items={transmissionOptions}
+            selectedValue={transmission}
+            onSelect={setTransmission}
+            placeholder="Selecione o Câmbio"
+            isOpen={openDropdown === 'transmission'}
+            setIsOpen={(open) => setOpenDropdown(open ? 'transmission' : null)}
+            onOpen={() => setOpenDropdown('transmission')}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Motorização (Contexto para IA)</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={engineType}
-                onValueChange={setEngineType}
-                enabled={!!selectedModel}
-                style={styles.picker}
-              >
-                <Picker.Item label="Selecione a Motorização" value="" />
-                {engines.map(engine => (
-                  <Picker.Item key={engine} label={engine} value={engine} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+          <CustomDropdown
+            label="Motorização (Contexto para IA)"
+            items={engines}
+            selectedValue={engineType}
+            onSelect={setEngineType}
+            placeholder="Selecione a Motorização"
+            enabled={!!selectedBrand && !!selectedModel && !!selectedYear}
+            isOpen={openDropdown === 'engine'}
+            setIsOpen={(open) => setOpenDropdown(open ? 'engine' : null)}
+            onOpen={() => setOpenDropdown('engine')}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Perfil de Uso (Recomendações IA)</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={usageType}
-                onValueChange={setUsageType}
-                style={styles.picker}
-              >
-                <Picker.Item label="Urbano (Cidade/Trânsito)" value="Urbano" />
-                <Picker.Item label="Rodoviário (Estrada)" value="Rodoviário" />
-                <Picker.Item label="Misto (Cidade e Estrada)" value="Misto" />
-                <Picker.Item label="Trabalho/Severo (Uber/Entrega)" value="Severo" />
-              </Picker>
-            </View>
-          </View>
+          <CustomDropdown
+            label="Perfil de Uso (Recomendações IA)"
+            items={usageTypeOptions}
+            selectedValue={usageType}
+            onSelect={setUsageType}
+            placeholder="Selecione o Perfil de Uso"
+            isOpen={openDropdown === 'usage'}
+            setIsOpen={(open) => setOpenDropdown(open ? 'usage' : null)}
+            onOpen={() => setOpenDropdown('usage')}
+          />
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Quilometragem</Text>
@@ -252,23 +398,16 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Combustível</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={fuelType}
-                onValueChange={setFuelType}
-                style={styles.picker}
-              >
-                <Picker.Item label="Gasolina" value="Gasolina" />
-                <Picker.Item label="Etanol" value="Etanol" />
-                <Picker.Item label="Flex" value="Flex" />
-                <Picker.Item label="Diesel" value="Diesel" />
-                <Picker.Item label="Híbrido" value="Híbrido" />
-                <Picker.Item label="Elétrico" value="Elétrico" />
-              </Picker>
-            </View>
-          </View>
+          <CustomDropdown
+            label="Combustível"
+            items={fuelTypeOptions}
+            selectedValue={fuelType}
+            onSelect={setFuelType}
+            placeholder="Selecione o Combustível"
+            isOpen={openDropdown === 'fuel'}
+            setIsOpen={(open) => setOpenDropdown(open ? 'fuel' : null)}
+            onOpen={() => setOpenDropdown('fuel')}
+          />
 
           <TouchableOpacity style={styles.registerButton} onPress={handleRegisterVehicle}>
             <Text style={styles.registerButtonText}>Cadastrar Veículo</Text>
@@ -292,6 +431,7 @@ const styles = StyleSheet.create({
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       },
       default: {
         flex: 1,
@@ -314,11 +454,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 10,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
@@ -333,9 +468,14 @@ const styles = StyleSheet.create({
     width: '85%',
     backgroundColor: '#ffffff',
     borderRadius: 15,
-    padding: 20,
+    padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
+    borderColor: '#E0E0E0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   infoText: {
     fontSize: 12,
@@ -345,13 +485,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   inputContainer: {
-    marginBottom: 15,
+    marginBottom: 20,
+    position: 'relative',
+    zIndex: 1,
+  },
+  inputContainerOpen: {
+    zIndex: 1000,
   },
   label: {
     fontSize: 16,
-    color: '#000',
-    marginBottom: 5,
-    marginLeft: 5,
+    color: '#333',
+    marginBottom: 8,
   },
   input: {
     height: 48,
@@ -362,25 +506,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#ffffff',
   },
-  pickerContainer: {
+  customPickerContainer: {
+    position: 'relative',
+  },
+  customPickerContainerOpen: {
+    zIndex: 10000,
+  },
+  disabledPicker: {
+    opacity: 0.5,
+  },
+  customPickerButton: {
+    height: 48,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
+    paddingHorizontal: 16,
     backgroundColor: '#ffffff',
-    height: 48,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  picker: {
-    height: 48,
-    width: '100%',
+  customPickerText: {
+    fontSize: 16,
     color: '#333',
-    backgroundColor: 'transparent',
-    borderWidth: 0,
+    flex: 1,
+  },
+  placeholderText: {
+    color: '#999',
+  },
+  dropdownList: {
+    position: 'absolute',
+    top: 52,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        zIndex: 100000,
+      }
+    })
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  selectedDropdownItem: {
+    backgroundColor: '#F5F5F5',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedDropdownItemText: {
+    color: '#2D2D2D',
+    fontWeight: '600',
   },
   registerButton: {
     backgroundColor: '#2D2D2D',
@@ -388,7 +584,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
+    marginBottom: 15,
   },
   registerButtonText: {
     color: '#ffffff',

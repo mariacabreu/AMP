@@ -18,6 +18,7 @@ import PaymentMethodsScreen from './src/screens/PaymentMethodsScreen';
 import CreditPaymentScreen from './src/screens/CreditPaymentScreen';
 import DebitPaymentScreen from './src/screens/DebitPaymentScreen';
 import QRCodeScreen from './src/screens/QRCodeScreen';
+import MaintenanceTipsScreen from './src/screens/MaintenanceTipsScreen';
 
 const Stack = createStackNavigator();
 
@@ -42,6 +43,7 @@ export default function App() {
         <Stack.Screen name="CreditPayment" component={CreditPaymentScreen} />
         <Stack.Screen name="DebitPayment" component={DebitPaymentScreen} />
         <Stack.Screen name="QRCode" component={QRCodeScreen} />
+        <Stack.Screen name="MaintenanceTips" component={MaintenanceTipsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

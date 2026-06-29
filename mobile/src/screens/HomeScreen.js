@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
 import axios from 'axios';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import API_BASE_URL from '../api';
@@ -10,20 +10,46 @@ const HomeScreen = ({ navigation, route }) => {
   const [status, setStatus] = useState({
     user_name: loggedUser?.full_name || 'Usuário',
     recommendation: 'Carregando informações...',
-    vehicle: null
+    vehicle: null,
+    is_premium: loggedUser?.is_premium || false
   });
 
   useEffect(() => {
     fetchUserStatus();
-  }, []);
+  }, [route.params?.user]); // Re-fetch when route params change
 
   const fetchUserStatus = async () => {
     try {
       const userId = loggedUser?.id || 1;
       const response = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
-      setStatus(response.data);
+      
+      // Get user's premium status
+      let isPremium = loggedUser?.is_premium || false;
+      try {
+        const userResponse = await axios.get(`${API_BASE_URL}/user/${userId}`);
+        isPremium = userResponse.data.is_premium;
+      } catch (err) {
+        console.error('Error fetching user details:', err);
+      }
+      
+      setStatus({
+        ...response.data,
+        is_premium: isPremium
+      });
     } catch (error) {
       console.error('Error fetching status:', error);
+      setStatus({
+        user_name: loggedUser?.full_name || 'Usuário',
+        recommendation: 'Nenhuma recomendação no momento.',
+        vehicle: null,
+        is_premium: loggedUser?.is_premium || false
+      });
+    }
+  };
+
+  const handlePremiumButton = () => {
+    if (!status.is_premium) {
+      navigation.navigate('PremiumPlan', { user: loggedUser });
     }
   };
 
@@ -62,9 +88,9 @@ const HomeScreen = ({ navigation, route }) => {
 
         <View style={styles.buttonGrid}>
           <View style={styles.row}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.gridButton}
-              onPress={() => navigation.navigate('PremiumPlan', { user: loggedUser })}
+              onPress={status.is_premium ? () => Alert.alert('Recurso Desbloqueado', 'Recurso OBD desbloqueado!') : handlePremiumButton}
             >
               <View style={styles.iconCircle}>
                 <MaterialCommunityIcons name="engine-outline" size={50} color="#FFCF00" />
@@ -72,10 +98,10 @@ const HomeScreen = ({ navigation, route }) => {
               <Text style={styles.gridButtonTitle}>OBD</Text>
               <Text style={styles.gridButtonSub}>Diagnóstico de Bordo</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.gridButton}
-              onPress={() => navigation.navigate('PremiumPlan', { user: loggedUser })}
+              onPress={status.is_premium ? () => Alert.alert('Recurso Desbloqueado', 'Recurso Planejar Viagem desbloqueado!') : handlePremiumButton}
             >
               <View style={styles.iconCircle}>
                 <FontAwesome5 name="route" size={45} color="#FFCF00" />
@@ -85,14 +111,20 @@ const HomeScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.row}>
-            <TouchableOpacity style={styles.gridButton}>
+            <TouchableOpacity
+              style={styles.gridButton}
+              onPress={() => navigation.navigate('VehicleRegistration', { user: loggedUser })}
+            >
               <View style={styles.iconCircle}>
                 <MaterialCommunityIcons name="car-info" size={50} color="#FFCF00" />
               </View>
               <Text style={styles.gridButtonTitle}>Dados do veículo</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.gridButton}>
+
+            <TouchableOpacity
+              style={styles.gridButton}
+              onPress={status.is_premium ? () => navigation.navigate('MaintenanceTips', { user: loggedUser }) : handlePremiumButton}
+            >
               <View style={styles.iconCircle}>
                 <FontAwesome5 name="tools" size={45} color="#FFCF00" />
               </View>
@@ -101,16 +133,16 @@ const HomeScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.row}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.gridButton}
-              onPress={() => navigation.navigate('PremiumPlan', { user: loggedUser })}
+              onPress={status.is_premium ? () => navigation.navigate('PartsCatalog', { user: loggedUser }) : handlePremiumButton}
             >
               <View style={styles.iconCircle}>
                 <MaterialIcons name="settings-input-component" size={50} color="#FFCF00" />
               </View>
               <Text style={styles.gridButtonTitle}>Informações OBD</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.gridButton} onPress={() => navigation.navigate('Report', { user: loggedUser })}>
               <View style={styles.iconCircle}>
                 <Ionicons name="time-outline" size={50} color="#FFCF00" />

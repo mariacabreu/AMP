@@ -4,53 +4,31 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-ico
 import axios from 'axios';
 import API_BASE_URL from '../api';
 
-const ChecklistScreen = ({ navigation, route }) => {
+const MaintenanceTipsScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
   const [loading, setLoading] = useState(true);
-  const [checklist, setChecklist] = useState([]);
+  const [tips, setTips] = useState([]);
   const [vehicleInfo, setVehicleInfo] = useState('');
 
   useEffect(() => {
-    fetchChecklist();
+    fetchTips();
   }, []);
 
-  const fetchChecklist = async () => {
+  const fetchTips = async () => {
     try {
       const userId = loggedUser?.id || 1;
       const statusRes = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
       const vehicleId = statusRes.data.vehicle?.id;
       
       if (vehicleId) {
-        // Usando o endpoint de IA para recomendações personalizadas
-        const response = await axios.get(`${API_BASE_URL}/vehicle/checklist/ai/${vehicleId}`);
-        setChecklist(response.data.checklist.map(item => ({ ...item, checked: false })));
-        setVehicleInfo(`${response.data.vehicle} (${response.data.mileage} km)`);
+        const response = await axios.get(`${API_BASE_URL}/vehicle/maintenance-tips/${vehicleId}`);
+        setTips(response.data.tips);
+        setVehicleInfo(response.data.vehicle);
       }
     } catch (error) {
-      console.error('Erro ao buscar checklist:', error);
+      console.error('Erro ao buscar dicas de manutenção:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const toggleCheck = (id) => {
-    setChecklist(prev => prev.map(item => 
-      item.id === id ? { ...item, checked: !item.checked } : item
-    ));
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'URGENTE':
-        return '#FF4444';
-      case 'PRÓXIMOS 30 DIAS':
-        return '#FF8C00';
-      case 'PRÓXIMOS 60 DIAS':
-        return '#1E90FF';
-      case 'PRÓXIMOS 90 DIAS':
-        return '#32CD32';
-      default:
-        return '#666';
     }
   };
 
@@ -66,19 +44,11 @@ const ChecklistScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* Header Fixo */}
       <View style={styles.header}>
-        <Image
-          source={require('../assets/mow376om-iempala.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow376om-wu018h0.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow376om-4s6plsc.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>DICAS DE MANUTENÇÃO</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Conteúdo Scrollable */}
@@ -88,40 +58,24 @@ const ChecklistScreen = ({ navigation, route }) => {
         showsVerticalScrollIndicator={true}
         scrollEnabled={true}
       >
-        <Text style={styles.screenTitle}>CHECKLIST PREVENTIVO</Text>
         <Text style={styles.vehicleText}>{vehicleInfo}</Text>
-        <Text style={styles.subtitle}>Baseado na quilometragem e histórico informado.</Text>
+        <Text style={styles.subtitle}>Dicas personalizadas para o seu veículo.</Text>
 
-        {checklist.length === 0 ? (
+        {tips.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="check-decagram" size={60} color="#FFCF00" />
-            <Text style={styles.emptyText}>Tudo em dia! Nenhuma manutenção preventiva necessária agora.</Text>
+            <MaterialCommunityIcons name="lightbulb-outline" size={60} color="#FFCF00" />
+            <Text style={styles.emptyText}>Nenhuma dica disponível no momento.</Text>
           </View>
         ) : (
-          checklist.map((item) => (
+          tips.map((item) => (
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.cardHeader}>
-                <TouchableOpacity 
-                  style={[styles.checkbox, item.checked && styles.checkboxChecked]} 
-                  onPress={() => toggleCheck(item.id)}
-                >
-                  {item.checked && <MaterialCommunityIcons name="check" size={20} color="#000" />}
-                </TouchableOpacity>
-                <View style={styles.titleContainer}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(item.priority) }]}>
-                    <Text style={styles.priorityText}>{item.priority}</Text>
-                  </View>
+                <View style={styles.iconContainer}>
+                  <MaterialCommunityIcons name="lightbulb-on" size={24} color="#FFCF00" />
                 </View>
+                <Text style={styles.itemTitle}>{item.title}</Text>
               </View>
-
-              <View style={styles.cardBody}>
-                <View style={styles.textContainer}>
-                  <Text style={styles.descriptionText}>{item.description}</Text>
-                  <Text style={styles.reasonTitle}>POR QUE TROCAR?</Text>
-                  <Text style={styles.reasonText}>{item.reason}</Text>
-                </View>
-              </View>
+              <Text style={styles.itemContent}>{item.content}</Text>
             </View>
           ))
         )}
@@ -143,9 +97,9 @@ const ChecklistScreen = ({ navigation, route }) => {
           <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
           <Text style={styles.navText}>Peças</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="clipboard-check" size={24} color="#FFCF00" />
-          <Text style={[styles.navText, styles.navTextActive]}>Checklist</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Checklist', { user: loggedUser })}>
+          <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
+          <Text style={styles.navText}>Checklist</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings', { user: loggedUser })}>
           <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
@@ -185,23 +139,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10,
-    height: 70,
+    paddingTop: 40,
+    paddingBottom: 20,
     backgroundColor: '#fff',
   },
-  logo: {
-    width: 100,
-    height: 50,
+  backButton: {
+    width: 40,
   },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    marginLeft: 15,
-  },
-  topIcon: {
-    width: 30,
-    height: 30,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#000',
   },
   scrollView: {
     flex: 1,
@@ -213,15 +161,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 15,
-    paddingTop: 20,
-    paddingBottom: 100, // Espaço para não cobrir o conteúdo com a barra
-  },
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#000000',
-    marginBottom: 5,
+    paddingTop: 10,
+    paddingBottom: 100,
   },
   vehicleText: {
     fontSize: 14,
@@ -253,7 +194,7 @@ const styles = StyleSheet.create({
   itemCard: {
     backgroundColor: '#D9D9D9',
     borderRadius: 15,
-    padding: 15,
+    padding: 18,
     marginBottom: 15,
     elevation: 2,
     shadowColor: '#000',
@@ -266,73 +207,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#000',
-    backgroundColor: '#fff',
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2C2C2C',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  checkboxChecked: {
-    backgroundColor: '#FFCF00',
-    borderColor: '#FFCF00',
-  },
-  titleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  itemName: {
+  itemTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#000',
-  },
-  priorityBadge: {
-    backgroundColor: '#FF4444',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  priorityText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  cardBody: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  textContainer: {
     flex: 1,
-    paddingRight: 10,
   },
-  descriptionText: {
-    fontSize: 11,
+  itemContent: {
+    fontSize: 13,
     color: '#000',
-    lineHeight: 14,
+    lineHeight: 18,
     textAlign: 'justify',
-    marginBottom: 8,
-  },
-  reasonTitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#000',
-    marginBottom: 2,
-  },
-  reasonText: {
-    fontSize: 10,
-    color: '#444',
-    lineHeight: 12,
-    textAlign: 'justify',
-  },
-  partImage: {
-    width: 80,
-    height: 80,
   },
   footerSpace: {
     height: 20,
@@ -361,9 +255,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '700',
   },
-  navTextActive: {
-    color: '#FFCF00',
-  },
 });
 
-export default ChecklistScreen;
+export default MaintenanceTipsScreen;

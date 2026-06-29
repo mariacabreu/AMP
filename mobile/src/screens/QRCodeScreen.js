@@ -1,12 +1,37 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, Alert } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import API_BASE_URL from '../api';
 
 const QRCodeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const handleCopyCode = () => {
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentConfirm = async () => {
+    setShowPaymentModal(false);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/user/activate-premium/${loggedUser.id}`);
+      Alert.alert('Sucesso!', 'Premium ativado com sucesso!');
+      navigation.navigate('Home', { 
+        user: response.data.user 
+      });
+    } catch (error) {
+      console.error('Erro ao ativar premium:', error);
+      Alert.alert('Erro', 'Não foi possível ativar o premium. Tente novamente.');
+    }
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentModal(false);
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header Fixo */}
       <View style={styles.header}>
         <Image
@@ -28,6 +53,8 @@ const QRCodeScreen = ({ navigation, route }) => {
         <ScrollView 
           style={styles.scrollView} 
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+          scrollEnabled={true}
         >
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -43,19 +70,39 @@ const QRCodeScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.qrContainer}>
-            <Image 
-              source={{ uri: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=AMP_PREMIUM_PAYMENT_PIX_CODE' }} 
-              style={styles.qrCode}
-            />
+            <View style={styles.qrCode} />
           </View>
 
-          <TouchableOpacity style={styles.copyBtn} onPress={() => alert('Código PIX copiado!')}>
-            <Text style={styles.copyBtnText}>Copiar e colar</Text>
+          <TouchableOpacity style={styles.copyBtn} onPress={handleCopyCode}>
+            <Text style={styles.copyBtnText}>Copiar código pix</Text>
           </TouchableOpacity>
 
           <View style={styles.footerSpace} />
         </ScrollView>
       </View>
+
+      {/* Modal de confirmação de pagamento */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showPaymentModal}
+        onRequestClose={() => setShowPaymentModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Pagamento Concluído?</Text>
+            <Text style={styles.modalText}>Você já concluiu o pagamento via PIX?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handlePaymentCancel}>
+                <Text style={styles.cancelButtonText}>Ainda Não</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handlePaymentConfirm}>
+                <Text style={styles.confirmButtonText}>Sim, Concluí</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Floating Action Button */}
       <TouchableOpacity style={styles.fab}>
@@ -63,15 +110,29 @@ const QRCodeScreen = ({ navigation, route }) => {
           <MaterialCommunityIcons name="steering" size={24} color="#FFCF00" />
         </View>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
-    height: Platform.OS === 'web' ? '100vh' : '100%',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
   },
   header: {
     flexDirection: 'row',
@@ -200,7 +261,68 @@ const styles = StyleSheet.create({
   },
   footerSpace: {
     height: 20,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 30,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#EAEAEA',
+  },
+  confirmButton: {
+    backgroundColor: '#FFCF00',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2C2C2C',
+  },
 });
 
 export default QRCodeScreen;

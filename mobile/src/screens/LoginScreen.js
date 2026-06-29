@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 
@@ -27,7 +28,7 @@ const LoginScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backButtonText}>← Voltar</Text>
+        <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>
       <ScrollView 
         style={styles.scrollView}
@@ -120,11 +121,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     padding: 10,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
+
   logo: {
     width: 300,
     height: 180,

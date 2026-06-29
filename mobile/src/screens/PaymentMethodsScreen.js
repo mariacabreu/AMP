@@ -27,7 +27,7 @@ const PaymentMethodsScreen = ({ navigation, route }) => {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header Fixo */}
       <View style={styles.header}>
         <Image
@@ -49,6 +49,8 @@ const PaymentMethodsScreen = ({ navigation, route }) => {
         <ScrollView 
           style={styles.scrollView} 
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+          scrollEnabled={true}
         >
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -115,15 +117,29 @@ const PaymentMethodsScreen = ({ navigation, route }) => {
           <Text style={styles.navText}>Config</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
-    height: Platform.OS === 'web' ? '100vh' : '100%',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+      default: {
+        flex: 1,
+      }
+    })
   },
   header: {
     flexDirection: 'row',

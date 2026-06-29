@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 
@@ -51,7 +52,7 @@ const RegisterScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backButtonText}>← Voltar</Text>
+        <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>
       <ScrollView 
         style={styles.scrollView}
@@ -98,7 +99,7 @@ const RegisterScreen = ({ navigation }) => {
           </View>
           
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Repita sua senha</Text>
+            <Text style={styles.label}>Confirmação de senha</Text>
             <TextInput
               style={styles.input}
               value={confirmPassword}
@@ -154,18 +155,12 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 10,
     padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderRadius: 20,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
+
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
-    paddingTop: 100,
+    paddingTop: 50,
     paddingBottom: 40,
   },
   logo: {
@@ -177,25 +172,30 @@ const styles = StyleSheet.create({
     width: '85%',
     backgroundColor: '#ffffff',
     borderRadius: 15,
-    padding: 20,
+    padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
+    borderColor: '#E0E0E0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   inputContainer: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
-    color: '#000',
-    marginBottom: 5,
-    marginLeft: 5,
+    color: '#333',
+    marginBottom: 8,
   },
   input: {
-    height: 40,
+    height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.2)',
+    borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
   },
   registerButton: {
     backgroundColor: '#2D2D2D',
@@ -203,8 +203,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 10,
+    marginBottom: 15,
   },
   registerButtonText: {
     color: '#ffffff',
@@ -212,11 +212,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   premiumText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontSize: 14,
+    color: '#333',
     textDecorationLine: 'underline',
-    color: '#1E1E1E',
+    textAlign: 'center',
   },
 });
 
