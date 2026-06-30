@@ -1,4 +1,4 @@
-﻿﻿import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform, TouchableWithoutFeedback, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: 'visible',
       },
       default: {
         flex: 1,
@@ -442,7 +442,8 @@ const styles = StyleSheet.create({
     flex: 1,
     ...Platform.select({
       web: {
-        overflowY: 'scroll',
+        overflowY: 'visible',
+        overflowX: 'hidden',
         height: '100%',
       }
     })
@@ -476,6 +477,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    ...Platform.select({
+      web: {
+        position: 'relative',
+        zIndex: 1,
+      }
+    })
   },
   infoText: {
     fontSize: 12,

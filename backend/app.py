@@ -27,7 +27,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     is_premium = db.Column(db.Boolean, default=False)
-    vehicles = db.relationship('Vehicle', backref='owner', lazy=True)
+    vehicles = db.relationship('Vehicle', backref='owner', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
