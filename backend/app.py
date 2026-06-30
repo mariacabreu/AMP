@@ -291,7 +291,7 @@ def get_brands():
 def get_models(brand):
     if brand in SUPPORTED_BRANDS:
         return jsonify(SUPPORTED_BRANDS[brand]['models']), 200
-    return jsonify({'error': 'Brand not supported'}), 404
+    return jsonify({'error': 'Marca não suportada'}), 404
 
 @app.route('/vehicle/engines/<brand>/<model>', methods=['GET'])
 def get_engines(brand, model):
@@ -300,7 +300,7 @@ def get_engines(brand, model):
         if 'engines' in brand_data and model in brand_data['engines']:
             return jsonify(brand_data['engines'][model]), 200
         return jsonify([]), 200
-    return jsonify({'error': 'Brand not supported'}), 404
+    return jsonify({'error': 'Marca não suportada'}), 404
 
 @app.route('/vehicle/years/<brand>/<model>', methods=['GET'])
 def get_years(brand, model):
@@ -315,13 +315,13 @@ def get_years(brand, model):
             
         years = list(range(current_year, start_year - 1, -1))
         return jsonify(years), 200
-    return jsonify({'error': 'Brand not supported'}), 404
+    return jsonify({'error': 'Marca não suportada'}), 404
 
 @app.route('/vehicle/register', methods=['POST'])
 def register_vehicle():
     data = request.json
     if not data or not all(k in data for k in ('brand', 'model', 'year', 'user_id')):
-        return jsonify({'error': 'Missing required fields'}), 400
+        return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
     
     # Validação: apenas veículos compatíveis com OBD-II Bluetooth
     if data['brand'] not in SUPPORTED_BRANDS:
@@ -361,7 +361,7 @@ def register_vehicle():
     try:
         db.session.add(new_vehicle)
         db.session.commit()
-        return jsonify({'message': 'Vehicle registered successfully', 'vehicle': new_vehicle.to_dict()}), 201
+        return jsonify({'message': 'Veículo registrado com sucesso', 'vehicle': new_vehicle.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -370,7 +370,7 @@ def register_vehicle():
 def get_vehicle_checklist(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if not vehicle:
-        return jsonify({'error': 'Vehicle not found'}), 404
+        return jsonify({'error': 'Veículo não encontrado'}), 404
         
     current_km = vehicle.mileage
     checklist = []
@@ -569,7 +569,7 @@ def save_maintenance():
     
     if not data or not data.get('vehicle_id') or not data.get('history'):
         print("Erro: Dados obrigatórios ausentes")
-        return jsonify({'error': 'Missing required fields'}), 400
+        return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
     
     try:
         vehicle_id = data['vehicle_id']
@@ -598,7 +598,7 @@ def save_maintenance():
         
         db.session.commit()
         print("Registro salvo com sucesso!")
-        return jsonify({'message': 'Maintenance history saved successfully'}), 201
+        return jsonify({'message': 'Histórico de manutenção salvo com sucesso'}), 201
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao salvar no banco: {str(e)}")
@@ -608,7 +608,7 @@ def save_maintenance():
 def get_user_report(user_id):
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': 'Usuário não encontrado'}), 404
     
     vehicles = Vehicle.query.filter_by(user_id=user_id).all()
     all_history = []
@@ -634,7 +634,7 @@ def get_user_report(user_id):
 def get_user_status(user_id):
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': 'Usuário não encontrado'}), 404
     
     vehicle = Vehicle.query.filter_by(user_id=user_id).order_by(Vehicle.id.desc()).first()
     
@@ -666,22 +666,81 @@ def get_user_status(user_id):
 def get_user(user_id):
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': 'Usuário não encontrado'}), 404
     return jsonify(user.to_dict()), 200
+
+@app.route('/user/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+    
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'message': 'Usuário excluído com sucesso'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users]), 200
 
 @app.route('/user/activate-premium/<int:user_id>', methods=['POST'])
 def activate_premium(user_id):
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': 'Usuário não encontrado'}), 404
     
     user.is_premium = True
     db.session.commit()
     
     return jsonify({
-        'message': 'Premium activated successfully',
+        'message': 'Premium ativado com sucesso',
         'user': user.to_dict()
     }), 200
+
+@app.route('/user/change-password/<int:user_id>', methods=['PUT'])
+def change_password(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+    
+    data = request.json
+    
+    if not data or not data.get('current_password') or not data.get('new_password'):
+        return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
+    
+    if user.password != data['current_password']:
+        return jsonify({'error': 'Senha atual incorreta'}), 400
+    
+    if user.password == data['new_password']:
+        return jsonify({'error': 'Nova senha deve ser diferente da senha atual'}), 400
+    
+    user.password = data['new_password']
+    db.session.commit()
+    
+    return jsonify({'message': 'Senha alterada com sucesso'}), 200
+
+@app.route('/user/recover-password', methods=['POST'])
+def recover_password():
+    data = request.json
+    
+    if not data or not data.get('email'):
+        return jsonify({'error': 'Email é obrigatório'}), 400
+    
+    user = User.query.filter_by(email=data['email']).first()
+    
+    if not user:
+        # Sempre retorna a mesma mensagem por segurança, para não revelar se o email existe ou não
+        return jsonify({'message': 'Se este email estiver cadastrado, você receberá um link de recuperação de senha'}), 200
+    
+    # Aqui você poderia integrar com um serviço de envio de e-mails como SendGrid ou SMTP
+    print(f"[SIMULAÇÃO] Enviando email de recuperação para {user.email}")
+    
+    return jsonify({'message': 'Se este email estiver cadastrado, você receberá um link de recuperação de senha'}), 200
 
 # --- AI Powered Endpoints ---
 
@@ -696,7 +755,7 @@ def validate_and_fix_images(data, key):
 def get_vehicle_parts_ai(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if not vehicle:
-        return jsonify({'error': 'Vehicle not found'}), 404
+        return jsonify({'error': 'Veículo não encontrado'}), 404
 
     # Check if API Key is configured
     api_key = os.getenv("OPENAI_API_KEY")
@@ -844,7 +903,7 @@ def get_vehicle_parts_ai(vehicle_id):
 def get_vehicle_checklist_ai(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if not vehicle:
-        return jsonify({'error': 'Vehicle not found'}), 404
+        return jsonify({'error': 'Veículo não encontrado'}), 404
         
     current_km = vehicle.mileage
     
@@ -938,7 +997,7 @@ def get_vehicle_checklist_ai(vehicle_id):
 def get_maintenance_tips(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if not vehicle:
-        return jsonify({'error': 'Vehicle not found'}), 404
+        return jsonify({'error': 'Veículo não encontrado'}), 404
 
     # Check if API Key is configured
     api_key = os.getenv("OPENAI_API_KEY")
@@ -1078,7 +1137,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         print(f"Usuário criado com sucesso: {email}")
-        return jsonify({'message': 'User registered successfully', 'user': new_user.to_dict()}), 201
+        return jsonify({'message': 'Usuário registrado com sucesso', 'user': new_user.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
         print(f"Erro de banco de dados: {e}")
@@ -1089,14 +1148,18 @@ def login():
     data = request.json
     
     if not data or not data.get('email') or not data.get('password'):
-        return jsonify({'error': 'Missing credentials'}), 400
+        return jsonify({'error': 'Credenciais ausentes'}), 400
     
     user = User.query.filter_by(email=data['email'], password=data['password']).first()
     
     if user:
-        return jsonify({'message': 'Login successful', 'user': user.to_dict()}), 200
+        return jsonify({'message': 'Login realizado com sucesso', 'user': user.to_dict()}), 200
     else:
-        return jsonify({'error': 'Invalid email or password'}), 401
+        return jsonify({'error': 'Email ou senha inválidos'}), 401
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    return jsonify({'message': 'Logout realizado com sucesso'}), 200
 
 @app.route('/vehicle/maintenance/<int:maintenance_id>', methods=['DELETE'])
 def delete_maintenance(maintenance_id):
@@ -1119,7 +1182,7 @@ def delete_maintenance(maintenance_id):
 def get_vehicle_parts(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if not vehicle:
-        return jsonify({'error': 'Vehicle not found'}), 404
+        return jsonify({'error': 'Veículo não encontrado'}), 404
         
     transmission_type = vehicle.transmission.lower() if vehicle.transmission else 'manual'
     is_automatic = 'autom' in transmission_type
