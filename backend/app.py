@@ -55,8 +55,7 @@ class Vehicle(db.Model):
     last_belt_change = db.Column(db.Integer, default=0)
     last_brake_change = db.Column(db.Integer, default=0)
 
-    # Relacionamento com MaintenanceHistory com cascade
-    maintenance_history = db.relationship('MaintenanceHistory', backref='vehicle', lazy=True, cascade='all, delete-orphan')
+
 
     def to_dict(self):
         return {
@@ -85,7 +84,7 @@ class MaintenanceHistory(db.Model):
     cost = db.Column(db.Float, default=0.0)
     liters = db.Column(db.Float, default=0.0)
     
-    vehicle = db.relationship('Vehicle', backref=db.backref('maintenance_history', lazy=True))
+    vehicle = db.relationship('Vehicle', backref=db.backref('maintenance_history', lazy=True, cascade='all, delete-orphan'))
 
     def to_dict(self):
         return {
