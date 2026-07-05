@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -19,6 +20,7 @@ import CreditPaymentScreen from './src/screens/CreditPaymentScreen';
 import DebitPaymentScreen from './src/screens/DebitPaymentScreen';
 import QRCodeScreen from './src/screens/QRCodeScreen';
 import MaintenanceTipsScreen from './src/screens/MaintenanceTipsScreen';
+import OBDScreen from './src/screens/OBDScreen';
 
 const Stack = createStackNavigator();
 
@@ -44,6 +46,7 @@ export default function App() {
         <Stack.Screen name="DebitPayment" component={DebitPaymentScreen} />
         <Stack.Screen name="QRCode" component={QRCodeScreen} />
         <Stack.Screen name="MaintenanceTips" component={MaintenanceTipsScreen} />
+        <Stack.Screen name="OBD" component={OBDScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

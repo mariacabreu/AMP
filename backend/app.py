@@ -3,15 +3,18 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
 import json
-from openai import OpenAI
-from dotenv import load_dotenv
-
-load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+try:
+    from openai import OpenAI
+    from dotenv import load_dotenv
+    load_dotenv()
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+except ImportError:
+    client = None
+    print("OpenAI module not available - AI features will use static fallback")
 
 # Database configuration
 basedir = os.path.abspath(os.path.dirname(__file__))

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
 import axios from 'axios';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import API_BASE_URL from '../api';
@@ -16,14 +17,13 @@ const HomeScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchUserStatus();
-  }, [route.params?.user]); // Re-fetch when route params change
+  }, [route.params?.user]);
 
   const fetchUserStatus = async () => {
     try {
       const userId = loggedUser?.id || 1;
       const response = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
       
-      // Get user's premium status
       let isPremium = loggedUser?.is_premium || false;
       try {
         const userResponse = await axios.get(`${API_BASE_URL}/user/${userId}`);
@@ -57,7 +57,7 @@ const HomeScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Image
-          source={require('../assets/mow376om-iempala.png')} // New Logo from Figma
+          source={require('../assets/mow376om-iempala.png')}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -71,7 +71,7 @@ const HomeScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={true}
@@ -81,16 +81,14 @@ const HomeScreen = ({ navigation, route }) => {
 
         <View style={styles.recommendationCard}>
           <Image source={require('../assets/mow376om-7sjpz1g.png')} style={styles.lampIcon} />
-          <Text style={styles.recommendationText}>
-            {status.recommendation}
-          </Text>
+          <Text style={styles.recommendationText}>{status.recommendation}</Text>
         </View>
 
         <View style={styles.buttonGrid}>
           <View style={styles.row}>
             <TouchableOpacity
               style={styles.gridButton}
-              onPress={status.is_premium ? () => Alert.alert('Recurso Desbloqueado', 'Recurso OBD desbloqueado!') : handlePremiumButton}
+              onPress={() => navigation.navigate('OBD', { user: loggedUser })}
             >
               <View style={styles.iconCircle}>
                 <MaterialCommunityIcons name="engine-outline" size={50} color="#FFCF00" />
@@ -143,7 +141,10 @@ const HomeScreen = ({ navigation, route }) => {
               <Text style={styles.gridButtonTitle}>Informações OBD</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridButton} onPress={() => navigation.navigate('Report', { user: loggedUser })}>
+            <TouchableOpacity
+              style={styles.gridButton}
+              onPress={() => navigation.navigate('Report', { user: loggedUser })}
+            >
               <View style={styles.iconCircle}>
                 <Ionicons name="time-outline" size={50} color="#FFCF00" />
               </View>
@@ -156,7 +157,6 @@ const HomeScreen = ({ navigation, route }) => {
         <View style={styles.emptySpace} />
       </ScrollView>
 
-      {/* Navigation Bar */}
       <View style={styles.navBar}>
         <TouchableOpacity style={styles.navItem}>
           <Ionicons name="home" size={24} color="#FFCF00" />
@@ -196,10 +196,10 @@ const styles = StyleSheet.create({
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: 'hidden'
       },
       default: {
-        flex: 1,
+        flex: 1
       }
     })
   },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     flex: 1,
     ...Platform.select({
       web: {
-        overflowY: 'scroll',
+        overflowY: 'scroll'
       }
     })
   },
@@ -218,34 +218,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 40,
     paddingBottom: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffff'
   },
   logo: {
     width: 150,
-    height: 50,
+    height: 50
   },
   headerIcons: {
-    flexDirection: 'row',
+    flexDirection: 'row'
   },
   iconButton: {
-    marginLeft: 15,
+    marginLeft: 15
   },
   topIcon: {
     width: 24,
-    height: 24,
+    height: 24
   },
   content: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingBottom: 100, // Espaço para não cobrir pela sidebar
-    alignItems: 'center',
+    paddingBottom: 100,
+    alignItems: 'center'
   },
   welcomeText: {
     fontSize: 20,
     fontWeight: '600',
     color: '#000000',
     marginBottom: 30,
-    textAlign: 'center',
+    textAlign: 'center'
   },
   recommendationCard: {
     flexDirection: 'row',
@@ -253,28 +253,28 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 15,
     alignItems: 'center',
-    width: '100%',
+    width: '100%'
   },
   lampIcon: {
     width: 32,
     height: 34,
-    marginRight: 15,
+    marginRight: 15
   },
   recommendationText: {
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
     color: '#000000',
-    lineHeight: 18,
+    lineHeight: 18
   },
   buttonGrid: {
     width: '100%',
-    marginTop: 30,
+    marginTop: 30
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 20
   },
   gridButton: {
     backgroundColor: '#2C2C2C',
@@ -283,30 +283,30 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 140,
+    minHeight: 140
   },
   iconCircle: {
-    marginBottom: 10,
+    marginBottom: 10
   },
   gridIcon: {
     width: 50,
     height: 50,
-    tintColor: '#FFCF00',
+    tintColor: '#FFCF00'
   },
   gridButtonTitle: {
     color: '#ffffff',
     fontSize: 12,
     fontWeight: 'bold',
-    textAlign: 'center',
+    textAlign: 'center'
   },
   gridButtonSub: {
     color: '#ffffff',
     fontSize: 10,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 2
   },
   emptySpace: {
-    height: 100,
+    height: 100
   },
   navBar: {
     position: Platform.OS === 'web' ? 'fixed' : 'absolute',
@@ -319,25 +319,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingBottom: 10,
-    zIndex: 1000,
+    zIndex: 1000
   },
   navItem: {
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   navIcon: {
     width: 24,
     height: 24,
-    marginBottom: 4,
+    marginBottom: 4
   },
   navText: {
     color: '#D9D9D9',
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '800'
   },
   navTextActive: {
-    color: '#FFCF00',
-  },
+    color: '#FFCF00'
+  }
 });
 
 export default HomeScreen;
