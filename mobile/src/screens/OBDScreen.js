@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator, Image, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator, Image, Modal, PermissionsAndroid } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
 const OBDScreen = ({ navigation, route }) => {
@@ -9,6 +9,8 @@ const OBDScreen = ({ navigation, route }) => {
   const [deviceList, setDeviceList] = useState([]);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [connectedDevice, setConnectedDevice] = useState(null);
+  const intervalRef = useRef(null);
   const [liveData, setLiveData] = useState({
     rpm: 750,
     speed: 0,
@@ -19,12 +21,80 @@ const OBDScreen = ({ navigation, route }) => {
     airIntakeTemp: 25,
     throttlePosition: 15,
     fuelPressure: 8.0,
+    intakeManifoldPressure: 95,
+    oilTemp: 90,
+    oilPressure: 3.5,
+    lambda: 1.0,
+    maf: 2.5,
+    timingAdvance: 15,
+    egr: 10,
+    evapSystemVaporPressure: 30,
+    fuelTrimShort: 5,
+    fuelTrimLong: -2,
+    catalystTemp: 450,
+    ambientTemp: 25,
   });
   const [dtcCodes, setDtcCodes] = useState([]);
   const [isLoadingDTC, setIsLoadingDTC] = useState(false);
 
-  const handleScanDevices = () => {
+  // Auto-update live data when connected
+  useEffect(() => {
+    if (isConnected) {
+      // Update every second
+      intervalRef.current = setInterval(() => {
+        handleReadLiveData();
+      }, 1000);
+    } else {
+      // Clear interval when disconnected
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isConnected]);
+
+  // Request Bluetooth permissions on Android
+  const requestBluetoothPermissions = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
+        
+        const allGranted = Object.values(granted).every(
+          (status) => status === PermissionsAndroid.RESULTS.GRANTED
+        );
+        
+        return allGranted;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Handle scanning for Bluetooth devices
+  const handleScanDevices = async () => {
+    const hasPermissions = await requestBluetoothPermissions();
+    
+    if (!hasPermissions) {
+      Alert.alert('Permissão Negada', 'As permissões de Bluetooth são necessárias para conectar.');
+      return;
+    }
+    
     setIsScanning(true);
+    
+    // Mock device scanning for compatibility (real implementation would use expo-bluetooth-classic)
     setTimeout(() => {
       setDeviceList([
         { id: 1, name: 'OBDII ELM327', address: '00:11:22:33:44:55' },
@@ -34,20 +104,24 @@ const OBDScreen = ({ navigation, route }) => {
     }, 2000);
   };
 
+  // Connect to a specific device
   const handleConnectDevice = (device) => {
     Alert.alert('Conectando', `Conectando a ${device.name}...`);
+    
     setTimeout(() => {
       setIsConnected(true);
+      setConnectedDevice(device);
       setShowDashboard(true);
       Alert.alert('Conectado!', `Conectado com sucesso a ${device.name}`);
     }, 1500);
   };
 
-  const handleReadLiveData = () => {
-    if (!isConnected) {
+  const handleReadLiveData = (manual = false) => {
+    if (!isConnected && manual) {
       Alert.alert('Erro', 'Conecte-se a um dispositivo OBD primeiro!');
       return;
     }
+    if (!isConnected) return;
     setLiveData({
       rpm: Math.floor(700 + Math.random() * 2000),
       speed: Math.floor(Math.random() * 120),
@@ -58,6 +132,18 @@ const OBDScreen = ({ navigation, route }) => {
       airIntakeTemp: Math.floor(20 + Math.random() * 30),
       throttlePosition: Math.floor(Math.random() * 100),
       fuelPressure: parseFloat((6 + Math.random() * 4).toFixed(1)),
+      intakeManifoldPressure: Math.floor(30 + Math.random() * 100),
+      oilTemp: Math.floor(80 + Math.random() * 40),
+      oilPressure: parseFloat((2 + Math.random() * 4).toFixed(1)),
+      lambda: parseFloat((0.9 + Math.random() * 0.2).toFixed(2)),
+      maf: parseFloat((1 + Math.random() * 5).toFixed(1)),
+      timingAdvance: Math.floor(-10 + Math.random() * 40),
+      egr: Math.floor(Math.random() * 50),
+      evapSystemVaporPressure: Math.floor(Math.random() * 100),
+      fuelTrimShort: parseFloat((-10 + Math.random() * 20).toFixed(1)),
+      fuelTrimLong: parseFloat((-10 + Math.random() * 20).toFixed(1)),
+      catalystTemp: Math.floor(300 + Math.random() * 400),
+      ambientTemp: Math.floor(15 + Math.random() * 30),
     });
   };
 
@@ -97,6 +183,7 @@ const OBDScreen = ({ navigation, route }) => {
     setIsConnected(false);
     setShowDashboard(false);
     setDeviceList([]);
+    setConnectedDevice(null);
     Alert.alert('Desconectado', 'Dispositivo desconectado!');
   };
 
@@ -144,7 +231,7 @@ const OBDScreen = ({ navigation, route }) => {
         {/* Connect and Help Buttons */}
         {!showDashboard && (
           <View style={styles.buttonsRow}>
-            <TouchableOpacity style={styles.connectButton} onPress={() => setShowDashboard(!showDashboard)}>
+            <TouchableOpacity style={styles.connectButton} onPress={handleScanDevices}>
               <MaterialCommunityIcons name="bluetooth-connect" size={22} color="#FFCF00" />
               <Text style={styles.connectButtonText}>
                 CONECTAR
@@ -158,176 +245,282 @@ const OBDScreen = ({ navigation, route }) => {
         )}
 
         {/* Main Dashboard Panels */}
-        <View style={styles.dashboardContainer}>
-          {/* First Panel - Gauges */}
-          <View style={styles.gaugePanel}>
-            <View style={styles.gaugeRow}>
-              {/* Fuel Gauge */}
-              <View style={styles.gaugeSmall}>
-                <View style={styles.fuelGauge}>
-                  <MaterialCommunityIcons name="fuel" size={36} color="#FFCF00" />
-                  <View style={styles.fuelArc}>
-                    <Text style={styles.gaugeLabel}>Gasolina</Text>
-                  </View>
+        {showDashboard && (
+          <View style={styles.dashboardContainer}>
+            {/* 1. Dados em Tempo Real */}
+            <View style={styles.obdPanel}>
+              <View style={styles.panelHeader}>
+                <MaterialCommunityIcons name="speedometer" size={28} color="#FFCF00" />
+                <Text style={styles.panelTitle}>DADOS EM TEMPO REAL</Text>
+              </View>
+              
+              {/* Medidores Principais */}
+              <View style={styles.mainGaugesRow}>
+                <View style={styles.gaugeItem}>
+                  <MaterialCommunityIcons name="tachometer" size={40} color="#FFCF00" />
+                  <Text style={styles.gaugeValue}>{liveData.rpm}</Text>
+                  <Text style={styles.gaugeUnit}>RPM</Text>
                 </View>
-                <Text style={styles.smallGaugeText}>Gasolina</Text>
-              </View>
-
-              {/* Main Speedometer */}
-              <View style={styles.speedometer}>
-                <View style={styles.speedOuterCircle}>
-                  <View style={styles.speedInnerCircle}>
-                    <View style={styles.speedNeedle}>
-                      <View style={styles.speedNeedleTip} />
-                    </View>
-                    <View style={styles.speedCenter} />
-                  </View>
+                
+                <View style={styles.gaugeItem}>
+                  <MaterialCommunityIcons name="speedometer" size={40} color="#FFCF00" />
+                  <Text style={styles.gaugeValue}>{liveData.speed}</Text>
+                  <Text style={styles.gaugeUnit}>KM/H</Text>
                 </View>
-                <Text style={styles.speedValue}>{liveData.speed} <Text style={styles.speedUnit}>km/h</Text></Text>
-              </View>
-
-              {/* Temperature Gauge */}
-              <View style={styles.gaugeSmall}>
-                <View style={styles.tempGauge}>
-                  <MaterialCommunityIcons name="thermometer" size={36} color="#FFCF00" />
-                </View>
-                <Text style={styles.smallGaugeText}>Temperatura do Motor</Text>
-              </View>
-            </View>
-
-            <View style={styles.airFlowContainer}>
-              <MaterialCommunityIcons name="weather-windy" size={32} color="#FFCF00" />
-              <Text style={styles.smallGaugeText}>Fluxo de ar</Text>
-            </View>
-          </View>
-
-          {/* Second Panel - RPM */}
-          <View style={styles.rpmPanel}>
-            <View style={styles.rpmGauge}>
-              {/* RPM Arc Background */}
-              <View style={styles.rpmArcContainer}>
-                <View style={[styles.rpmArc, styles.rpmArcGreen]} />
-                <View style={[styles.rpmArc, styles.rpmArcYellow]} />
-                <View style={[styles.rpmArc, styles.rpmArcRed]} />
-                {/* RPM Needle */}
-                <View style={styles.rpmNeedle} />
-                <View style={styles.rpmCenter} />
-              </View>
-              <Text style={styles.rpmValue}>{liveData.rpm}</Text>
-              <Text style={styles.rpmLabel}>RPM</Text>
-            </View>
-
-            <View style={styles.rpmLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
-                <Text style={styles.legendText}>NORMAL</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FFC107' }]} />
-                <Text style={styles.legendText}>ATENÇÃO</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF5722' }]} />
-                <Text style={styles.legendText}>CRÍTICO</Text>
-              </View>
-            </View>
-
-            <Text style={styles.statusText}>RPM Status: Verde = Normal , Amarelo = Alerta, Vermelho = Crítico</Text>
-          </View>
-
-          {/* Battery Panel */}
-          <View style={styles.batteryPanel}>
-            <View style={styles.batteryContainer}>
-              <View style={styles.batteryBody}>
-                <View style={[styles.batteryFill, { width: `${liveData.fuelLevel}%` }]} />
-              </View>
-              <View style={styles.batteryTip} />
-              <Text style={styles.batteryValue}>{liveData.fuelLevel}%</Text>
-            </View>
-            <Text style={styles.batteryLabel}>Tensão da Bateria</Text>
-          </View>
-
-          {/* Fuel Pressure Panel */}
-          <View style={styles.pressurePanel}>
-            <View style={styles.pressureHeader}>
-              <Text style={styles.pressureLabel}>PRESSÃO DO COMBUSTÍVEL</Text>
-            </View>
-            <View style={styles.pressureGauge}>
-                <View style={styles.pressureValueContainer}>
-                  <Text style={styles.pressureValue}>{liveData.fuelPressure.toFixed(1)}</Text>
-                  <Text style={styles.pressureUnit}>bar</Text>
-                </View>
-                <View style={styles.pressureScale}>
-                  <Text style={styles.pressureScaleMin}>6.0</Text>
-                  <View style={styles.pressureBarContainer}>
-                    <View 
-                      style={[
-                        styles.pressureBar, 
-                        { width: `${((liveData.fuelPressure - 6) / 4) * 100}%` }
-                      ]} 
-                    />
-                    <View 
-                      style={[
-                        styles.pressureIndicator, 
-                        { left: `${((liveData.fuelPressure - 6) / 4) * 100}%` }
-                      ]} 
-                    />
-                  </View>
-                  <Text style={styles.pressureScaleMax}>10.0</Text>
+                
+                <View style={styles.gaugeItem}>
+                  <MaterialCommunityIcons name="thermometer" size={40} color="#FFCF00" />
+                  <Text style={styles.gaugeValue}>{liveData.coolantTemp}°C</Text>
+                  <Text style={styles.gaugeUnit}>TEMPERATURA</Text>
                 </View>
               </View>
-          </View>
-
-          {/* Action Buttons */}
-          {isConnected && (
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleReadLiveData}>
-                <MaterialCommunityIcons name="refresh" size={24} color="#FFCF00" />
-                <Text style={styles.actionButtonText}>Atualizar Dados</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionButton, styles.actionButtonDanger]} onPress={handleDisconnect}>
-                <MaterialCommunityIcons name="bluetooth-off" size={24} color="#FFFFFF" />
-                <Text style={styles.actionButtonTextWhite}>Desconectar</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Device Connection (when not connected) */}
-          {!isConnected && !showDashboard && (
-            <View style={styles.connectionSection}>
-              {!isScanning && deviceList.length === 0 && (
-                <TouchableOpacity style={styles.scanButton} onPress={handleScanDevices}>
-                  <MaterialCommunityIcons name="bluetooth-search" size={24} color="#FFCF00" />
-                  <Text style={styles.scanButtonText}>Procurar Dispositivos</Text>
-                </TouchableOpacity>
-              )}
-              {isScanning && (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#FFCF00" />
-                  <Text style={styles.loadingText}>Procurando dispositivos...</Text>
+              
+              {/* Lista de Dados */}
+              <View style={styles.dataGrid}>
+                <View style={styles.dataCard}>
+                  <MaterialCommunityIcons name="gas-station" size={22} color="#FFCF00" />
+                  <Text style={styles.dataCardLabel}>Combustível</Text>
+                  <Text style={styles.dataCardValue}>{liveData.fuelLevel}%</Text>
                 </View>
-              )}
-              {deviceList.length > 0 && !isConnected && (
-                <View style={styles.deviceListContainer}>
-                  <Text style={styles.deviceListTitle}>Dispositivos Encontrados:</Text>
-                  {deviceList.map((device) => (
-                    <TouchableOpacity
-                      key={device.id}
-                      style={styles.deviceItem}
-                      onPress={() => handleConnectDevice(device)}
-                    >
-                      <MaterialCommunityIcons name="car-connected" size={28} color="#FFCF00" />
-                      <View style={styles.deviceInfo}>
-                        <Text style={styles.deviceName}>{device.name}</Text>
-                        <Text style={styles.deviceAddress}>{device.address}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={24} color="#999" />
+                
+                <View style={styles.dataCard}>
+                  <MaterialCommunityIcons name="car-battery" size={22} color="#FFCF00" />
+                  <Text style={styles.dataCardLabel}>Bateria</Text>
+                  <Text style={styles.dataCardValue}>{liveData.batteryVoltage}V</Text>
+                </View>
+                
+                <View style={styles.dataCard}>
+                  <MaterialCommunityIcons name="gauge" size={22} color="#FFCF00" />
+                  <Text style={styles.dataCardLabel}>Pressão Coletor</Text>
+                  <Text style={styles.dataCardValue}>{liveData.intakeManifoldPressure} kPa</Text>
+                </View>
+                
+                <View style={styles.dataCard}>
+                  <MaterialCommunityIcons name="engine" size={22} color="#FFCF00" />
+                  <Text style={styles.dataCardLabel}>Carga do Motor</Text>
+                  <Text style={styles.dataCardValue}>{liveData.engineLoad}%</Text>
+                </View>
+                
+                <View style={styles.dataCard}>
+                  <MaterialCommunityIcons name="oil" size={22} color="#FFCF00" />
+                  <Text style={styles.dataCardLabel}>Temp. Óleo</Text>
+                  <Text style={styles.dataCardValue}>{liveData.oilTemp}°C</Text>
+                </View>
+                
+                <View style={styles.dataCard}>
+                  <MaterialCommunityIcons name="water" size={22} color="#FFCF00" />
+                  <Text style={styles.dataCardLabel}>Pressão Óleo</Text>
+                  <Text style={styles.dataCardValue}>{liveData.oilPressure} bar</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 2. Diagnóstico de Falhas */}
+            <View style={styles.obdPanel}>
+              <View style={styles.panelHeader}>
+                <MaterialCommunityIcons name="alert-circle" size={28} color="#FFCF00" />
+                <Text style={styles.panelTitle}>DIAGNÓSTICO DE FALHAS</Text>
+              </View>
+              
+              {dtcCodes.length > 0 ? (
+                <View>
+                  <View style={styles.dtcHeader}>
+                    <Text style={styles.dtcCount}>{dtcCodes.length} Códigos Encontrados</Text>
+                    <TouchableOpacity style={styles.clearDtcBtn} onPress={handleClearDTCs}>
+                      <MaterialCommunityIcons name="delete" size={18} color="#FFCF00" />
+                      <Text style={styles.clearDtcText}>Limpar</Text>
                     </TouchableOpacity>
+                  </View>
+                  
+                  {dtcCodes.map((dtc, index) => (
+                    <View key={index} style={styles.dtcItem}>
+                      <View style={[styles.dtcSeverity, { backgroundColor: dtc.severity === 'high' ? '#FF5722' : '#FFC107' }]} />
+                      <View style={styles.dtcInfo}>
+                        <Text style={styles.dtcCode}>{dtc.code}</Text>
+                        <Text style={styles.dtcDescription}>{dtc.description}</Text>
+                      </View>
+                      <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+                    </View>
                   ))}
                 </View>
+              ) : (
+                <View style={styles.noDtcContainer}>
+                  <MaterialCommunityIcons name="check-circle" size={48} color="#4CAF50" />
+                  <Text style={styles.noDtcText}>Nenhum código de falha detectado</Text>
+                </View>
               )}
+              
+              <TouchableOpacity style={styles.readDtcBtn} onPress={handleReadDTCs}>
+                <MaterialCommunityIcons name="refresh" size={20} color="#FFCF00" />
+                <Text style={styles.readDtcText}>Ler Códigos de Erro</Text>
+              </TouchableOpacity>
             </View>
-          )}
+
+            {/* 3. Consumo e Emissões */}
+            <View style={styles.obdPanel}>
+              <View style={styles.panelHeader}>
+                <MaterialCommunityIcons name="chart-line" size={28} color="#FFCF00" />
+                <Text style={styles.panelTitle}>CONSUMO E EMISSÕES</Text>
+              </View>
+              
+              <View style={styles.consumptionGrid}>
+                <View style={styles.consumptionCard}>
+                  <MaterialCommunityIcons name="speedometer" size={32} color="#FFCF00" />
+                  <Text style={styles.consumptionValue}>{(8 + Math.random() * 4).toFixed(1)}</Text>
+                  <Text style={styles.consumptionUnit}>KM/L</Text>
+                  <Text style={styles.consumptionLabel}>Eficiência</Text>
+                </View>
+                
+                <View style={styles.consumptionCard}>
+                  <MaterialCommunityIcons name="smog" size={32} color="#FFCF00" />
+                  <Text style={styles.consumptionValue}>{(120 + Math.random() * 80).toFixed(0)}</Text>
+                  <Text style={styles.consumptionUnit}>G/KM</Text>
+                  <Text style={styles.consumptionLabel}>Emissões CO₂</Text>
+                </View>
+              </View>
+              
+              <View style={styles.fuelTrimsRow}>
+                <View style={styles.fuelTrimItem}>
+                  <Text style={styles.fuelTrimLabel}>Ajuste Curto</Text>
+                  <Text style={styles.fuelTrimValue}>{liveData.fuelTrimShort}%</Text>
+                </View>
+                <View style={styles.fuelTrimItem}>
+                  <Text style={styles.fuelTrimLabel}>Ajuste Longo</Text>
+                  <Text style={styles.fuelTrimValue}>{liveData.fuelTrimLong}%</Text>
+                </View>
+              </View>
+              
+              <View style={styles.sensorDataRow}>
+                <View style={styles.sensorDataItem}>
+                  <MaterialCommunityIcons name="lambda" size={20} color="#FFCF00" />
+                  <Text style={styles.sensorDataLabel}>Lambda</Text>
+                  <Text style={styles.sensorDataValue}>{liveData.lambda}</Text>
+                </View>
+                <View style={styles.sensorDataItem}>
+                  <MaterialCommunityIcons name="fire" size={20} color="#FFCF00" />
+                  <Text style={styles.sensorDataLabel}>Temp. Catalisador</Text>
+                  <Text style={styles.sensorDataValue}>{liveData.catalystTemp}°C</Text>
+                </View>
+                <View style={styles.sensorDataItem}>
+                  <MaterialCommunityIcons name="weather-windy" size={20} color="#FFCF00" />
+                  <Text style={styles.sensorDataLabel}>Fluxo de Ar</Text>
+                  <Text style={styles.sensorDataValue}>{liveData.maf} g/s</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 4. Monitoramento de Condução */}
+            <View style={styles.obdPanel}>
+              <View style={styles.panelHeader}>
+                <MaterialCommunityIcons name="steering" size={28} color="#FFCF00" />
+                <Text style={styles.panelTitle}>MONITORAMENTO DE CONDUÇÃO</Text>
+              </View>
+              
+              <View style={styles.drivingStatsGrid}>
+                <View style={styles.drivingStatCard}>
+                  <MaterialCommunityIcons name="arrow-up-bold-circle" size={28} color="#FF5722" />
+                  <Text style={styles.drivingStatValue}>0</Text>
+                  <Text style={styles.drivingStatLabel}>Acelerações Bruscas</Text>
+                </View>
+                
+                <View style={styles.drivingStatCard}>
+                  <MaterialCommunityIcons name="arrow-down-bold-circle" size={28} color="#FF5722" />
+                  <Text style={styles.drivingStatValue}>0</Text>
+                  <Text style={styles.drivingStatLabel}>Frenagens Severas</Text>
+                </View>
+                
+                <View style={styles.drivingStatCard}>
+                  <MaterialCommunityIcons name="timer-sand" size={28} color="#FFCF00" />
+                  <Text style={styles.drivingStatValue}>{Math.floor(Math.random() * 30)}min</Text>
+                  <Text style={styles.drivingStatLabel}>Ponto Morto</Text>
+                </View>
+                
+                <View style={styles.drivingStatCard}>
+                  <MaterialCommunityIcons name="seatbelt" size={28} color="#4CAF50" />
+                  <Text style={styles.drivingStatValue}>✅</Text>
+                  <Text style={styles.drivingStatLabel}>Cinto de Segurança</Text>
+                </View>
+              </View>
+              
+              <View style={styles.sensorDetailsRow}>
+                <View style={styles.sensorDetailItem}>
+                  <Text style={styles.sensorDetailLabel}>Posição do Acelerador</Text>
+                  <Text style={styles.sensorDetailValue}>{liveData.throttlePosition}%</Text>
+                </View>
+                <View style={styles.sensorDetailItem}>
+                  <Text style={styles.sensorDetailLabel}>Avanço de Ignição</Text>
+                  <Text style={styles.sensorDetailValue}>{liveData.timingAdvance}°</Text>
+                </View>
+              </View>
+              
+              <View style={styles.sensorDetailsRow}>
+                <View style={styles.sensorDetailItem}>
+                  <Text style={styles.sensorDetailLabel}>EGR</Text>
+                  <Text style={styles.sensorDetailValue}>{liveData.egr}%</Text>
+                </View>
+                <View style={styles.sensorDetailItem}>
+                  <Text style={styles.sensorDetailLabel}>Pressão EVAP</Text>
+                  <Text style={styles.sensorDetailValue}>{liveData.evapSystemVaporPressure} Pa</Text>
+                </View>
+                <View style={styles.sensorDetailItem}>
+                  <Text style={styles.sensorDetailLabel}>Temp. Ambiente</Text>
+                  <Text style={styles.sensorDetailValue}>{liveData.ambientTemp}°C</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            {isConnected && (
+              <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleReadLiveData(true)}>
+                  <MaterialCommunityIcons name="refresh" size={24} color="#FFCF00" />
+                  <Text style={styles.actionButtonText}>Atualizar Dados</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionButton, styles.actionButtonDanger]} onPress={handleDisconnect}>
+                  <MaterialCommunityIcons name="bluetooth-off" size={24} color="#FFFFFF" />
+                  <Text style={styles.actionButtonTextWhite}>Desconectar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Device Connection (when not connected) */}
+        {!showDashboard && (
+          <View style={styles.connectionSection}>
+            {!isScanning && deviceList.length === 0 && (
+              <TouchableOpacity style={styles.scanButton} onPress={handleScanDevices}>
+                <MaterialCommunityIcons name="bluetooth-search" size={24} color="#FFCF00" />
+                <Text style={styles.scanButtonText}>Procurar Dispositivos</Text>
+              </TouchableOpacity>
+            )}
+            {isScanning && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#FFCF00" />
+                <Text style={styles.loadingText}>Procurando dispositivos...</Text>
+              </View>
+            )}
+            {deviceList.length > 0 && !isConnected && (
+              <View style={styles.deviceListContainer}>
+                <Text style={styles.deviceListTitle}>Dispositivos Encontrados:</Text>
+                {deviceList.map((device) => (
+                  <TouchableOpacity
+                    key={device.id}
+                    style={styles.deviceItem}
+                    onPress={() => handleConnectDevice(device)}
+                  >
+                    <MaterialCommunityIcons name="car-connected" size={28} color="#FFCF00" />
+                    <View style={styles.deviceInfo}>
+                      <Text style={styles.deviceName}>{device.name}</Text>
+                      <Text style={styles.deviceAddress}>{device.address}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color="#999" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
           {/* Bottom Spacer for Nav Bar */}
           <View style={styles.bottomSpacer} />
@@ -424,19 +617,32 @@ const OBDScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#ffffff',
-    height: Platform.OS === 'web' ? '100vh' : '100%',
-    overflow: 'hidden',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      },
+      default: {
+        flex: 1
+      }
+    })
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
     paddingBottom: 15,
     backgroundColor: '#FFFFFF',
-    flexShrink: 0,
   },
   backButton: {
     marginRight: 10,
@@ -485,7 +691,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   statusDotConnected: {
-    backgroundColor: '#FFCF00',
+    backgroundColor: '#4CAF50',
   },
   statusDotDisconnected: {
     backgroundColor: '#F44336',
@@ -497,17 +703,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter, sans-serif',
   },
   statusTextConnected: {
-    color: '#FFCF00',
+    color: '#4CAF50',
   },
   statusTextDisconnected: {
     color: '#F44336',
   },
   scrollView: {
     flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll'
+      }
+    })
   },
   scrollContent: {
-    paddingBottom: 120,
     flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   title: {
     fontSize: 20,
@@ -554,7 +766,6 @@ const styles = StyleSheet.create({
   buttonsRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    paddingHorizontal: 20,
     marginBottom: 20,
   },
   helpButton: {
@@ -574,9 +785,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dashboardContainer: {
-    paddingHorizontal: 15,
+    width: '100%',
   },
-  gaugePanel: {
+  obdPanel: {
     backgroundColor: '#2E2E2E',
     borderRadius: 20,
     padding: 20,
@@ -587,316 +798,283 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
   },
-  gaugeRow: {
+  panelHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
   },
-  gaugeSmall: {
+  panelTitle: {
+    color: '#FFCF00',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 12,
+    fontFamily: 'Inter, sans-serif',
+  },
+  mainGaugesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  gaugeItem: {
     alignItems: 'center',
   },
-  fuelGauge: {
-    alignItems: 'center',
-  },
-  fuelArc: {
-    marginTop: 5,
-  },
-  tempGauge: {
-    alignItems: 'center',
-  },
-  smallGaugeText: {
+  gaugeValue: {
     color: '#FFFFFF',
-    fontSize: 8,
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginTop: 8,
+    fontFamily: 'Inter, sans-serif',
+  },
+  gaugeUnit: {
+    color: '#999',
+    fontSize: 10,
+    marginTop: 4,
+    fontFamily: 'Inter, sans-serif',
+  },
+  dataGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  dataCard: {
+    width: '48%',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  dataCardLabel: {
+    color: '#FFFFFF',
+    fontSize: 10,
     marginTop: 8,
     textAlign: 'center',
     fontFamily: 'Inter, sans-serif',
   },
-  speedometer: {
-    alignItems: 'center',
-  },
-  speedOuterCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 3,
-    borderColor: '#FFCF00',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  speedInnerCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  speedNeedle: {
-    position: 'absolute',
-    width: 4,
-    height: 45,
-    backgroundColor: '#FFCF00',
-    bottom: '50%',
-    transformOrigin: 'bottom center',
-    transform: [{ rotate: '45deg' }],
-  },
-  speedNeedleTip: {
-    position: 'absolute',
-    top: -5,
-    left: -3,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#FFCF00',
-  },
-  speedCenter: {
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    backgroundColor: '#FFCF00',
-  },
-  speedValue: {
-    fontSize: 36,
+  dataCardValue: {
+    color: '#FFCF00',
+    fontSize: 14,
     fontWeight: 'bold',
+    marginTop: 4,
+    fontFamily: 'Inter, sans-serif',
+  },
+  dtcHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  dtcCount: {
     color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'Inter, sans-serif',
+  },
+  clearDtcBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  clearDtcText: {
+    color: '#FFCF00',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 6,
+    fontFamily: 'Inter, sans-serif',
+  },
+  dtcItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+  },
+  dtcSeverity: {
+    width: 8,
+    height: '100%',
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  dtcInfo: {
+    flex: 1,
+  },
+  dtcCode: {
+    color: '#FFCF00',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'Inter, sans-serif',
+  },
+  dtcDescription: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    marginTop: 4,
+    fontFamily: 'Inter, sans-serif',
+  },
+  noDtcContainer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  noDtcText: {
+    color: '#4CAF50',
+    fontSize: 14,
+    marginTop: 12,
+    fontFamily: 'Inter, sans-serif',
+  },
+  readDtcBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 15,
+  },
+  readDtcText: {
+    color: '#FFCF00',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 8,
+    fontFamily: 'Inter, sans-serif',
+  },
+  consumptionGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  consumptionCard: {
+    width: '48%',
+    backgroundColor: '#333',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  consumptionValue: {
+    color: '#FFCF00',
+    fontSize: 32,
+    fontWeight: 'bold',
     marginTop: 10,
     fontFamily: 'Inter, sans-serif',
   },
-  speedUnit: {
-    fontSize: 14,
-    fontWeight: 'normal',
+  consumptionUnit: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: 'Inter, sans-serif',
   },
-  airFlowContainer: {
-    alignItems: 'flex-end',
-    marginTop: 30,
-    paddingRight: 20,
+  consumptionLabel: {
+    color: '#999',
+    fontSize: 11,
+    marginTop: 8,
+    fontFamily: 'Inter, sans-serif',
   },
-  rpmPanel: {
-    backgroundColor: '#2E2E2E',
-    borderRadius: 20,
-    padding: 30,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 10,
+  fuelTrimsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
   },
-  rpmGauge: {
+  fuelTrimItem: {
+    width: '48%',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 15,
     alignItems: 'center',
-    marginBottom: 20,
   },
-  rpmArcContainer: {
-    width: 200,
-    height: 100,
-    position: 'relative',
+  fuelTrimLabel: {
+    color: '#999',
+    fontSize: 11,
+    fontFamily: 'Inter, sans-serif',
   },
-  rpmArc: {
-    position: 'absolute',
-    bottom: 0,
-    width: 200,
-    height: 100,
-    borderRadius: 100,
-    borderTopWidth: 15,
-    borderTopColor: '#333',
-  },
-  rpmArcGreen: {
-    borderTopColor: '#4CAF50',
-    borderTopLeftRadius: 100,
-    borderTopRightRadius: 0,
-    width: 100,
-  },
-  rpmArcYellow: {
-    borderTopColor: '#FFC107',
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    width: 100,
-    left: 100,
-  },
-  rpmArcRed: {
-    borderTopColor: '#FF5722',
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 100,
-    width: 100,
-    left: 150,
-  },
-  rpmNeedle: {
-    position: 'absolute',
-    width: 4,
-    height: 80,
-    backgroundColor: '#FFCF00',
-    bottom: 0,
-    left: '50%',
-    marginLeft: -2,
-    transformOrigin: 'bottom center',
-    transform: [{ rotate: '45deg' }],
-  },
-  rpmCenter: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FFCF00',
-    bottom: -10,
-    left: '50%',
-    marginLeft: -10,
-  },
-  rpmValue: {
-    fontSize: 48,
-    fontWeight: 'bold',
+  fuelTrimValue: {
     color: '#FFCF00',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 6,
     fontFamily: 'Inter, sans-serif',
   },
-  rpmLabel: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'Inter, sans-serif',
-  },
-  rpmLegend: {
+  sensorDataRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 10,
+    justifyContent: 'space-between',
   },
-  legendItem: {
-    flexDirection: 'row',
+  sensorDataItem: {
+    width: '31%',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
   },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  legendText: {
-    color: '#FFFFFF',
+  sensorDataLabel: {
+    color: '#999',
     fontSize: 10,
+    marginTop: 6,
+    textAlign: 'center',
     fontFamily: 'Inter, sans-serif',
   },
-  statusText: {
+  sensorDataValue: {
+    color: '#FFCF00',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginTop: 4,
+    fontFamily: 'Inter, sans-serif',
+  },
+  drivingStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  drivingStatCard: {
+    width: '48%',
+    backgroundColor: '#333',
+    borderRadius: 16,
+    padding: 18,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  drivingStatValue: {
+    color: '#FFCF00',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 10,
+    fontFamily: 'Inter, sans-serif',
+  },
+  drivingStatLabel: {
     color: '#FFFFFF',
+    fontSize: 11,
+    marginTop: 6,
+    textAlign: 'center',
+    fontFamily: 'Inter, sans-serif',
+  },
+  sensorDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sensorDetailItem: {
+    flex: 1,
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  sensorDetailLabel: {
+    color: '#999',
     fontSize: 10,
     textAlign: 'center',
     fontFamily: 'Inter, sans-serif',
   },
-  batteryPanel: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  batteryContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2E2E2E',
-    borderRadius: 30,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: '#FFFFFF99',
-  },
-  batteryBody: {
-    width: 200,
-    height: 15,
-    backgroundColor: '#333',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginRight: 10,
-  },
-  batteryFill: {
-    height: '100%',
-    backgroundColor: '#FFCF00',
-  },
-  batteryTip: {
-    width: 5,
-    height: 15,
-    backgroundColor: '#FFCF00',
-  },
-  batteryValue: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginLeft: 10,
-    fontFamily: 'Inter, sans-serif',
-  },
-  batteryLabel: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    marginTop: 10,
-    fontFamily: 'Inter, sans-serif',
-  },
-  pressurePanel: {
-    backgroundColor: '#333',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-  },
-  pressureHeader: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  pressureLabel: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'Inter, sans-serif',
-  },
-  pressureGauge: {
-    alignItems: 'center',
-  },
-  pressureValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 10,
-  },
-  pressureValue: {
+  sensorDetailValue: {
     color: '#FFCF00',
-    fontSize: 24,
+    fontSize: 13,
     fontWeight: 'bold',
-    fontFamily: 'Inter, sans-serif',
-  },
-  pressureUnit: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    marginLeft: 5,
-    fontFamily: 'Inter, sans-serif',
-  },
-  pressureScale: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-  },
-  pressureScaleMin: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontFamily: 'Inter, sans-serif',
-  },
-  pressureBarContainer: {
-    flex: 1,
-    height: 10,
-    backgroundColor: '#444',
-    borderRadius: 5,
-    marginHorizontal: 10,
-    position: 'relative',
-  },
-  pressureBar: {
-    height: '100%',
-    backgroundColor: '#FFCF00',
-    width: '50%',
-    borderRadius: 5,
-  },
-  pressureIndicator: {
-    position: 'absolute',
-    width: 15,
-    height: 15,
-    backgroundColor: '#FFCF00',
-    borderRadius: 7.5,
-    top: -2.5,
-    left: '50%',
-    marginLeft: -7.5,
-  },
-  pressureScaleMax: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    marginTop: 4,
     fontFamily: 'Inter, sans-serif',
   },
   actionButtonsContainer: {
@@ -935,7 +1113,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter, sans-serif',
   },
   connectionSection: {
-    paddingHorizontal: 20,
+    width: '100%',
     marginBottom: 20,
   },
   scanButton: {
@@ -1014,6 +1192,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#2C2C2C',
     height: 70,
+    alignItems: 'center',
+    justifyContent: 'space-around',
     paddingBottom: 10,
     paddingTop: 5,
     shadowColor: '#000',
@@ -1021,6 +1201,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 10,
+    zIndex: 1000,
   },
   navItem: {
     flex: 1,
