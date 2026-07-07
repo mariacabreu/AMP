@@ -4,6 +4,7 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import API_BASE_URL from '../api';
+import BottomNav from '../components/BottomNav';
 
 const ReportScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -270,29 +271,7 @@ const ReportScreen = ({ navigation, route }) => {
         <MaterialCommunityIcons name="robot" size={30} color="#FFCF00" />
       </TouchableOpacity>
 
-      {/* Navigation Bar */}
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home', { user: loggedUser })}>
-          <Ionicons name="home-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="file-document" size={24} color="#FFCF00" />
-          <Text style={[styles.navText, styles.navTextActive]}>Relatório</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PartsCatalog', { user: loggedUser })}>
-          <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
-          <Text style={styles.navText}>Peças</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Checklist', { user: loggedUser })}>
-          <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Checklist</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings', { user: loggedUser })}>
-          <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Config</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Relatório" />
     </View>
   );
 };
@@ -533,31 +512,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFCF00',
   },
-  navBar: {
-     position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-     bottom: 0,
-     left: 0,
-     right: 0,
-     flexDirection: 'row',
-     backgroundColor: '#2b2b2b',
-     height: 70,
-     justifyContent: 'space-around',
-     alignItems: 'center',
-     paddingBottom: 10,
-     zIndex: 1000,
-   },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    fontSize: 10,
-    color: '#D9D9D9',
-    marginTop: 4,
-    fontWeight: '800',
-  },
-  navTextActive: {
-    color: '#FFCF00',
-  },
+
   emptySpace: {
     height: 100,
   },

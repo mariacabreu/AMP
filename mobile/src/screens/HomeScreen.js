@@ -4,6 +4,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, 
 import axios from 'axios';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import API_BASE_URL from '../api';
+import BottomNav from '../components/BottomNav';
 
 const HomeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -157,28 +158,7 @@ const HomeScreen = ({ navigation, route }) => {
         <View style={styles.emptySpace} />
       </ScrollView>
 
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="home" size={24} color="#FFCF00" />
-          <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Report', { user: loggedUser })}>
-          <MaterialCommunityIcons name="file-document-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Relatório</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PartsCatalog', { user: loggedUser })}>
-          <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
-          <Text style={styles.navText}>Peças</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Checklist', { user: loggedUser })}>
-          <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Checklist</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings', { user: loggedUser })}>
-          <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Config</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
     </View>
   );
 };
@@ -308,36 +288,7 @@ const styles = StyleSheet.create({
   emptySpace: {
     height: 100
   },
-  navBar: {
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: '#2C2C2C',
-    height: 70,
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingBottom: 10,
-    zIndex: 1000
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  navIcon: {
-    width: 24,
-    height: 24,
-    marginBottom: 4
-  },
-  navText: {
-    color: '#D9D9D9',
-    fontSize: 10,
-    fontWeight: '800'
-  },
-  navTextActive: {
-    color: '#FFCF00'
-  }
+
 });
 
 export default HomeScreen;

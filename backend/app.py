@@ -322,6 +322,47 @@ def get_years(brand, model):
         return jsonify(years), 200
     return jsonify({'error': 'Marca não suportada'}), 404
 
+@app.route('/vehicle/<int:vehicle_id>', methods=['PUT', 'PATCH'])
+def update_vehicle(vehicle_id):
+    print(f"\n=== ATUALIZANDO VEÍCULO ID: {vehicle_id} ===")
+    data = request.json
+    print(f"Dados recebidos para atualização: {data}")
+    
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Veículo não encontrado'}), 404
+    
+    try:
+        # Atualizar campos permitidos
+        if 'mileage' in data:
+            vehicle.mileage = data['mileage']
+        if 'last_oil_change' in data:
+            vehicle.last_oil_change = data['last_oil_change']
+        if 'last_belt_change' in data:
+            vehicle.last_belt_change = data['last_belt_change']
+        if 'last_brake_change' in data:
+            vehicle.last_brake_change = data['last_brake_change']
+        if 'transmission' in data:
+            vehicle.transmission = data['transmission']
+        if 'fuel_type' in data:
+            vehicle.fuel_type = data['fuel_type']
+        if 'engine_type' in data:
+            vehicle.engine_type = data['engine_type']
+        if 'usage_type' in data:
+            vehicle.usage_type = data['usage_type']
+        
+        db.session.commit()
+        print("Veículo atualizado com sucesso!")
+        return jsonify({
+            'message': 'Veículo atualizado com sucesso', 
+            'vehicle': vehicle.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao atualizar veículo: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/vehicle/register', methods=['POST'])
 def register_vehicle():
     data = request.json

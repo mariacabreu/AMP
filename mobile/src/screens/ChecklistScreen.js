@@ -9,6 +9,8 @@ const ChecklistScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [checklist, setChecklist] = useState([]);
   const [vehicleInfo, setVehicleInfo] = useState('');
+  const [vehicleId, setVehicleId] = useState(null);
+  const [currentMileage, setCurrentMileage] = useState(0);
 
   useEffect(() => {
     fetchChecklist();
@@ -18,11 +20,14 @@ const ChecklistScreen = ({ navigation, route }) => {
     try {
       const userId = loggedUser?.id || 1;
       const statusRes = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
-      const vehicleId = statusRes.data.vehicle?.id;
+      const vehicle = statusRes.data.vehicle;
       
-      if (vehicleId) {
+      if (vehicle) {
+        setVehicleId(vehicle.id);
+        setCurrentMileage(vehicle.mileage || 0);
+        
         // Usando o endpoint de IA para recomendações personalizadas
-        const response = await axios.get(`${API_BASE_URL}/vehicle/checklist/ai/${vehicleId}`);
+        const response = await axios.get(`${API_BASE_URL}/vehicle/checklist/ai/${vehicle.id}`);
         setChecklist(response.data.checklist.map(item => ({ ...item, checked: false })));
         setVehicleInfo(`${response.data.vehicle} (${response.data.mileage} km)`);
       }
@@ -30,6 +35,36 @@ const ChecklistScreen = ({ navigation, route }) => {
       console.error('Erro ao buscar checklist:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleMarkAsDone = async (item) => {
+    if (!vehicleId) return;
+    
+    try {
+      // Mapear o item para o campo correspondente no veículo
+      let updateData = {};
+      
+      const itemNameLower = item.name.toLowerCase();
+      
+      if (itemNameLower.includes('óleo') || itemNameLower.includes('oil')) {
+        updateData.last_oil_change = currentMileage;
+      } else if (itemNameLower.includes('correia') || itemNameLower.includes('corrente') || itemNameLower.includes('dentada')) {
+        updateData.last_belt_change = currentMileage;
+      } else if (itemNameLower.includes('freio') || itemNameLower.includes('pastilha')) {
+        updateData.last_brake_change = currentMileage;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await axios.patch(`${API_BASE_URL}/vehicle/${vehicleId}`, updateData);
+        alert(`${item.name} marcado como feito com sucesso!`);
+        
+        // Atualizar o checklist
+        fetchChecklist();
+      }
+    } catch (error) {
+      console.error('Erro ao marcar como feito:', error);
+      alert('Erro ao marcar como feito. Tente novamente.');
     }
   };
 
@@ -122,6 +157,14 @@ const ChecklistScreen = ({ navigation, route }) => {
                   <Text style={styles.reasonText}>{item.reason}</Text>
                 </View>
               </View>
+              
+              <TouchableOpacity 
+                style={styles.markDoneButton} 
+                onPress={() => handleMarkAsDone(item)}
+              >
+                <MaterialCommunityIcons name="check-circle" size={18} color="#FFCF00" />
+                <Text style={styles.markDoneText}>Marcar como Feito</Text>
+              </TouchableOpacity>
             </View>
           ))
         )}
@@ -329,6 +372,22 @@ const styles = StyleSheet.create({
     color: '#444',
     lineHeight: 12,
     textAlign: 'justify',
+  },
+  markDoneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2E2E2E',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  markDoneText: {
+    color: '#FFCF00',
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   partImage: {
     width: 80,
