@@ -1,0 +1,375 @@
+* {
+  box-sizing: border-box;
+}
+
+.planejamentoDeViagem {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  padding-top: 26px;
+  width: 393px;
+  height: 852px;
+  overflow-y: auto;
+
+  .frame24 {
+    display: flex;
+    align-items: flex-start;
+    align-self: stretch;
+    background: #ffffff;
+    padding-right: 11px;
+    height: 62px;
+    overflow: hidden;
+
+    .pItchprojetoandreza1 {
+      width: 105px;
+      height: 59px;
+    }
+
+    .group336 {
+      position: relative;
+      margin-top: 8px;
+      margin-left: 174px;
+      width: 103px;
+      height: 71px;
+
+      .group334 {
+        display: flex;
+        position: absolute;
+        top: 6px;
+        left: 0;
+        align-items: flex-start;
+        padding-right: 69px;
+        padding-bottom: 35px;
+        width: 103px;
+        height: 65px;
+
+        .image28 {
+          width: 34px;
+          height: 30px;
+        }
+      }
+
+      .image29 {
+        position: absolute;
+        top: 0;
+        left: 61px;
+        width: 42px;
+        height: 43px;
+      }
+    }
+  }
+
+  .pLanejesuaviagem {
+    margin: 17px 0px 0px;
+    line-height: 20px;
+    letter-spacing: 0;
+    color: #000000;
+    font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .image73 {
+    margin-top: 10px;
+    border-radius: 15px;
+    width: 350px;
+    height: 258px;
+    background-image: url(../image/mrb9uzo0-02aona5.png);
+    background-position: 0px -181px;
+    background-size: 100% 294.44%;
+    background-repeat: no-repeat;
+  }
+
+  .image66 {
+    position: absolute;
+    top: 661px;
+    left: 336px;
+    border-radius: 50px;
+    width: 49px;
+    height: 51px;
+  }
+
+  .frame1 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: stretch;
+    z-index: 1;
+    margin-right: 22px;
+    margin-left: 22px;
+    border: 1px solid #00000033;
+    border-radius: 15px;
+    padding: 10px 11px 19px;
+    overflow: hidden;
+
+    .button {
+      flex-shrink: 0;
+      line-height: 16px;
+      letter-spacing: 0;
+      color: var(--sds-color-text-brand-on-brand);
+      font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+      font-size: 16px;
+    }
+
+    .group330 {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      align-self: stretch;
+
+      .partida {
+        width: 199px;
+        height: 23px;
+        line-height: 16px;
+        letter-spacing: 0;
+        color: #000000;
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 16px;
+      }
+
+      .caixaEmail {
+        display: flex;
+        align-items: center;
+        align-self: stretch;
+        border: 1px solid #00000033;
+        border-radius: 8px;
+        padding: 10px 17px 10px 16px;
+        overflow: hidden;
+
+        .localDePartida {
+          width: 291px;
+          height: 21px;
+          line-height: 21px;
+          letter-spacing: 0;
+          color: #000000;
+          font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+          font-size: 15px;
+        }
+      }
+    }
+
+    .group331 {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      align-self: stretch;
+      margin-top: 27px;
+
+      .destino {
+        width: 110px;
+        height: 23px;
+        line-height: 16px;
+        letter-spacing: 0;
+        color: #000000;
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 16px;
+      }
+
+      .caixaEmail2 {
+        display: flex;
+        align-items: center;
+        align-self: stretch;
+        border: 1px solid #00000033;
+        border-radius: 8px;
+        padding: 10px 31px 10px 18px;
+        overflow: hidden;
+
+        .praOnde {
+          width: 275px;
+          height: 21px;
+          line-height: 21px;
+          letter-spacing: 0;
+          color: #000000;
+          font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+          font-size: 15px;
+        }
+      }
+    }
+
+    .quilometragem {
+      margin: 27px 0px 0px;
+      width: 125px;
+      height: 23px;
+      line-height: 16px;
+      letter-spacing: 0;
+      color: #000000;
+      font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+      font-size: 16px;
+    }
+
+    .caixaEmail3 {
+      position: relative;
+      border: 1px solid #00000033;
+      border-radius: 8px;
+      width: 326px;
+      height: 43px;
+      overflow: hidden;
+
+      .a82Km {
+        position: absolute;
+        top: 10px;
+        left: 19px;
+        width: 278px;
+        height: 21px;
+        line-height: 21px;
+        letter-spacing: 0;
+        color: #000000;
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+        font-size: 15px;
+      }
+
+      .button2 {
+        display: flex;
+        position: absolute;
+        top: 1px;
+        left: 204px;
+        align-items: center;
+        justify-content: center;
+        column-gap: 8px;
+        border: 1px solid var(--sds-color-border-brand-default);
+        border-radius: 8px;
+        background: var(--sds-color-background-brand-default);
+        padding: 11px;
+        width: 121px;
+        height: 41px;
+        overflow: hidden;
+      }
+    }
+
+    .button3 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      column-gap: 8px;
+      margin-top: 27px;
+      margin-left: 15px;
+      border: 1px solid var(--sds-color-border-brand-default);
+      border-radius: 8px;
+      background: var(--sds-color-background-brand-default);
+      padding: 11px;
+      width: 170px;
+      overflow: hidden;
+    }
+  }
+
+  .barraDeNavegaO {
+    display: flex;
+    align-items: center;
+    margin-top: 33px;
+    background: #2c2c2c;
+    padding-right: 20px;
+    padding-left: 20px;
+    width: 393px;
+
+    .home2 {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      width: 53px;
+      height: 18px;
+      line-height: 13px;
+      letter-spacing: 0;
+      color: #ffffff;
+      font-family: "Coda Caption", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .home3 {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(
+        --M3-Elevation-Dark-5,
+        0px 8px 12px 6px #00000026,
+        0px 4px 4px 0px #0000004d
+      );
+      padding-top: 5px;
+      padding-bottom: 5px;
+
+      .home {
+        flex-shrink: 0;
+        width: 47px;
+        height: 48px;
+        overflow: hidden;
+      }
+    }
+
+    .home4 {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(
+        --M3-Elevation-Dark-5,
+        0px 8px 12px 6px #00000026,
+        0px 4px 4px 0px #0000004d
+      );
+      padding-top: 5px;
+      padding-bottom: 5px;
+
+      .iconPeAs {
+        position: relative;
+        flex-shrink: 0;
+        width: 47px;
+        height: 48px;
+
+        .peAs {
+          display: flex;
+          position: absolute;
+          top: 22px;
+          left: 0;
+          align-items: center;
+          justify-content: center;
+          width: 47px;
+          height: 26px;
+          line-height: 13px;
+          letter-spacing: 0;
+          color: #000000;
+          font-family: "Coda Caption", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+          font-size: 9px;
+          font-weight: 800;
+        }
+
+        .settings {
+          position: absolute;
+          top: 26px;
+          left: 24px;
+          width: 18px;
+          height: 17px;
+          overflow: hidden;
+        }
+
+        .group351 {
+          position: absolute;
+          top: 10px;
+          left: 5px;
+          width: 38px;
+          height: 35px;
+        }
+      }
+    }
+  }
+
+  .peopleInCarSideView {
+    position: absolute;
+    top: 86px;
+    left: 285px;
+    width: 25px;
+    height: 19px;
+  }
+
+  .image72 {
+    position: absolute;
+    top: 87px;
+    left: 308px;
+    width: 86px;
+    height: 37px;
+  }
+}

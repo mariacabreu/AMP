@@ -100,7 +100,7 @@ const HomeScreen = ({ navigation, route }) => {
 
             <TouchableOpacity
               style={styles.gridButton}
-              onPress={status.is_premium ? () => Alert.alert('Recurso Desbloqueado', 'Recurso Planejar Viagem desbloqueado!') : handlePremiumButton}
+              onPress={() => navigation.navigate('TravelPlanning', { user: loggedUser })}
             >
               <View style={styles.iconCircle}>
                 <FontAwesome5 name="route" size={45} color="#FFCF00" />

@@ -21,6 +21,7 @@ import DebitPaymentScreen from './src/screens/DebitPaymentScreen';
 import QRCodeScreen from './src/screens/QRCodeScreen';
 import MaintenanceTipsScreen from './src/screens/MaintenanceTipsScreen';
 import OBDScreen from './src/screens/OBDScreen';
+import TravelPlanningScreen from './src/screens/TravelPlanningScreen';
 
 const Stack = createStackNavigator();
 
@@ -47,6 +48,7 @@ export default function App() {
         <Stack.Screen name="QRCode" component={QRCodeScreen} />
         <Stack.Screen name="MaintenanceTips" component={MaintenanceTipsScreen} />
         <Stack.Screen name="OBD" component={OBDScreen} />
+        <Stack.Screen name="TravelPlanning" component={TravelPlanningScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

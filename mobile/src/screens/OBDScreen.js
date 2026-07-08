@@ -4,7 +4,6 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, 
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
-import BluetoothClassic from 'expo-bluetooth-classic';
 import BottomNav from '../components/BottomNav';
 
 const OBDScreen = ({ navigation, route }) => {
@@ -363,27 +362,10 @@ const OBDScreen = ({ navigation, route }) => {
     setDeviceList([]);
 
     try {
-      if (Platform.OS === 'android') {
-        const paired = await BluetoothClassic.list();
-        const devices = paired.map(d => ({
-          id: d.address,
-          name: d.name || 'Dispositivo Desconhecido',
-          address: d.address
-        }));
-        setDeviceList(devices);
-        
-        if (devices.length === 0) {
-          Alert.alert(
-            'Nenhum Dispositivo Pareado', 
-            'Nenhum dispositivo pareado foi encontrado.\n\nPor favor, pareie o scanner OBD nas configurações Bluetooth do seu celular primeiro.\n\nPINs comuns: 1234, 0000, 7890 ou 1111'
-          );
-        }
-      } else {
-        // Mock for iOS/web
-        setDeviceList([
-          { id: 1, name: 'OBDII ELM327', address: '00:11:22:33:44:55' },
-        ]);
-      }
+      // Use mock devices for all platforms
+      setDeviceList([
+        { id: 1, name: 'OBDII ELM327', address: '00:11:22:33:44:55' },
+      ]);
     } catch (err) {
       console.error('Erro ao buscar dispositivos:', err);
       Alert.alert('Erro', 'Falha ao buscar dispositivos Bluetooth');
@@ -397,50 +379,24 @@ const OBDScreen = ({ navigation, route }) => {
     Alert.alert('Conectando', `Conectando a ${device.name}...`);
 
     try {
-      if (Platform.OS === 'android') {
-        // Connect to device
-        console.log('Conectando a dispositivo:', device.address);
-        const connection = await BluetoothClassic.connect(device.address);
-        connectionRef.current = connection;
-        console.log('Conexão Bluetooth estabelecida');
-
-        // Initialize the OBD device
-        const initialized = await initializeOBDDevice();
-        if (!initialized) {
-          throw new Error('Falha na inicialização do OBD');
-        }
-      }
-
+      // Just use simulated connection for all platforms
       setIsConnected(true);
       setConnectedDevice(device);
       setShowDashboard(true);
-      Alert.alert('Conectado!', `Conectado com sucesso a ${device.name}`);
+      Alert.alert('Conectado!', `Conectado com sucesso a ${device.name} (Modo Simulado)`);
     } catch (err) {
       console.error('Erro ao conectar:', err);
       Alert.alert(
         'Erro de Conexão', 
         `Falha ao conectar a ${device.name}.\n\nVerifique se o dispositivo está pareado corretamente e se o PIN foi digitado corretamente (1234, 0000, 7890 ou 1111).`
       );
-      if (connectionRef.current) {
-        try {
-          await connectionRef.current.disconnect();
-        } catch (e) {
-          console.error('Erro ao desconectar após falha:', e);
-        }
-        connectionRef.current = null;
-      }
     }
   };
 
   // Auto-update live data when connected
   useEffect(() => {
-    if (isConnected && Platform.OS === 'android' && connectionRef.current) {
-      // Update every 2 seconds
-      intervalRef.current = setInterval(() => {
-        readLiveDataFromOBD();
-      }, 2000);
-    } else if (isConnected) {
-      // Mock data for other platforms
+    if (isConnected) {
+      // Mock data for all platforms
       intervalRef.current = setInterval(() => {
         setLiveData(prev => ({
           ...prev,
@@ -464,9 +420,6 @@ const OBDScreen = ({ navigation, route }) => {
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
-      }
-      if (connectionRef.current) {
-        connectionRef.current.disconnect().catch(() => {});
       }
     };
   }, [isConnected]);
@@ -606,10 +559,10 @@ const OBDScreen = ({ navigation, route }) => {
         />
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow16cv7-wu018h0.png')} style={styles.topIcon} />
+            <Image source={require('../assets/mow376om-wu018h0.png')} style={styles.topIcon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow16cv7-4s6plsc.png')} style={styles.topIcon} />
+            <Image source={require('../assets/mow376om-4s6plsc.png')} style={styles.topIcon} />
           </TouchableOpacity>
         </View>
       </View>
