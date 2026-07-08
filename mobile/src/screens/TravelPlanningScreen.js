@@ -1,44 +1,35 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import BottomNav from '../components/BottomNav';
 
-const TravelPlanningScreen = ({ navigation, route }) =&gt; {
+export default function TravelPlanningScreen(props) {
+  const { navigation, route } = props;
   const loggedUser = route.params?.user;
   const [currentLocation, setCurrentLocation] = useState(null);
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
   const [distance, setDistance] = useState('0.0 KM');
   const [loading, setLoading] = useState(true);
-  const [routeCoordinates, setRouteCoordinates] = useState([]);
-  const [region, setRegion] = useState({
-    latitude: -23.5505,
-    longitude: -46.6333,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
 
-  // Função para calcular distância entre dois pontos (Haversine formula)
-  const calculateDistance = (lat1, lon1, lat2, lon2) =&gt; {
-    const R = 6371; // Radius da Terra em km
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    const distance = R * c;
-    return distance.toFixed(1);
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dist = R * c;
+    return dist.toFixed(1);
   };
 
-  useEffect(() =&gt; {
+  useEffect(() => {
     getCurrentLocation();
   }, []);
 
-  const getCurrentLocation = async () =&gt; {
+  const getCurrentLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -58,12 +49,6 @@ const TravelPlanningScreen = ({ navigation, route }) =&gt; {
 
       setCurrentLocation(coords);
       setStartLocation('Localização atual');
-      setRegion({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
       setLoading(false);
     } catch (error) {
       console.error('Error getting location:', error);
@@ -72,7 +57,7 @@ const TravelPlanningScreen = ({ navigation, route }) =&gt; {
     }
   };
 
-  const handleCalculateDistance = async () =&gt; {
+  const handleCalculateDistance = async () => {
     if (!currentLocation) {
       Alert.alert('Aviso', 'Aguardando localização atual...');
       return;
@@ -86,29 +71,18 @@ const TravelPlanningScreen = ({ navigation, route }) =&gt; {
     try {
       setLoading(true);
       
-      // Simulação de busca de endereço para destino (para demonstração)
-      // Em produção, você usaria uma API de geocoding como Google Maps, Mapbox, etc.
       const destinationCoords = {
         latitude: currentLocation.latitude + 0.01,
         longitude: currentLocation.longitude + 0.01,
       };
 
-      // Criar rota entre os dois pontos
-      const routeCoords = [
-        { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
-        { latitude: destinationCoords.latitude, longitude: destinationCoords.longitude },
-      ];
-
-      setRouteCoordinates(routeCoords);
-      
       const dist = calculateDistance(
         currentLocation.latitude,
         currentLocation.longitude,
         destinationCoords.latitude,
         destinationCoords.longitude
       );
-      setDistance(`${dist} KM`);
-
+      setDistance(dist + ' KM');
     } catch (error) {
       console.error('Error calculating distance:', error);
       Alert.alert('Erro', 'Não foi possível calcular a distância');
@@ -117,118 +91,116 @@ const TravelPlanningScreen = ({ navigation, route }) =&gt; {
     }
   };
 
-  const handleGenerateReport = () =&gt; {
+  const handleGenerateReport = () => {
     if (distance === '0.0 KM') {
       Alert.alert('Aviso', 'Calcule a distância primeiro');
       return;
     }
-    Alert.alert('Relatório', `Relatório de viagem gerado com sucesso!\nDistância: ${distance}`);
+    Alert.alert('Relatório', 'Relatório de viagem gerado com sucesso!\nDistância: ' + distance);
   };
 
   if (loading) {
     return (
-      &lt;View style={styles.loadingContainer}&gt;
-        &lt;ActivityIndicator size="large" color="#FFCF00" /&gt;
-        &lt;Text style={styles.loadingText}&gt;Carregando...&lt;/Text&gt;
-      &lt;/View&gt;
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FFCF00" />
+        <Text style={styles.loadingText}>Carregando...</Text>
+      </View>
     );
   }
 
   return (
-    &lt;View style={styles.container}&gt;
-      &lt;View style={styles.header}&gt;
-        &lt;TouchableOpacity onPress={() =&gt; navigation.goBack()}&gt;
-          &lt;MaterialIcons name="arrow-back" size={28} color="#000" /&gt;
-        &lt;/TouchableOpacity&gt;
-        &lt;Text style={styles.headerTitle}&gt;PLANEJE SUA VIAGEM&lt;/Text&gt;
-        &lt;View style={{ width: 28 }} /&gt;
-      &lt;/View&gt;
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <MaterialIcons name="arrow-back" size={28} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>PLANEJE SUA VIAGEM</Text>
+        <View style={{ width: 28 }} />
+      </View>
 
-      &lt;ScrollView
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={true}
-      &gt;
-        {/* Mapa */}
-        &lt;View style={styles.mapContainer}&gt;
-          &lt;View style={styles.mapPlaceholder}&gt;
-            &lt;FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" /&gt;
-            &lt;Text style={styles.mapText}&gt;
+      >
+        <View style={styles.mapContainer}>
+          <View style={styles.mapPlaceholder}>
+            <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
+            <Text style={styles.mapText}>
               {Platform.OS === 'web' ? 'Mapa interativo disponível no app mobile' : 'Mapa'}
-            &lt;/Text&gt;
-            {currentLocation &amp;&amp; (
-              &lt;View style={styles.locationInfoContainer}&gt;
-                &lt;MaterialIcons name="my-location" size={20} color="#4CAF50" /&gt;
-                &lt;Text style={styles.locationInfo}&gt;
+            </Text>
+            {currentLocation && (
+              <View style={styles.locationInfoContainer}>
+                <MaterialIcons name="my-location" size={20} color="#4CAF50" />
+                <Text style={styles.locationInfo}>
                   {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
-                &lt;/Text&gt;
-              &lt;/View&gt;
+                </Text>
+              </View>
             )}
-          &lt;/View&gt;
-        &lt;/View&gt;
+          </View>
+        </View>
 
-        {/* Formulário */}
-        &lt;View style={styles.formContainer}&gt;
-          &lt;View style={styles.inputGroup}&gt;
-            &lt;Text style={styles.label}&gt;Partida&lt;/Text&gt;
-            &lt;View style={styles.inputContainer}&gt;
-              &lt;MaterialIcons name="my-location" size={20} color="#4CAF50" style={styles.inputIcon} /&gt;
-              &lt;TextInput
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Partida</Text>
+            <View style={styles.inputContainer}>
+              <MaterialIcons name="my-location" size={20} color="#4CAF50" style={styles.inputIcon} />
+              <TextInput
                 style={styles.input}
                 placeholder="Local de partida"
                 value={startLocation}
                 editable={false}
-              /&gt;
-            &lt;/View&gt;
-          &lt;/View&gt;
+              />
+            </View>
+          </View>
 
-          &lt;View style={styles.inputGroup}&gt;
-            &lt;Text style={styles.label}&gt;Destino&lt;/Text&gt;
-            &lt;View style={styles.inputContainer}&gt;
-              &lt;FontAwesome5 name="map-marker-alt" size={20} color="#FF5722" style={styles.inputIcon} /&gt;
-              &lt;TextInput
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Destino</Text>
+            <View style={styles.inputContainer}>
+              <FontAwesome5 name="map-marker-alt" size={20} color="#FF5722" style={styles.inputIcon} />
+              <TextInput
                 style={styles.input}
                 placeholder="Pra onde?"
                 value={endLocation}
                 onChangeText={setEndLocation}
-              /&gt;
-            &lt;/View&gt;
-          &lt;/View&gt;
+              />
+            </View>
+          </View>
 
-          &lt;View style={styles.distanceContainer}&gt;
-            &lt;Text style={styles.label}&gt;Quilometragem:&lt;/Text&gt;
-            &lt;View style={styles.distanceBox}&gt;
-              &lt;Text style={styles.distanceText}&gt;{distance}&lt;/Text&gt;
-              &lt;TouchableOpacity
+          <View style={styles.distanceContainer}>
+            <Text style={styles.label}>Quilometragem:</Text>
+            <View style={styles.distanceBox}>
+              <Text style={styles.distanceText}>{distance}</Text>
+              <TouchableOpacity
                 style={styles.calculateButton}
                 onPress={handleCalculateDistance}
                 disabled={loading}
-              &gt;
+              >
                 {loading ? (
-                  &lt;ActivityIndicator size="small" color="#FFF" /&gt;
+                  <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  &lt;Text style={styles.calculateButtonText}&gt;Calcular Km&lt;/Text&gt;
+                  <Text style={styles.calculateButtonText}>Calcular Km</Text>
                 )}
-              &lt;/TouchableOpacity&gt;
-            &lt;/View&gt;
-          &lt;/View&gt;
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          &lt;TouchableOpacity
+          <TouchableOpacity
             style={styles.generateButton}
             onPress={handleGenerateReport}
-          &gt;
-            &lt;MaterialIcons name="receipt" size={20} color="#FFF" style={{ marginRight: 8 }} /&gt;
-            &lt;Text style={styles.generateButtonText}&gt;Gerar Relatório&lt;/Text&gt;
-          &lt;/TouchableOpacity&gt;
-        &lt;/View&gt;
+          >
+            <MaterialIcons name="receipt" size={20} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={styles.generateButtonText}>Gerar Relatório</Text>
+          </TouchableOpacity>
+        </View>
 
-        &lt;View style={styles.emptySpace} /&gt;
-      &lt;/ScrollView&gt;
+        <View style={styles.emptySpace} />
+      </ScrollView>
 
-      &lt;BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" /&gt;
-    &lt;/View&gt;
+      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -412,6 +384,3 @@ const styles = StyleSheet.create({
     height: 100,
   },
 });
-
-export default TravelPlanningScreen;
-
