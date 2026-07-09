@@ -15,7 +15,7 @@ import {
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
-import BottomNav from '../components/BottomNav';
+import BottomNav from '../components/NavBar/BottomNav';
 
 // Bluetooth is only available on Android, skip on web/iOS
 const BluetoothClassic = (() => {

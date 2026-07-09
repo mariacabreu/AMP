@@ -4,7 +4,7 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import API_BASE_URL from '../api';
-import BottomNav from '../components/BottomNav';
+import BottomNav from '../components/NavBar/BottomNav';
 
 const ReportScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;

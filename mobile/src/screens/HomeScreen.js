@@ -15,7 +15,7 @@ import {
 import axios from 'axios';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import API_BASE_URL from '../api';
-import BottomNav from '../components/BottomNav';
+import BottomNav from '../components/NavBar/BottomNav';
 
 // Notificações mockadas — troque por uma chamada à API quando o endpoint existir
 const MOCK_NOTIFICATIONS = [

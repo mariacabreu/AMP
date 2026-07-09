@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BottomNav from '../components/BottomNav';
+import BottomNav from '../components/NavBar/BottomNav';
 
 const STORAGE_KEY = 'trip_history';
 

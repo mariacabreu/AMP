@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
-import BottomNav from '../components/BottomNav';
+import BottomNav from '../components/NavBar/BottomNav';
 
 const PaymentMethodsScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;

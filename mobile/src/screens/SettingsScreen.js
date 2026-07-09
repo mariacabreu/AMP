@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, 
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
-import BottomNav from '../components/BottomNav';
+import BottomNav from '../components/NavBar/BottomNav';
 
 // Toggle customizado - substitui o Switch nativo para evitar o verde/teal do sistema na web
 const CustomSwitch = ({ value, onValueChange }) => {
