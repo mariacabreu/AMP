@@ -180,16 +180,16 @@ const ReportScreen = ({ navigation, route }) => {
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Image
-          source={require('../assets/mow376om-iempala.png')}
+          source={require('../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow376om-wu018h0.png')} style={styles.topIcon} />
+            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow376om-4s6plsc.png')} style={styles.topIcon} />
+            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
         </View>
       </View>

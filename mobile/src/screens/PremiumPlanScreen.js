@@ -48,16 +48,16 @@ const PremiumPlanScreen = ({ navigation, route }) => {
       {/* Header Fixo */}
       <View style={styles.header}>
         <Image
-          source={require('../assets/mow376om-iempala.png')}
+          source={require('../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow376om-wu018h0.png')} style={styles.topIcon} />
+            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/mow376om-4s6plsc.png')} style={styles.topIcon} />
+            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
         </View>
       </View>

@@ -20,7 +20,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       </TouchableOpacity>
       <View style={styles.content}>
         <Image
-          source={require('../assets/mow16cvs-4jz7ffc.png')}
+          source={require('../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

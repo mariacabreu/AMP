@@ -179,7 +179,7 @@ const MaintenanceEditScreen = ({ navigation, route }) => {
       {/* Header Fixo - mesma estrutura da ReportFormScreen em modo edição (somente logo centralizada) */}
       <View style={styles.header}>
         <Image
-          source={require('../assets/mow376om-iempala.png')}
+          source={require('../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

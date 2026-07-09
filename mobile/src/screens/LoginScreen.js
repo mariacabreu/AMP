@@ -38,7 +38,7 @@ const LoginScreen = ({ navigation }) => {
         scrollEnabled={true}
       >
         <Image
-          source={require('../assets/mow16cvf-h8ooki9.png')}
+          source={require('../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

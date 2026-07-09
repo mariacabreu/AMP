@@ -109,7 +109,7 @@ const VehicleHistoryScreen = ({ navigation, route }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Image
-              source={require('../assets/mow16cv7-aerakpu.png')}
+              source={require('../assets/logo.png')}
               style={styles.modalLogo}
               resizeMode="contain"
             />

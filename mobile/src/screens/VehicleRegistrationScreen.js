@@ -308,7 +308,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
         </TouchableOpacity>
 
         <Image
-          source={require('../assets/mow16cv7-aerakpu.png')} 
+          source={require('../assets/logo.png')} 
           style={styles.logo}
           resizeMode="contain"
         />

@@ -62,7 +62,7 @@ const RegisterScreen = ({ navigation }) => {
         scrollEnabled={true}
       >
         <Image
-          source={require('../assets/mow16cuz-sf57r2w.png')}
+          source={require('../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

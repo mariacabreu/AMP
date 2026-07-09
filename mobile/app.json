@@ -4,7 +4,7 @@
     "slug": "amp-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/mow16cv7-aerakpu.png",
+    "icon": "./src/assets/logo.png",
     "userInterfaceStyle": "light",
     "splash": {
       "resizeMode": "contain",
@@ -37,7 +37,7 @@
       "package": "com.anonymous.ampmobile"
     },
     "web": {
-      "favicon": "./src/assets/mow16cv7-aerakpu.png"
+      "favicon": "./src/assets/logo.png"
     }
   }
 }
