@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollVi
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
+import BottomNav from '../components/BottomNav';
 
 const PartsCatalogScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -245,29 +246,7 @@ const PartsCatalogScreen = ({ navigation, route }) => {
         <MaterialCommunityIcons name="robot" size={30} color="#FFCF00" />
       </TouchableOpacity>
 
-      {/* Navigation Bar */}
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home', { user: loggedUser })}>
-          <Ionicons name="home-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Report', { user: loggedUser })}>
-          <MaterialCommunityIcons name="file-document-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Relatório</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="folder-open" size={24} color="#FFCF00" />
-          <Text style={[styles.navText, styles.navTextActive]}>Peças</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Checklist', { user: loggedUser })}>
-          <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Checklist</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings', { user: loggedUser })}>
-          <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Config</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Peças" />
     </View>
   );
 };

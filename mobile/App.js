@@ -12,6 +12,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import ReportScreen from './src/screens/ReportScreen';
 import ReportFormScreen from './src/screens/ReportFormScreen';
 import PartsCatalogScreen from './src/screens/PartsCatalogScreen';
+import FuelScreen from './src/screens/FuelScreen';
 import ChecklistScreen from './src/screens/ChecklistScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PremiumPlanScreen from './src/screens/PremiumPlanScreen';
@@ -39,6 +40,7 @@ export default function App() {
         <Stack.Screen name="Report" component={ReportScreen} />
         <Stack.Screen name="ReportForm" component={ReportFormScreen} />
         <Stack.Screen name="PartsCatalog" component={PartsCatalogScreen} />
+        <Stack.Screen name="Fuel" component={FuelScreen} />
         <Stack.Screen name="Checklist" component={ChecklistScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="PremiumPlan" component={PremiumPlanScreen} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import BottomNav from '../components/BottomNav';
@@ -10,27 +10,212 @@ export default function TravelPlanningScreen(props) {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+  const [selectedDestination, setSelectedDestination] = useState(null);
+  const [searchingDestination, setSearchingDestination] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [distance, setDistance] = useState('0.0 KM');
+  const [duration, setDuration] = useState('');
+  const [mapPreviewUrl, setMapPreviewUrl] = useState('');
+  const [mapEmbedHtml, setMapEmbedHtml] = useState('');
+  const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
   const [loading, setLoading] = useState(true);
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const dist = R * c;
-    return dist.toFixed(1);
+  const formatDistance = (distanceInMeters) => {
+    return `${(distanceInMeters / 1000).toFixed(1)} KM`;
+  };
+
+  const formatDuration = (durationInSeconds) => {
+    const hours = Math.floor(durationInSeconds / 3600);
+    const minutes = Math.round((durationInSeconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+
+    return `${minutes} min`;
+  };
+
+  const simplifyRouteCoordinates = (coordinates, maxPoints = 24) => {
+    if (!Array.isArray(coordinates) || coordinates.length <= maxPoints) {
+      return coordinates || [];
+    }
+
+    const step = Math.max(1, Math.ceil(coordinates.length / maxPoints));
+    const simplified = coordinates.filter((_, index) => index % step === 0);
+    const lastCoordinate = coordinates[coordinates.length - 1];
+
+    if (simplified[simplified.length - 1] !== lastCoordinate) {
+      simplified.push(lastCoordinate);
+    }
+
+    return simplified;
+  };
+
+  const buildStaticMapUrl = (origin, destination, routeCoordinates = []) => {
+    const simplifiedCoordinates = simplifyRouteCoordinates(routeCoordinates);
+    const pathSegments = simplifiedCoordinates.length > 1
+      ? simplifiedCoordinates.map(([longitude, latitude]) => `${latitude},${longitude}`).join('|')
+      : `${origin.latitude},${origin.longitude}|${destination.latitude},${destination.longitude}`;
+
+    return `https://staticmap.openstreetmap.de/staticmap.php?size=800x420&markers=${origin.latitude},${origin.longitude},lightblue1|${destination.latitude},${destination.longitude},red-pushpin&path=${encodeURIComponent(`weight:4|color:0x1f6febff|${pathSegments}`)}`;
+  };
+
+  const buildMapEmbedHtml = (origin, destination, routeCoordinates = []) => {
+    const leafletCoordinates = (routeCoordinates || []).map(([longitude, latitude]) => [latitude, longitude]);
+    const safeRouteCoordinates = leafletCoordinates.length > 1
+      ? leafletCoordinates
+      : [
+          [origin.latitude, origin.longitude],
+          [destination.latitude, destination.longitude],
+        ];
+
+    return `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+            crossorigin=""
+          />
+          <style>
+            html, body, #map {
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              height: 100%;
+              font-family: Arial, sans-serif;
+            }
+          </style>
+        </head>
+        <body>
+          <div id="map"></div>
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+          <script>
+            const map = L.map('map', { zoomControl: false });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const routeCoordinates = ${JSON.stringify(safeRouteCoordinates)};
+            const routeLine = L.polyline(routeCoordinates, {
+              color: '#1f6feb',
+              weight: 5,
+              opacity: 0.85
+            }).addTo(map);
+
+            L.marker([${origin.latitude}, ${origin.longitude}]).addTo(map).bindPopup('Origem');
+            L.marker([${destination.latitude}, ${destination.longitude}]).addTo(map).bindPopup('Destino');
+            map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+          </script>
+        </body>
+      </html>
+    `;
+  };
+
+  const openRouteInMap = async () => {
+    if (!currentLocation || !selectedDestination) {
+      return;
+    }
+
+    const directionsUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${currentLocation.latitude}%2C${currentLocation.longitude}%3B${selectedDestination.latitude}%2C${selectedDestination.longitude}`;
+    await Linking.openURL(directionsUrl);
+  };
+
+  const fetchLocationLabel = async (coords) => {
+    try {
+      const reverseUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=pt-BR&lat=${coords.latitude}&lon=${coords.longitude}`;
+      const response = await fetch(reverseUrl, {
+        headers: {
+          Accept: 'application/json',
+          'Accept-Language': 'pt-BR',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Falha ao buscar endereço atual: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const address = data.address || {};
+      const labelParts = [
+        address.road,
+        address.house_number,
+        address.neighbourhood || address.suburb,
+        address.city || address.town || address.village || address.municipality,
+      ].filter(Boolean);
+
+      return labelParts.join(', ') || 'Localização atual';
+    } catch (error) {
+      console.error('Error fetching current location label:', error);
+      return 'Localização atual';
+    }
   };
 
   useEffect(() => {
     getCurrentLocation();
   }, []);
 
+  useEffect(() => {
+    const query = endLocation.trim();
+
+    if (query.length < 3) {
+      setDestinationSuggestions([]);
+      setSearchingDestination(false);
+      return undefined;
+    }
+
+    if (selectedDestination && selectedDestination.label === query) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      fetchDestinationSuggestions(query);
+    }, 350);
+
+    return () => clearTimeout(timeoutId);
+  }, [endLocation, selectedDestination]);
+
   const getCurrentLocation = async () => {
     try {
+      if (Platform.OS === 'web') {
+        const browserLocation = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error('Geolocalização não suportada pelo navegador'));
+            return;
+          }
+
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+              resolve({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+              });
+            },
+            (error) => reject(error),
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 5000,
+            }
+          );
+        });
+
+        const coords = browserLocation;
+        setCurrentLocation(coords);
+        setStartLocation(await fetchLocationLabel(coords));
+        setRouteStatus('Localização atual obtida. Escolha um destino para traçar a rota');
+        setLoading(false);
+        return;
+      }
+
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permissão negada', 'Precisamos da sua localização para usar o mapa!');
@@ -48,13 +233,98 @@ export default function TravelPlanningScreen(props) {
       };
 
       setCurrentLocation(coords);
-      setStartLocation('Localização atual');
+      setStartLocation(await fetchLocationLabel(coords));
+      setRouteStatus('Localização atual obtida. Escolha um destino para traçar a rota');
       setLoading(false);
     } catch (error) {
       console.error('Error getting location:', error);
-      Alert.alert('Erro', 'Não foi possível obter sua localização');
+      const fallbackCoords = {
+        latitude: -23.5505,
+        longitude: -46.6333,
+      };
+      setCurrentLocation(fallbackCoords);
+      setStartLocation(await fetchLocationLabel(fallbackCoords));
+      setRouteStatus('Usando localização aproximada. Ative a geolocalização para rota mais precisa');
       setLoading(false);
     }
+  };
+
+  const fetchDestinationSuggestions = async (query) => {
+    try {
+      setSearchingDestination(true);
+
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=br&accept-language=pt-BR&q=${encodeURIComponent(query)}`;
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          'Accept-Language': 'pt-BR',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch destination suggestions: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const suggestions = data.map((item) => {
+        const address = item.address || {};
+        const titleParts = [
+          address.road,
+          address.house_number,
+          address.neighbourhood || address.suburb,
+          address.city_district,
+          address.city || address.town || address.village || address.municipality || address.county,
+        ].filter(Boolean);
+        const subtitleParts = [
+          address.state,
+          address.region,
+          address.country,
+        ].filter(Boolean);
+        const fallbackParts = item.display_name.split(',').map((part) => part.trim());
+        const title = titleParts.slice(0, 3).join(', ') || fallbackParts.slice(0, 2).join(', ');
+        const subtitle = subtitleParts.join(', ') || fallbackParts.slice(2).join(', ');
+
+        return {
+          id: `${item.place_id}`,
+          label: title || item.display_name,
+          subtitle,
+          latitude: Number(item.lat),
+          longitude: Number(item.lon),
+        };
+      });
+
+      setDestinationSuggestions(suggestions);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Error fetching destination suggestions:', error);
+      setDestinationSuggestions([]);
+    } finally {
+      setSearchingDestination(false);
+    }
+  };
+
+  const handleDestinationChange = (text) => {
+    setEndLocation(text);
+    setSelectedDestination(null);
+    setDistance('0.0 KM');
+    setDuration('');
+    setMapPreviewUrl('');
+    setMapEmbedHtml('');
+    setRouteStatus('Selecione um destino sugerido para calcular a rota');
+    setShowSuggestions(true);
+  };
+
+  const handleSelectDestination = (destination) => {
+    setSelectedDestination(destination);
+    setEndLocation(destination.label);
+    setDestinationSuggestions([]);
+    setShowSuggestions(false);
+    setDistance('0.0 KM');
+    setDuration('');
+    setMapPreviewUrl('');
+    setMapEmbedHtml('');
+    setRouteStatus('Destino selecionado. Toque em "Calcular Km" para buscar a rota');
   };
 
   const handleCalculateDistance = async () => {
@@ -68,24 +338,55 @@ export default function TravelPlanningScreen(props) {
       return;
     }
 
+    if (!selectedDestination) {
+      Alert.alert('Aviso', 'Selecione um destino sugerido para calcular a distância');
+      return;
+    }
+
     try {
       setLoading(true);
-      
-      const destinationCoords = {
-        latitude: currentLocation.latitude + 0.01,
-        longitude: currentLocation.longitude + 0.01,
-      };
+      setRouteStatus('Calculando rota...');
 
-      const dist = calculateDistance(
-        currentLocation.latitude,
-        currentLocation.longitude,
-        destinationCoords.latitude,
-        destinationCoords.longitude
-      );
-      setDistance(dist + ' KM');
+      const routeUrl = `https://router.project-osrm.org/route/v1/driving/${currentLocation.longitude},${currentLocation.latitude};${selectedDestination.longitude},${selectedDestination.latitude}?overview=full&geometries=geojson&steps=false`;
+      const response = await fetch(routeUrl, {
+        headers: {
+          Accept: 'application/json',
+          'Accept-Language': 'pt-BR',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Falha ao calcular rota: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const routeData = data.routes?.[0];
+
+      if (!routeData) {
+        throw new Error('Rota não encontrada');
+      }
+
+      setDistance(formatDistance(routeData.distance));
+      setDuration(formatDuration(routeData.duration));
+      setMapPreviewUrl(buildStaticMapUrl(
+        currentLocation,
+        selectedDestination,
+        routeData.geometry?.coordinates || []
+      ));
+      setMapEmbedHtml(buildMapEmbedHtml(
+        currentLocation,
+        selectedDestination,
+        routeData.geometry?.coordinates || []
+      ));
+      setRouteStatus('Rota calculada com sucesso');
     } catch (error) {
       console.error('Error calculating distance:', error);
-      Alert.alert('Erro', 'Não foi possível calcular a distância');
+      setDistance('0.0 KM');
+      setDuration('');
+      setMapPreviewUrl('');
+      setMapEmbedHtml('');
+      setRouteStatus('Não foi possível obter a rota pela API no momento');
+      Alert.alert('Erro', 'Não foi possível calcular a rota e a distância');
     } finally {
       setLoading(false);
     }
@@ -124,20 +425,46 @@ export default function TravelPlanningScreen(props) {
         showsVerticalScrollIndicator={true}
       >
         <View style={styles.mapContainer}>
-          <View style={styles.mapPlaceholder}>
-            <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
-            <Text style={styles.mapText}>
-              {Platform.OS === 'web' ? 'Mapa interativo disponível no app mobile' : 'Mapa'}
-            </Text>
-            {currentLocation && (
-              <View style={styles.locationInfoContainer}>
-                <MaterialIcons name="my-location" size={20} color="#4CAF50" />
-                <Text style={styles.locationInfo}>
-                  {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
-                </Text>
+          {(Platform.OS === 'web' ? mapEmbedHtml : mapPreviewUrl) ? (
+            <View style={styles.mapPreviewWrapper}>
+              {Platform.OS === 'web' ? (
+                <iframe
+                  title="Mapa da rota"
+                  srcDoc={mapEmbedHtml}
+                  style={styles.mapIframe}
+                />
+              ) : (
+                <Image
+                  source={{ uri: mapPreviewUrl }}
+                  style={styles.mapImage}
+                  resizeMode="cover"
+                />
+              )}
+              <View style={styles.mapOverlay}>
+                <View style={styles.routeBadge}>
+                  <Text style={styles.routeBadgeText}>{distance}</Text>
+                  {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
+                </View>
+                <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
+                  <MaterialIcons name="open-in-new" size={18} color="#FFF" />
+                  <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
+            </View>
+          ) : (
+            <View style={styles.mapPlaceholder}>
+              <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
+              <Text style={styles.mapText}>{routeStatus}</Text>
+              {currentLocation && (
+                <View style={styles.locationInfoContainer}>
+                  <MaterialIcons name="my-location" size={20} color="#4CAF50" />
+                  <Text style={styles.locationInfo}>
+                    {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         <View style={styles.formContainer}>
@@ -162,9 +489,35 @@ export default function TravelPlanningScreen(props) {
                 style={styles.input}
                 placeholder="Pra onde?"
                 value={endLocation}
-                onChangeText={setEndLocation}
+                onChangeText={handleDestinationChange}
+                onFocus={() => setShowSuggestions(true)}
               />
             </View>
+            {(searchingDestination || (showSuggestions && destinationSuggestions.length > 0)) && (
+              <View style={styles.suggestionsContainer}>
+                {searchingDestination && (
+                  <View style={styles.suggestionLoading}>
+                    <ActivityIndicator size="small" color="#2C2C2C" />
+                    <Text style={styles.suggestionLoadingText}>Buscando endereços...</Text>
+                  </View>
+                )}
+                {!searchingDestination && destinationSuggestions.map((suggestion) => (
+                  <TouchableOpacity
+                    key={suggestion.id}
+                    style={styles.suggestionItem}
+                    onPress={() => handleSelectDestination(suggestion)}
+                  >
+                    <MaterialIcons name="location-on" size={18} color="#FF5722" />
+                    <View style={styles.suggestionTextContainer}>
+                      <Text style={styles.suggestionTitle}>{suggestion.label}</Text>
+                      {!!suggestion.subtitle && (
+                        <Text style={styles.suggestionSubtitle}>{suggestion.subtitle}</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.distanceContainer}>
@@ -183,6 +536,9 @@ export default function TravelPlanningScreen(props) {
                 )}
               </TouchableOpacity>
             </View>
+            {!!duration && (
+              <Text style={styles.durationText}>Tempo estimado de trajeto: {duration}</Text>
+            )}
           </View>
 
           <TouchableOpacity
@@ -275,6 +631,59 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     padding: 20,
   },
+  mapPreviewWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  mapImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mapIframe: {
+    width: '100%',
+    height: '100%',
+    borderWidth: 0,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    right: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  routeBadge: {
+    backgroundColor: '#ffffffee',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    maxWidth: '65%',
+  },
+  routeBadgeText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  routeBadgeSubtext: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#444444',
+  },
+  mapLinkButton: {
+    backgroundColor: '#2C2C2C',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mapLinkButtonText: {
+    marginLeft: 6,
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   mapText: {
     marginTop: 20,
     fontSize: 14,
@@ -332,6 +741,47 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
   },
+  suggestionsContainer: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#00000022',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+  },
+  suggestionLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  suggestionLoadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#2C2C2C',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#00000011',
+  },
+  suggestionTextContainer: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  suggestionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  suggestionSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#666666',
+  },
   distanceContainer: {
     marginBottom: 25,
   },
@@ -348,6 +798,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#000000',
     fontWeight: '600',
+  },
+  durationText: {
+    marginTop: 10,
+    fontSize: 13,
+    color: '#444444',
   },
   calculateButton: {
     position: 'absolute',

@@ -47,7 +47,15 @@ const ReportScreen = ({ navigation, route }) => {
   );
 
   // Filtra o histórico para remover itens com custo zero (mocks do cadastro inicial)
-  const realHistory = reportData.history.filter(item => item.cost > 0);
+  const realHistory = reportData.history
+    .filter(item => item.cost > 0)
+    .map((item, index) => ({
+      id: item.id || index,
+      item: item.item,
+      last_date: item.last_date,
+      cost: item.cost,
+      liters: item.liters
+    }));
 
   // Processa dados para o gráfico
   const getChartData = () => {
@@ -57,13 +65,22 @@ const ReportScreen = ({ navigation, route }) => {
       const data = new Array(12).fill(0);
       realHistory.forEach(item => {
         if (item.last_date) {
-          const parts = item.last_date.split('/');
-          if (parts.length === 3) {
-            const month = parseInt(parts[1]) - 1;
-            const year = parseInt(parts[2]);
-            if (year === currentYear) {
-              data[month] += item.cost || 0;
-            }
+          let day, month, year;
+          
+          if (item.last_date.includes('/')) {
+            const parts = item.last_date.split('/');
+            day = parseInt(parts[0]);
+            month = parseInt(parts[1]) - 1;
+            year = parseInt(parts[2]);
+          } else if (item.last_date.includes('-')) {
+            const parts = item.last_date.split('-');
+            year = parseInt(parts[0]);
+            month = parseInt(parts[1]) - 1;
+            day = parseInt(parts[2]);
+          }
+          
+          if (year === currentYear && month >= 0 && month < 12) {
+            data[month] += item.cost || 0;
           }
         }
       });
@@ -82,13 +99,19 @@ const ReportScreen = ({ navigation, route }) => {
       
       realHistory.forEach(item => {
         if (item.last_date) {
-          const parts = item.last_date.split('/');
-          if (parts.length === 3) {
-            const year = parseInt(parts[2]);
-            const labelIdx = labels.indexOf(year.toString());
-            if (labelIdx !== -1) {
-              data[labelIdx] += item.cost || 0;
-            }
+          let year;
+          
+          if (item.last_date.includes('/')) {
+            const parts = item.last_date.split('/');
+            year = parseInt(parts[2]);
+          } else if (item.last_date.includes('-')) {
+            const parts = item.last_date.split('-');
+            year = parseInt(parts[0]);
+          }
+          
+          const labelIdx = labels.indexOf(year.toString());
+          if (labelIdx !== -1) {
+            data[labelIdx] += item.cost || 0;
           }
         }
       });
@@ -100,6 +123,21 @@ const ReportScreen = ({ navigation, route }) => {
     }
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '---';
+    
+    if (dateStr.includes('/')) {
+      return dateStr;
+    } else if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+    
+    return dateStr;
+  };
+  
   const chartData = getChartData();
   const currentMonthYear = filterType === 'Mês' 
     ? new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()
@@ -138,7 +176,7 @@ const ReportScreen = ({ navigation, route }) => {
         showsVerticalScrollIndicator={true}
         scrollEnabled={true}
       >
-        <Text style={styles.screenTitle}>RELATORIO</Text>
+        <Text style={styles.screenTitle}>CONTROLE DE CUSTOS</Text>
 
         {/* Chart Section */}
         <View style={styles.chartContainer}>
@@ -229,8 +267,8 @@ const ReportScreen = ({ navigation, route }) => {
               </View>
               <View style={styles.costInfo}>
                 <Text style={styles.costType}>{item.item}</Text>
-                <Text style={styles.costDetail}>📅 {item.last_date || '---'}</Text>
-                {item.liters > 0 && (
+                <Text style={styles.costDetail}>📅 {formatDate(item.last_date)}</Text>
+                {item.liters && item.liters > 0 && (
                   <Text style={styles.costDetail}>🛢️ {item.liters.toFixed(1)} L a R$ {(item.cost / item.liters).toFixed(2)}</Text>
                 )}
               </View>
@@ -271,7 +309,7 @@ const ReportScreen = ({ navigation, route }) => {
         <MaterialCommunityIcons name="robot" size={30} color="#FFCF00" />
       </TouchableOpacity>
 
-      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Relatório" />
+      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Financeiro" />
     </View>
   );
 };

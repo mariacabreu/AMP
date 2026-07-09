@@ -6,7 +6,7 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-ico
 const BottomNav = ({ navigation, user, activeScreen = 'Home' }) => {
   const navItems = [
     { name: 'Home', icon: 'home', iconType: 'Ionicons', route: 'Home' },
-    { name: 'Relatório', icon: 'file-document-outline', iconType: 'MaterialCommunityIcons', route: 'Report' },
+    { name: 'Financeiro', icon: 'cash', iconType: 'MaterialCommunityIcons', route: 'Report' },
     { name: 'Peças', icon: 'cog', iconType: 'FontAwesome5', route: 'PartsCatalog' },
     { name: 'Checklist', icon: 'clipboard-check-outline', iconType: 'MaterialCommunityIcons', route: 'Checklist' },
     { name: 'Config', icon: 'settings-sharp', iconType: 'Ionicons', route: 'Settings' }
@@ -14,7 +14,7 @@ const BottomNav = ({ navigation, user, activeScreen = 'Home' }) => {
 
   const renderIcon = (item, isActive) => {
     const color = isActive ? '#FFCF00' : '#D9D9D9';
-    const size = item.iconType === 'FontAwesome5' ? 20 : 24;
+    const size = item.iconType === 'FontAwesome5' ? 24 : 24;
     
     switch (item.iconType) {
       case 'MaterialCommunityIcons':

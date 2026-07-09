@@ -5,6 +5,7 @@ import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import API_BASE_URL from '../api';
+import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
 
@@ -200,29 +201,7 @@ const ReportFormScreen = ({ navigation, route }) => {
         <MaterialCommunityIcons name="robot" size={30} color="#FFCF00" />
       </TouchableOpacity>
 
-      {/* Navigation Bar */}
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home', { user: loggedUser })}>
-          <Ionicons name="home-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Report', { user: loggedUser })}>
-          <MaterialCommunityIcons name="file-document" size={24} color="#FFCF00" />
-          <Text style={[styles.navText, styles.navTextActive]}>Relatório</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PartsCatalog', { user: loggedUser })}>
-          <FontAwesome5 name="cog" size={20} color="#D9D9D9" />
-          <Text style={styles.navText}>Peças</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Checklist</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="settings-sharp" size={24} color="#D9D9D9" />
-          <Text style={styles.navText}>Config</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Financeiro" />
     </SafeAreaView>
   );
 };
