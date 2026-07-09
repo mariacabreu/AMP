@@ -23,6 +23,8 @@ import QRCodeScreen from './src/screens/QRCodeScreen';
 import MaintenanceTipsScreen from './src/screens/MaintenanceTipsScreen';
 import OBDScreen from './src/screens/OBDScreen';
 import TravelPlanningScreen from './src/screens/TravelPlanningScreen';
+import MaintenanceEditScreen from './src/screens/MaintenanceEditScreen';
+
 
 const Stack = createStackNavigator();
 
@@ -39,6 +41,7 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Report" component={ReportScreen} />
         <Stack.Screen name="ReportForm" component={ReportFormScreen} />
+        <Stack.Screen name="MaintenanceEdit" component={MaintenanceEditScreen} />
         <Stack.Screen name="PartsCatalog" component={PartsCatalogScreen} />
         <Stack.Screen name="Fuel" component={FuelScreen} />
         <Stack.Screen name="Checklist" component={ChecklistScreen} />

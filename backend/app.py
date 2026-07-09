@@ -1223,6 +1223,32 @@ def delete_maintenance(maintenance_id):
         db.session.rollback()
         print(f"Erro ao excluir: {str(e)}")
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/vehicle/maintenance/<int:maintenance_id>', methods=['PUT', 'PATCH'])
+def update_maintenance(maintenance_id):
+    print(f"\n=== ATUALIZANDO MANUTENÇÃO ID: {maintenance_id} ===")
+    data = request.json
+    entry = MaintenanceHistory.query.get(maintenance_id)
+    if not entry:
+        return jsonify({'error': 'Registro não encontrado'}), 404
+
+    try:
+        if 'last_date' in data:
+            entry.last_date = data['last_date']
+        if 'cost' in data:
+            entry.cost = float(data['cost'])
+        if 'liters' in data:
+            entry.liters = float(data['liters'])
+        if 'item' in data:
+            entry.item = data['item']
+
+        db.session.commit()
+        print("Registro atualizado com sucesso!")
+        return jsonify({'message': 'Registro atualizado com sucesso', 'entry': entry.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao atualizar: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/vehicle/parts/<int:vehicle_id>', methods=['GET'])
 def get_vehicle_parts(vehicle_id):
