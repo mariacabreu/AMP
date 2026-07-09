@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform, TouchableWithoutFeedback, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -158,8 +158,14 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
   const [usageType, setUsageType] = useState('Misto');
   const [mileage, setMileage] = useState('');
   const [fuelType, setFuelType] = useState('Gasolina');
+  const [vehicleId, setVehicleId] = useState(null);
 
+  const [isEditing, setIsEditing] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+  
+  // Estados para armazenar os valores originais (para cancelar)
+  const [originalValues, setOriginalValues] = useState({});
+
 
   const transmissionOptions = [
     { label: 'Selecione o Câmbio', value: '' },
@@ -187,7 +193,58 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchBrands();
+    fetchVehicleData();
   }, []);
+  
+  const fetchVehicleData = async () => {
+    try {
+      const userId = user?.id || 1;
+      const response = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
+      if (response.data.vehicle) {
+        const vehicle = response.data.vehicle;
+        console.log('Dados do veículo carregados:', vehicle);
+        
+        const vehicleBrand = vehicle.brand;
+        const vehicleModel = vehicle.model;
+        const vehicleYear = vehicle.year ? vehicle.year.toString() : '';
+        
+        // Preencher os estados com os dados do veículo
+        setVehicleId(vehicle.id);
+        setSelectedBrand(vehicleBrand);
+        setSelectedModel(vehicleModel);
+        setSelectedYear(vehicleYear);
+        setTransmission(vehicle.transmission || '');
+        setEngineType(vehicle.engine_type || '');
+        setUsageType(vehicle.usage_type || 'Misto');
+        setMileage(vehicle.mileage ? vehicle.mileage.toString() : '');
+        setFuelType(vehicle.fuel_type || 'Gasolina');
+        
+        // Armazenar os valores originais
+        setOriginalValues({
+          brand: vehicleBrand,
+          model: vehicleModel,
+          year: vehicleYear,
+          transmission: vehicle.transmission || '',
+          engineType: vehicle.engine_type || '',
+          usageType: vehicle.usage_type || 'Misto',
+          mileage: vehicle.mileage ? vehicle.mileage.toString() : '',
+          fuelType: vehicle.fuel_type || 'Gasolina'
+        });
+        
+        // Carregar modelos, anos e engines com base na marca e modelo
+        if (vehicleBrand) {
+          await fetchModels(vehicleBrand);
+        }
+        if (vehicleBrand && vehicleModel) {
+          await fetchEngines(vehicleBrand, vehicleModel);
+          await fetchYears(vehicleBrand, vehicleModel);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do veículo:', error);
+    }
+  };
+
 
   const fetchBrands = async () => {
     try {
@@ -265,35 +322,85 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleRegisterVehicle = async () => {
+  const handleEdit = () => {
+    // Atualizar os valores originais antes de habilitar edição
+    setOriginalValues({
+      brand: selectedBrand,
+      model: selectedModel,
+      year: selectedYear,
+      transmission: transmission,
+      engineType: engineType,
+      usageType: usageType,
+      mileage: mileage,
+      fuelType: fuelType
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    // Restaurar os valores originais
+    setSelectedBrand(originalValues.brand);
+    setSelectedModel(originalValues.model);
+    setSelectedYear(originalValues.year);
+    setTransmission(originalValues.transmission);
+    setEngineType(originalValues.engineType);
+    setUsageType(originalValues.usageType);
+    setMileage(originalValues.mileage);
+    setFuelType(originalValues.fuelType);
+    setIsEditing(false);
+  };
+
+  const handleSaveVehicle = async () => {
     if (!selectedBrand || !selectedModel || !selectedYear) {
       Alert.alert('Erro', 'Por favor, preencha a marca, modelo e ano do veículo.');
       return;
     }
 
     try {
-      console.log('Cadastrando veículo para o usuário:', user?.id);
-      const response = await axios.post(`${API_BASE_URL}/vehicle/register`, {
-        brand: selectedBrand,
-        model: selectedModel,
-        year: parseInt(selectedYear),
-        transmission,
-        engine_type: engineType,
-        usage_type: usageType,
-        mileage: mileage ? parseInt(mileage) : 0,
-        fuel_type: fuelType,
-        user_id: user?.id || 1
-      });
+      let response;
+      if (vehicleId) {
+        // Atualizar veículo existente
+        console.log('Atualizando veículo:', vehicleId);
+        response = await axios.put(`${API_BASE_URL}/vehicle/update/${vehicleId}`, {
+          brand: selectedBrand,
+          model: selectedModel,
+          year: parseInt(selectedYear),
+          transmission,
+          engine_type: engineType,
+          usage_type: usageType,
+          mileage: mileage ? parseInt(mileage) : 0,
+          fuel_type: fuelType,
+          user_id: user?.id || 1
+        });
+        Alert.alert('Sucesso', 'Veículo atualizado com sucesso!');
+      } else {
+        // Cadastrar novo veículo
+        console.log('Cadastrando veículo para o usuário:', user?.id);
+        response = await axios.post(`${API_BASE_URL}/vehicle/register`, {
+          brand: selectedBrand,
+          model: selectedModel,
+          year: parseInt(selectedYear),
+          transmission,
+          engine_type: engineType,
+          usage_type: usageType,
+          mileage: mileage ? parseInt(mileage) : 0,
+          fuel_type: fuelType,
+          user_id: user?.id || 1
+        });
+        setVehicleId(response.data.vehicle.id);
+        Alert.alert('Sucesso', 'Veículo cadastrado com sucesso!');
+      }
 
-      console.log('Veículo cadastrado:', response.data);
-      navigation.navigate('VehicleHistory', { vehicleId: response.data.vehicle.id, user: user });
+      console.log('Resposta do servidor:', response.data);
+      setIsEditing(false);
       
     } catch (error) {
-      console.error('Erro ao cadastrar veículo:', error.response?.data || error.message);
-      const message = error.response?.data?.error || 'Erro ao cadastrar veículo';
+      console.error('Erro ao salvar veículo:', error.response?.data || error.message);
+      const message = error.response?.data?.error || 'Erro ao salvar veículo';
       Alert.alert('Erro', message);
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -318,6 +425,14 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             Apenas veículos compatíveis com OBD-II Bluetooth e com documentação de API disponível são listados.
           </Text>
 
+          {/* Botão Editar (apenas se já houver veículo cadastrado) */}
+          {vehicleId && !isEditing && (
+            <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+              <Ionicons name="create-outline" size={20} color="#ffffff" />
+              <Text style={styles.editButtonText}>Editar Dados</Text>
+            </TouchableOpacity>
+          )}
+
           <CustomDropdown
             label="Marca do Carro"
             items={brands}
@@ -327,6 +442,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             isOpen={openDropdown === 'brand'}
             setIsOpen={(open) => setOpenDropdown(open ? 'brand' : null)}
             onOpen={() => setOpenDropdown('brand')}
+            enabled={isEditing || !vehicleId}
           />
 
           <CustomDropdown
@@ -335,7 +451,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             selectedValue={selectedModel}
             onSelect={handleModelChange}
             placeholder="Selecione o Modelo"
-            enabled={!!selectedBrand}
+            enabled={(isEditing || !vehicleId) && !!selectedBrand}
             isOpen={openDropdown === 'model'}
             setIsOpen={(open) => setOpenDropdown(open ? 'model' : null)}
             onOpen={() => setOpenDropdown('model')}
@@ -347,7 +463,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             selectedValue={selectedYear}
             onSelect={handleYearChange}
             placeholder="Selecione o Ano"
-            enabled={!!selectedModel}
+            enabled={(isEditing || !vehicleId) && !!selectedModel}
             isOpen={openDropdown === 'year'}
             setIsOpen={(open) => setOpenDropdown(open ? 'year' : null)}
             onOpen={() => setOpenDropdown('year')}
@@ -359,6 +475,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             selectedValue={transmission}
             onSelect={setTransmission}
             placeholder="Selecione o Câmbio"
+            enabled={isEditing || !vehicleId}
             isOpen={openDropdown === 'transmission'}
             setIsOpen={(open) => setOpenDropdown(open ? 'transmission' : null)}
             onOpen={() => setOpenDropdown('transmission')}
@@ -370,7 +487,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             selectedValue={engineType}
             onSelect={setEngineType}
             placeholder="Selecione a Motorização"
-            enabled={!!selectedBrand && !!selectedModel && !!selectedYear}
+            enabled={(isEditing || !vehicleId) && !!selectedBrand && !!selectedModel && !!selectedYear}
             isOpen={openDropdown === 'engine'}
             setIsOpen={(open) => setOpenDropdown(open ? 'engine' : null)}
             onOpen={() => setOpenDropdown('engine')}
@@ -382,6 +499,7 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             selectedValue={usageType}
             onSelect={setUsageType}
             placeholder="Selecione o Perfil de Uso"
+            enabled={isEditing || !vehicleId}
             isOpen={openDropdown === 'usage'}
             setIsOpen={(open) => setOpenDropdown(open ? 'usage' : null)}
             onOpen={() => setOpenDropdown('usage')}
@@ -390,11 +508,12 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Quilometragem</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, !(isEditing || !vehicleId) && styles.disabledInput]}
               placeholder="Ex: 50000"
               value={mileage}
               onChangeText={setMileage}
               keyboardType="numeric"
+              editable={isEditing || !vehicleId}
             />
           </View>
 
@@ -404,14 +523,27 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
             selectedValue={fuelType}
             onSelect={setFuelType}
             placeholder="Selecione o Combustível"
+            enabled={isEditing || !vehicleId}
             isOpen={openDropdown === 'fuel'}
             setIsOpen={(open) => setOpenDropdown(open ? 'fuel' : null)}
             onOpen={() => setOpenDropdown('fuel')}
           />
 
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegisterVehicle}>
-            <Text style={styles.registerButtonText}>Cadastrar Veículo</Text>
-          </TouchableOpacity>
+          {/* Botões de ação */}
+          {isEditing ? (
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveVehicle}>
+                <Text style={styles.saveButtonText}>Salvar Alterações</Text>
+              </TouchableOpacity>
+            </View>
+          ) : !vehicleId ? (
+            <TouchableOpacity style={styles.registerButton} onPress={handleSaveVehicle}>
+              <Text style={styles.registerButtonText}>Cadastrar Veículo</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -598,6 +730,59 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  editButton: {
+    backgroundColor: '#FFCF00',
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    flexDirection: 'row',
+  },
+  editButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    marginBottom: 15,
+    gap: 15,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#E0E0E0',
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#4CAF50',
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Estilo para input desabilitado
+  disabledInput: {
+    backgroundColor: '#F5F5F5',
+    color: '#666',
   },
 });
 

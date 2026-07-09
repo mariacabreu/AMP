@@ -6,8 +6,8 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-ico
 const BottomNav = ({ navigation, user, activeScreen = 'Home' }) => {
   const navItems = [
     { name: 'Home', icon: 'home', iconType: 'Ionicons', route: 'Home' },
-    { name: 'Financeiro', icon: 'cash', iconType: 'MaterialCommunityIcons', route: 'Report' },
-    { name: 'Peças', icon: 'cog', iconType: 'FontAwesome5', route: 'PartsCatalog' },
+    { name: 'Financeiro', icon: 'cash-multiple', iconType: 'MaterialCommunityIcons', route: 'Report' },
+    { name: 'Peças', icon: 'car-part', iconType: 'MaterialCommunityIcons', route: 'PartsCatalog' },
     { name: 'Checklist', icon: 'clipboard-check-outline', iconType: 'MaterialCommunityIcons', route: 'Checklist' },
     { name: 'Config', icon: 'settings-sharp', iconType: 'Ionicons', route: 'Settings' }
   ];

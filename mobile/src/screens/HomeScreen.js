@@ -103,7 +103,7 @@ const HomeScreen = ({ navigation, route }) => {
 
   const handlePremiumButton = () => {
     if (!status.is_premium) {
-      navigation.navigate('PremiumPlan', { user: loggedUser });
+      navigation.navigate('VehicleCompatibility', { user: loggedUser, vehicle: status.vehicle });
     }
   };
 
@@ -221,10 +221,16 @@ const HomeScreen = ({ navigation, route }) => {
           <View style={styles.row}>
             <TouchableOpacity
               style={styles.gridButton}
-              onPress={() => navigation.navigate('OBD', { user: loggedUser })}
+              onPress={() => {
+                if (!status.is_premium) {
+                  navigation.navigate('VehicleCompatibility', { user: loggedUser, vehicle: status.vehicle });
+                } else {
+                  navigation.navigate('OBD', { user: loggedUser });
+                }
+              }}
             >
               <View style={styles.iconCircle}>
-                <MaterialCommunityIcons name="engine-outline" size={50} color="#FFCF00" />
+                <MaterialCommunityIcons name="engine" size={50} color="#FFCF00" />
               </View>
               <Text style={styles.gridButtonTitle}>OBD</Text>
               <Text style={styles.gridButtonSub}>Diagnóstico de Bordo</Text>
@@ -276,7 +282,7 @@ const HomeScreen = ({ navigation, route }) => {
 
             <TouchableOpacity
               style={styles.gridButton}
-              onPress={() => navigation.navigate('Report', { user: loggedUser })}
+              onPress={() => navigation.navigate('TripHistory', { user: loggedUser })}
             >
               <View style={styles.iconCircle}>
                 <Ionicons name="time-outline" size={50} color="#FFCF00" />

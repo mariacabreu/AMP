@@ -114,18 +114,26 @@ const SettingsScreen = ({ navigation, route }) => {
           </View>
           <View style={styles.separator} />
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={[styles.menuItem, notificationsDisabled && { opacity: 0.5 }]} 
+            onPress={() => !notificationsDisabled && navigation.navigate('Reminders', { user: loggedUser })}
+            disabled={notificationsDisabled}
+          >
             <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="clock-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
+              <MaterialCommunityIcons name="car-cog" size={20} color="#2D2D2D" style={styles.menuIcon} />
               <Text style={styles.menuLabel}>Lembretes Programáveis</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </TouchableOpacity>
           <View style={styles.separator} />
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={[styles.menuItem, notificationsDisabled && { opacity: 0.5 }]} 
+            onPress={() => !notificationsDisabled && navigation.navigate('ReminderFrequency', { user: loggedUser })}
+            disabled={notificationsDisabled}
+          >
             <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="calendar-sync-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
+              <MaterialCommunityIcons name="cash-multiple" size={20} color="#2D2D2D" style={styles.menuIcon} />
               <Text style={styles.menuLabel}>Frequência dos Lembretes</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
@@ -147,15 +155,6 @@ const SettingsScreen = ({ navigation, route }) => {
               onValueChange={setBiometryEnabled}
             />
           </View>
-          <View style={styles.separator} />
-          
-          <View style={styles.menuItem}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="shield-check-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Autenticação de dois fatores</Text>
-            </View>
-            <MaterialCommunityIcons name="check-circle" size={24} color="#FFCF00" />
-          </View>
         </View>
 
         {/* Ajuda e Suporte */}
@@ -166,7 +165,7 @@ const SettingsScreen = ({ navigation, route }) => {
           </View>
           <View style={styles.separator} />
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('FAQ', { user: loggedUser })}>
             <View style={styles.menuLabelRow}>
               <MaterialCommunityIcons name="help-circle-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
               <Text style={styles.menuLabel}>FAQ</Text>
@@ -175,19 +174,10 @@ const SettingsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
           <View style={styles.separator} />
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('LanguageSelection', { user: loggedUser })}>
             <View style={styles.menuLabelRow}>
               <MaterialCommunityIcons name="translate" size={20} color="#2D2D2D" style={styles.menuIcon} />
               <Text style={styles.menuLabel}>Idioma</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-          <View style={styles.separator} />
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="school-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Tutorial/Reapresentar Onboarding</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </TouchableOpacity>
@@ -213,7 +203,7 @@ const SettingsScreen = ({ navigation, route }) => {
           </View>
           <View style={styles.separator} />
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('TermsOfService', { user: loggedUser })}>
             <View style={styles.menuLabelRow}>
               <MaterialCommunityIcons name="file-document-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
               <Text style={styles.menuLabel}>Política de Termos e Condições</Text>

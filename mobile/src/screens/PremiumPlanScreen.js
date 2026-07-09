@@ -77,6 +77,15 @@ const PremiumPlanScreen = ({ navigation, route }) => {
           
           <Text style={styles.subtitle}>Cuide do seu carro gastando menos!</Text>
 
+          <TouchableOpacity 
+            style={styles.compatibilityButton}
+            onPress={() => navigation.navigate('VehicleCompatibility', { user: loggedUser })}
+          >
+            <MaterialCommunityIcons name="car-check" size={24} color="#000" />
+            <Text style={styles.compatibilityButtonText}>Verifique a compatibilidade do seu veículo</Text>
+            <MaterialCommunityIcons name="chevron-right" size={24} color="#000" />
+          </TouchableOpacity>
+
           {plans.map((plan) => (
             <View key={plan.id} style={styles.planCard}>
               <View style={styles.planHeader}>
@@ -184,7 +193,24 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     marginTop: 5,
+    marginBottom: 20,
+  },
+  compatibilityButton: {
+    flexDirection: 'row',
+    backgroundColor: '#FFCF00',
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 25,
+  },
+  compatibilityButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
+    flex: 1,
+    textAlign: 'center',
   },
   planCard: {
     backgroundColor: '#ffffff',

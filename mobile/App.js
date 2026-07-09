@@ -24,6 +24,13 @@ import MaintenanceTipsScreen from './src/screens/MaintenanceTipsScreen';
 import OBDScreen from './src/screens/OBDScreen';
 import TravelPlanningScreen from './src/screens/TravelPlanningScreen';
 import MaintenanceEditScreen from './src/screens/MaintenanceEditScreen';
+import TripHistoryScreen from './src/screens/TripHistoryScreen';
+import VehicleCompatibilityScreen from './src/screens/VehicleCompatibilityScreen';
+import RemindersScreen from './src/screens/RemindersScreen';
+import ReminderFrequencyScreen from './src/screens/ReminderFrequencyScreen';
+import FAQScreen from './src/screens/FAQScreen';
+import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
+import TermsOfServiceScreen from './src/screens/TermsOfServiceScreen';
 
 
 const Stack = createStackNavigator();
@@ -54,6 +61,13 @@ export default function App() {
         <Stack.Screen name="MaintenanceTips" component={MaintenanceTipsScreen} />
         <Stack.Screen name="OBD" component={OBDScreen} />
         <Stack.Screen name="TravelPlanning" component={TravelPlanningScreen} />
+        <Stack.Screen name="TripHistory" component={TripHistoryScreen} />
+        <Stack.Screen name="VehicleCompatibility" component={VehicleCompatibilityScreen} />
+        <Stack.Screen name="Reminders" component={RemindersScreen} />
+        <Stack.Screen name="ReminderFrequency" component={ReminderFrequencyScreen} />
+        <Stack.Screen name="FAQ" component={FAQScreen} />
+        <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
+        <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

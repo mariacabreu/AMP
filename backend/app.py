@@ -106,7 +106,14 @@ SUPPORTED_BRANDS = {
         'engines': {
             'Fiesta': ['1.0 Rocam', '1.6 Rocam', '1.0 EcoBoost', '1.5 Sigma'],
             'Focus': ['1.6 Sigma', '2.0 Duratec', '2.0 GDI'],
-            'Ranger': ['2.2 Diesel', '3.2 Diesel', '2.5 Flex']
+            'Ranger': ['2.2 Diesel', '3.2 Diesel', '2.5 Flex'],
+            'Ka': ['1.0 Rocam', '1.5 Sigma'],
+            'EcoSport': ['1.5 Sigma', '1.6 Rocam', '2.0 Duratec', '1.0 EcoBoost'],
+            'Fusion': ['2.0 Duratec', '2.0 EcoBoost', '2.5 Hybrid'],
+            'Edge': ['2.0 EcoBoost', '3.5 V6'],
+            'Mustang': ['2.3 EcoBoost', '5.0 V8'],
+            'Territory': ['1.5 EcoBoost', '2.0 EcoBoost'],
+            'Bronco': ['2.0 EcoBoost', '2.3 EcoBoost', '2.7 V6 EcoBoost']
         },
         'start_year': 2010,
         'docs': 'Ford Developer API / OpenXC'
@@ -115,7 +122,15 @@ SUPPORTED_BRANDS = {
         'models': ['Onix', 'Prisma', 'Cruze', 'S10', 'Tracker', 'Spin', 'Montana', 'Equinox', 'Trailblazer', 'Camaro'],
         'engines': {
             'Onix': ['1.0 Aspirado', '1.0 Turbo', '1.4 Aspirado'],
-            'S10': ['2.4 Flex', '2.5 Flex', '2.8 Diesel']
+            'S10': ['2.4 Flex', '2.5 Flex', '2.8 Diesel'],
+            'Prisma': ['1.0 Aspirado', '1.4 Aspirado'],
+            'Cruze': ['1.4 Turbo', '1.8 Aspirado', '2.0 Diesel'],
+            'Tracker': ['1.0 Turbo', '1.2 Turbo', '1.4 Turbo'],
+            'Spin': ['1.8 Aspirado', '1.8 Flex'],
+            'Montana': ['1.4 Aspirado', '1.8 Aspirado'],
+            'Equinox': ['1.5 Turbo', '2.0 Turbo'],
+            'Trailblazer': ['2.8 Diesel', '3.6 V6'],
+            'Camaro': ['2.0 Turbo', '3.6 V6', '6.2 V8']
         },
         'start_year': 2011,
         'docs': 'GM Developer Portal'
@@ -125,7 +140,16 @@ SUPPORTED_BRANDS = {
         'engines': {
             'Polo': ['1.0 MPI', '1.6 MSI', '1.0 TSI (200 TSI)', '1.4 TSI (GTS)'],
             'Golf': ['1.4 TSI', '2.0 TSI (GTI)', '1.6 MSI'],
-            'T-Cross': ['1.0 TSI (200 TSI)', '1.4 TSI (250 TSI)']
+            'T-Cross': ['1.0 TSI (200 TSI)', '1.4 TSI (250 TSI)'],
+            'Gol': ['1.0 MPI', '1.6 MSI', '1.0 TSI'],
+            'Amarok': ['2.0 Diesel', '3.0 V6 Diesel'],
+            'Virtus': ['1.0 MPI', '1.6 MSI', '1.0 TSI'],
+            'Nivus': ['1.0 TSI (200 TSI)', '1.4 TSI'],
+            'Taos': ['1.4 TSI', '2.0 TSI'],
+            'Jetta': ['1.4 TSI', '2.0 TSI', '2.0 Diesel'],
+            'Tiguan': ['1.4 TSI', '2.0 TSI'],
+            'Voyage': ['1.0 MPI', '1.6 MSI'],
+            'Saveiro': ['1.6 MSI']
         },
         'start_year': 2010,
         'docs': 'VW Car-Net API'
@@ -134,7 +158,14 @@ SUPPORTED_BRANDS = {
         'models': ['Corolla', 'Hilux', 'Yaris', 'Etios', 'SW4', 'Rav4', 'Camry', 'Prius', 'Corolla Cross'],
         'engines': {
             'Corolla': ['1.8 Hybrid', '2.0 Dynamic Force', '1.8 Dual VVT-i', '2.0 Dual VVT-i'],
-            'Hilux': ['2.7 Flex', '2.8 Diesel', '3.0 Diesel']
+            'Hilux': ['2.7 Flex', '2.8 Diesel', '3.0 Diesel'],
+            'Yaris': ['1.3 Dual VVT-i', '1.5 Dual VVT-i'],
+            'Etios': ['1.3 Dual VVT-i', '1.5 Dual VVT-i'],
+            'SW4': ['2.7 Flex', '2.8 Diesel', '4.0 V6'],
+            'Rav4': ['2.0 Dynamic Force', '2.5 Hybrid'],
+            'Camry': ['2.5 Hybrid', '3.5 V6'],
+            'Prius': ['1.8 Hybrid'],
+            'Corolla Cross': ['1.8 Hybrid', '2.0 Dynamic Force']
         },
         'start_year': 2012,
         'docs': 'Toyota Connected Services API'
@@ -143,7 +174,12 @@ SUPPORTED_BRANDS = {
         'models': ['Civic', 'Fit', 'City', 'HR-V', 'CR-V', 'WR-V', 'Accord'],
         'engines': {
             'Civic': ['2.0 i-VTEC', '1.5 Turbo', '1.8 i-VTEC'],
-            'HR-V': ['1.8 i-VTEC', '1.5 Turbo']
+            'HR-V': ['1.8 i-VTEC', '1.5 Turbo'],
+            'Fit': ['1.3 i-VTEC', '1.5 i-VTEC'],
+            'City': ['1.5 i-VTEC'],
+            'CR-V': ['1.5 Turbo', '2.0 i-VTEC', '2.0 Hybrid'],
+            'WR-V': ['1.5 i-VTEC'],
+            'Accord': ['1.5 Turbo', '2.0 Hybrid', '2.0 Turbo']
         },
         'start_year': 2012,
         'docs': 'Honda Developer Studio'
@@ -152,7 +188,13 @@ SUPPORTED_BRANDS = {
         'models': ['HB20', 'Creta', 'Tucson', 'i30', 'Santa Fe', 'Azera', 'Elantra', 'Ix35'],
         'engines': {
             'HB20': ['1.0 Aspirado', '1.0 Turbo (TGDI)', '1.6 Aspirado'],
-            'Creta': ['1.6 Aspirado', '2.0 Aspirado', '1.0 Turbo (TGDI)', '2.0 Smartstream']
+            'Creta': ['1.6 Aspirado', '2.0 Aspirado', '1.0 Turbo (TGDI)', '2.0 Smartstream'],
+            'i30': ['1.6 Gamma', '2.0 Nu', '1.6 Turbo GDI', '1.8 Nu'],
+            'Tucson': ['1.6 Turbo GDI', '2.0 Nu', '2.0 Diesel', '1.6 Hybrid'],
+            'Santa Fe': ['2.0 Turbo GDI', '2.2 Diesel', '3.5 V6'],
+            'Azera': ['3.0 V6', '3.3 V6'],
+            'Elantra': ['1.6 Gamma', '2.0 Nu', '1.6 Turbo'],
+            'Ix35': ['2.0 Nu', '2.4 Theta II', '2.0 Diesel']
         },
         'start_year': 2012,
         'docs': 'Hyundai Bluelink API'
@@ -166,7 +208,11 @@ SUPPORTED_BRANDS = {
             'Cronos': ['1.3 Firefly', '1.8 E.torQ'],
             'Toro': ['1.8 E.torQ', '2.4 Tigershark', '2.0 Diesel', '1.3 Turbo 270'],
             'Strada': ['1.4 Fire', '1.6 E.torQ'],
-            'Mobi': ['1.0 Fire']
+            'Mobi': ['1.0 Fire'],
+            'Uno': ['1.0 Fire', '1.3 Firefly'],
+            'Palio': ['1.0 Fire', '1.4 Fire', '1.6 E.torQ'],
+            'Fiorino': ['1.4 Fire'],
+            'Siena': ['1.4 Fire', '1.6 E.torQ']
         },
         'model_start_years': {
             'Pulse': 2021,
@@ -184,7 +230,12 @@ SUPPORTED_BRANDS = {
         'models': ['Sandero', 'Logan', 'Duster', 'Kwid', 'Oroch', 'Captur', 'Master', 'Stepway'],
         'engines': {
             'Duster': ['1.6 SCe', '2.0 Hi-Flex', '1.3 Turbo TCe'],
-            'Sandero': ['1.0 SCe', '1.6 SCe', '2.0 (R.S.)']
+            'Sandero': ['1.0 SCe', '1.6 SCe', '2.0 (R.S.)'],
+            'Logan': ['1.0 SCe', '1.6 SCe'],
+            'Kwid': ['1.0 SCe'],
+            'Oroch': ['1.6 SCe', '2.0 Hi-Flex'],
+            'Captur': ['1.3 Turbo TCe', '1.6 SCe'],
+            'Master': ['2.3 Diesel']
         },
         'start_year': 2012,
         'docs': 'Renault Connected Services'
@@ -193,7 +244,10 @@ SUPPORTED_BRANDS = {
         'models': ['Renegade', 'Compass', 'Commander', 'Wrangler', 'Cherokee'],
         'engines': {
             'Renegade': ['1.8 E.torQ', '2.0 Diesel', '1.3 Turbo 270'],
-            'Compass': ['2.0 Flex', '2.0 Diesel', '1.3 Turbo 270', '1.3 Turbo Hybrid (4xe)']
+            'Compass': ['2.0 Flex', '2.0 Diesel', '1.3 Turbo 270', '1.3 Turbo Hybrid (4xe)'],
+            'Commander': ['1.3 Turbo 270', '2.0 Diesel'],
+            'Wrangler': ['2.0 Turbo', '3.6 V6', '2.0 Diesel'],
+            'Cherokee': ['2.4 Tigershark', '2.0 Turbo', '3.2 V6']
         },
         'start_year': 2015,
         'docs': 'FCA Developer Portal'
@@ -202,7 +256,11 @@ SUPPORTED_BRANDS = {
         'models': ['March', 'Versa', 'Kicks', 'Frontier', 'Sentra', 'Leaf'],
         'engines': {
             'Kicks': ['1.6 16V Flex'],
-            'Frontier': ['2.3 Diesel Turbo', '2.3 Diesel Bi-Turbo', '2.5 Diesel']
+            'Frontier': ['2.3 Diesel Turbo', '2.3 Diesel Bi-Turbo', '2.5 Diesel'],
+            'March': ['1.0 12V', '1.6 16V'],
+            'Versa': ['1.0 12V', '1.6 16V'],
+            'Sentra': ['2.0 16V', '1.6 Turbo'],
+            'Leaf': ['Elétrico']
         },
         'start_year': 2012,
         'docs': 'Nissan Connect API'
@@ -211,7 +269,10 @@ SUPPORTED_BRANDS = {
         'models': ['L200', 'Pajero', 'ASX', 'Eclipse Cross', 'Outlander'],
         'engines': {
             'L200': ['2.4 Diesel', '3.2 Diesel', '3.5 Flex'],
-            'ASX': ['2.0 MIVEC Flex']
+            'ASX': ['2.0 MIVEC Flex'],
+            'Pajero': ['3.2 Diesel', '3.8 V6'],
+            'Eclipse Cross': ['1.5 Turbo', '2.4 Hybrid'],
+            'Outlander': ['2.4 MIVEC', '2.4 Hybrid']
         },
         'start_year': 2010,
         'docs': 'Mitsubishi Motors API'
@@ -220,7 +281,11 @@ SUPPORTED_BRANDS = {
         'models': ['208', '2008', '3008', '5008', 'Partner', 'Expert'],
         'engines': {
             '208': ['1.2 PureTech', '1.6 Flex', '1.0 Firefly'],
-            '3008': ['1.6 THP']
+            '3008': ['1.6 THP', '2.0 Diesel', '1.2 PureTech'],
+            '2008': ['1.2 PureTech', '1.6 THP'],
+            '5008': ['1.2 PureTech', '1.6 THP', '2.0 Diesel'],
+            'Partner': ['1.6 HDi', '1.6 THP'],
+            'Expert': ['2.0 Diesel']
         },
         'start_year': 2015,
         'docs': 'PSA Group API'
@@ -229,7 +294,10 @@ SUPPORTED_BRANDS = {
         'models': ['C3', 'C4 Cactus', 'C4 Lounge', 'Berlingo', 'Jumpy'],
         'engines': {
             'C3': ['1.2 PureTech', '1.6 Flex', '1.0 Firefly'],
-            'C4 Cactus': ['1.6 Flex', '1.6 THP']
+            'C4 Cactus': ['1.6 Flex', '1.6 THP'],
+            'C4 Lounge': ['1.6 THP', '2.0 Diesel'],
+            'Berlingo': ['1.6 HDi'],
+            'Jumpy': ['2.0 Diesel']
         },
         'start_year': 2015,
         'docs': 'PSA Group API'
@@ -237,7 +305,12 @@ SUPPORTED_BRANDS = {
     'BMW': {
         'models': ['Série 3', 'Série 1', 'X1', 'X3', 'X5', 'Série 5'],
         'engines': {
-            'Série 3': ['2.0 Turbo (320i)', '3.0 Turbo (M340i)', '2.0 Hybrid (330e)']
+            'Série 3': ['2.0 Turbo (320i)', '3.0 Turbo (M340i)', '2.0 Hybrid (330e)'],
+            'Série 1': ['1.5 Turbo', '2.0 Turbo'],
+            'X1': ['1.5 Turbo', '2.0 Turbo'],
+            'X3': ['2.0 Turbo', '3.0 Turbo'],
+            'X5': ['3.0 Turbo', '4.4 V8 Turbo'],
+            'Série 5': ['2.0 Turbo', '3.0 Turbo', '3.0 Hybrid']
         },
         'start_year': 2014,
         'docs': 'BMW ConnectedDrive API'
@@ -245,7 +318,12 @@ SUPPORTED_BRANDS = {
     'Mercedes-Benz': {
         'models': ['Classe A', 'Classe C', 'GLA', 'GLC', 'GLE', 'Classe E'],
         'engines': {
-            'Classe C': ['1.5 Turbo', '1.6 Turbo', '2.0 Turbo']
+            'Classe C': ['1.5 Turbo', '1.6 Turbo', '2.0 Turbo'],
+            'Classe A': ['1.3 Turbo', '2.0 Turbo'],
+            'GLA': ['1.3 Turbo', '2.0 Turbo'],
+            'GLC': ['2.0 Turbo', '3.0 Turbo'],
+            'GLE': ['2.0 Turbo', '3.0 Turbo', '3.0 Diesel'],
+            'Classe E': ['1.5 Turbo', '2.0 Turbo', '3.0 Turbo']
         },
         'start_year': 2014,
         'docs': 'Mercedes-Benz Developers'
@@ -254,7 +332,11 @@ SUPPORTED_BRANDS = {
         'models': ['A3', 'A4', 'Q3', 'Q5', 'A5', 'Q7'],
         'engines': {
             'A3': ['1.4 TFSI', '2.0 TFSI'],
-            'Q3': ['1.4 TFSI', '2.0 TFSI']
+            'Q3': ['1.4 TFSI', '2.0 TFSI'],
+            'A4': ['2.0 TFSI', '3.0 TFSI'],
+            'Q5': ['2.0 TFSI', '3.0 TFSI'],
+            'A5': ['2.0 TFSI', '3.0 TFSI'],
+            'Q7': ['3.0 TFSI', '3.0 TDI']
         },
         'start_year': 2014,
         'docs': 'Audi API Portal'
@@ -263,7 +345,12 @@ SUPPORTED_BRANDS = {
         'models': ['Sportage', 'Cerato', 'Sorento', 'Rio', 'Picanto', 'Stonic', 'Niro'],
         'engines': {
             'Sportage': ['2.0 Flex', '1.6 Turbo Hybrid'],
-            'Cerato': ['1.6 Flex', '2.0 Flex']
+            'Cerato': ['1.6 Flex', '2.0 Flex'],
+            'Sorento': ['2.2 Diesel', '2.5 Turbo'],
+            'Rio': ['1.0 MPI', '1.6 MPI'],
+            'Picanto': ['1.0 MPI'],
+            'Stonic': ['1.0 MPI', '1.0 Turbo'],
+            'Niro': ['1.6 Hybrid', '1.6 Plug-in Hybrid']
         },
         'start_year': 2012,
         'docs': 'Kia Connect API'
@@ -272,7 +359,11 @@ SUPPORTED_BRANDS = {
         'models': ['Tiggo 2', 'Tiggo 5X', 'Tiggo 7', 'Tiggo 8', 'Arrizo 5', 'Arrizo 6'],
         'engines': {
             'Tiggo 5X': ['1.5 Turbo Flex'],
-            'Tiggo 8': ['1.6 Turbo GDI']
+            'Tiggo 8': ['1.6 Turbo GDI'],
+            'Tiggo 2': ['1.5 Aspirado', '1.5 Turbo'],
+            'Tiggo 7': ['1.5 Turbo', '1.6 Turbo GDI'],
+            'Arrizo 5': ['1.5 Aspirado'],
+            'Arrizo 6': ['1.5 Turbo']
         },
         'start_year': 2018,
         'docs': 'Caoa Chery API'
@@ -304,7 +395,8 @@ def get_engines(brand, model):
         brand_data = SUPPORTED_BRANDS[brand]
         if 'engines' in brand_data and model in brand_data['engines']:
             return jsonify(brand_data['engines'][model]), 200
-        return jsonify([]), 200
+        # If no specific engines found for model, return a default list
+        return jsonify(['1.0', '1.4', '1.6', '1.8', '2.0', '2.0 Turbo']), 200
     return jsonify({'error': 'Marca não suportada'}), 404
 
 @app.route('/vehicle/years/<brand>/<model>', methods=['GET'])

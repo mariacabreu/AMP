@@ -10,10 +10,14 @@ export default function TravelPlanningScreen(props) {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
+  const [startSuggestions, setStartSuggestions] = useState([]);
+  const [selectedStartLocation, setSelectedStartLocation] = useState(null);
+  const [searchingStart, setSearchingStart] = useState(false);
+  const [showStartSuggestions, setShowStartSuggestions] = useState(false);
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
   const [selectedDestination, setSelectedDestination] = useState(null);
   const [searchingDestination, setSearchingDestination] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [distance, setDistance] = useState('0.0 KM');
   const [duration, setDuration] = useState('');
   const [mapPreviewUrl, setMapPreviewUrl] = useState('');
@@ -121,21 +125,25 @@ export default function TravelPlanningScreen(props) {
   };
 
   const openRouteInMap = async () => {
-    if (!currentLocation || !selectedDestination) {
+    const origin = selectedStartLocation || currentLocation;
+    if (!origin || !selectedDestination) {
       return;
     }
 
-    const directionsUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${currentLocation.latitude}%2C${currentLocation.longitude}%3B${selectedDestination.latitude}%2C${selectedDestination.longitude}`;
+    const directionsUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.latitude}%2C${origin.longitude}%3B${selectedDestination.latitude}%2C${selectedDestination.longitude}`;
     await Linking.openURL(directionsUrl);
   };
 
   const fetchLocationLabel = async (coords) => {
     try {
-      const reverseUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=pt-BR&lat=${coords.latitude}&lon=${coords.longitude}`;
+      console.log('Fetching location label for coords:', coords);
+      const reverseUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=pt-BR&lat=${coords.latitude}&lon=${coords.longitude}&zoom=18`;
+      console.log('Reverse geocode URL:', reverseUrl);
       const response = await fetch(reverseUrl, {
         headers: {
           Accept: 'application/json',
           'Accept-Language': 'pt-BR',
+          'User-Agent': 'AMP-App/1.0',
         },
       });
 
@@ -144,15 +152,56 @@ export default function TravelPlanningScreen(props) {
       }
 
       const data = await response.json();
+      console.log('Reverse geocode response:', data);
       const address = data.address || {};
-      const labelParts = [
+      
+      // Sempre começar com rua e número (se houver)
+      const streetParts = [
         address.road,
         address.house_number,
-        address.neighbourhood || address.suburb,
-        address.city || address.town || address.village || address.municipality,
       ].filter(Boolean);
+      
+      let label = '';
+      
+      if (streetParts.length > 0) {
+        label = streetParts.join(', ');
+        
+        // Adicionar bairro
+        const neighbourhood = address.neighbourhood || address.suburb || address.city_district;
+        if (neighbourhood) {
+          label += `, ${neighbourhood}`;
+        }
+        
+        // Adicionar cidade
+        const city = address.city || address.town || address.village || address.municipality;
+        if (city) {
+          label += `, ${city}`;
+        }
+        
+        // Se temos nome de estabelecimento, adicionar no final em parênteses
+        const possibleNames = [
+          data.name,
+          address.shop,
+          address.amenity,
+          address.building,
+          address.office,
+          address.hotel,
+          address.restaurant,
+          address.cafe,
+          address.supermarket,
+          address.mall,
+        ].filter(Boolean);
+        
+        if (possibleNames.length > 0) {
+          label += ` (${possibleNames[0]})`;
+        }
+      } else {
+        // Se não temos rua, tentar usar o display_name da API
+        label = data.display_name || 'Localização atual';
+      }
 
-      return labelParts.join(', ') || 'Localização atual';
+      console.log('Final location label:', label);
+      return label;
     } catch (error) {
       console.error('Error fetching current location label:', error);
       return 'Localização atual';
@@ -163,109 +212,27 @@ export default function TravelPlanningScreen(props) {
     getCurrentLocation();
   }, []);
 
-  useEffect(() => {
-    const query = endLocation.trim();
-
-    if (query.length < 3) {
-      setDestinationSuggestions([]);
-      setSearchingDestination(false);
-      return undefined;
-    }
-
-    if (selectedDestination && selectedDestination.label === query) {
-      return undefined;
-    }
-
-    const timeoutId = setTimeout(() => {
-      fetchDestinationSuggestions(query);
-    }, 350);
-
-    return () => clearTimeout(timeoutId);
-  }, [endLocation, selectedDestination]);
-
-  const getCurrentLocation = async () => {
+  const fetchStartSuggestions = async (query) => {
     try {
-      if (Platform.OS === 'web') {
-        const browserLocation = await new Promise((resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(new Error('Geolocalização não suportada pelo navegador'));
-            return;
-          }
+      console.log('Fetching start suggestions for query:', query);
+      setSearchingStart(true);
 
-          navigator.geolocation.getCurrentPosition(
-            ({ coords }) => {
-              resolve({
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-              });
-            },
-            (error) => reject(error),
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 5000,
-            }
-          );
-        });
-
-        const coords = browserLocation;
-        setCurrentLocation(coords);
-        setStartLocation(await fetchLocationLabel(coords));
-        setRouteStatus('Localização atual obtida. Escolha um destino para traçar a rota');
-        setLoading(false);
-        return;
-      }
-
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permissão negada', 'Precisamos da sua localização para usar o mapa!');
-        setLoading(false);
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const coords = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      };
-
-      setCurrentLocation(coords);
-      setStartLocation(await fetchLocationLabel(coords));
-      setRouteStatus('Localização atual obtida. Escolha um destino para traçar a rota');
-      setLoading(false);
-    } catch (error) {
-      console.error('Error getting location:', error);
-      const fallbackCoords = {
-        latitude: -23.5505,
-        longitude: -46.6333,
-      };
-      setCurrentLocation(fallbackCoords);
-      setStartLocation(await fetchLocationLabel(fallbackCoords));
-      setRouteStatus('Usando localização aproximada. Ative a geolocalização para rota mais precisa');
-      setLoading(false);
-    }
-  };
-
-  const fetchDestinationSuggestions = async (query) => {
-    try {
-      setSearchingDestination(true);
-
-      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=br&accept-language=pt-BR&q=${encodeURIComponent(query)}`;
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&accept-language=pt-BR&q=${encodeURIComponent(query)}`;
+      console.log('Request URL:', url);
       const response = await fetch(url, {
         headers: {
           Accept: 'application/json',
           'Accept-Language': 'pt-BR',
+          'User-Agent': 'AMP-App/1.0',
         },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch destination suggestions: ${response.status}`);
+        throw new Error(`Failed to fetch start suggestions: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('API response data:', data);
 
       const suggestions = data.map((item) => {
         const address = item.address || {};
@@ -294,8 +261,200 @@ export default function TravelPlanningScreen(props) {
         };
       });
 
+      console.log('Processed suggestions:', suggestions);
+      setStartSuggestions(suggestions);
+      setShowStartSuggestions(true);
+    } catch (error) {
+      console.error('Error fetching start suggestions:', error);
+      setStartSuggestions([]);
+    } finally {
+      setSearchingStart(false);
+    }
+  };
+
+  const handleStartChange = (text) => {
+    setStartLocation(text);
+    setSelectedStartLocation(null);
+    setDistance('0.0 KM');
+    setDuration('');
+    setMapPreviewUrl('');
+    setMapEmbedHtml('');
+    setRouteStatus('Selecione um local de partida sugerido para calcular a rota');
+    setShowStartSuggestions(true);
+  };
+
+  const handleSelectStart = (location) => {
+    setSelectedStartLocation(location);
+    setStartLocation(location.label);
+    setStartSuggestions([]);
+    setShowStartSuggestions(false);
+    setDistance('0.0 KM');
+    setDuration('');
+    setMapPreviewUrl('');
+    setMapEmbedHtml('');
+    setRouteStatus('Partida selecionada. Selecione um destino para traçar a rota');
+  };
+
+  const handleResetToCurrentLocation = async () => {
+    console.log('=== handleResetToCurrentLocation CALLED ===');
+    setLoading(true);
+    setSelectedStartLocation(null);
+    setStartSuggestions([]);
+    setShowStartSuggestions(false);
+    setDistance('0.0 KM');
+    setDuration('');
+    setMapPreviewUrl('');
+    setMapEmbedHtml('');
+    // Chama getCurrentLocation novamente para pegar a localização mais recente
+    await getCurrentLocation();
+  };
+
+  useEffect(() => {
+    const query = startLocation.trim();
+
+    if (query.length < 3) {
+      setStartSuggestions([]);
+      setSearchingStart(false);
+      return undefined;
+    }
+
+    if (selectedStartLocation && selectedStartLocation.label === query) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      fetchStartSuggestions(query);
+    }, 350);
+
+    return () => clearTimeout(timeoutId);
+  }, [startLocation, selectedStartLocation]);
+
+  useEffect(() => {
+    const query = endLocation.trim();
+
+    if (query.length < 3) {
+      setDestinationSuggestions([]);
+      setSearchingDestination(false);
+      return undefined;
+    }
+
+    if (selectedDestination && selectedDestination.label === query) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      fetchDestinationSuggestions(query);
+    }, 350);
+
+    return () => clearTimeout(timeoutId);
+  }, [endLocation, selectedDestination]);
+
+  const getCurrentLocation = async () => {
+    console.log('=== getCurrentLocation STARTING ===');
+    try {
+      // Usar expo-location para TODAS as plataformas, incluindo web!
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('❌ Permissão negada');
+        Alert.alert('Permissão negada', 'Precisamos da sua localização para usar o mapa!');
+        throw new Error('Permissão negada');
+      }
+
+      let location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      console.log('✅ Got location:', location);
+
+      const coords = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+
+      setCurrentLocation(coords);
+      const label = await fetchLocationLabel(coords);
+      console.log('✅ Setting startLocation to:', label);
+      setStartLocation(label);
+      setRouteStatus('Localização atual obtida. Escolha um destino para traçar a rota');
+      setLoading(false);
+      return;
+    } catch (error) {
+      console.log('❌ Error in getCurrentLocation, using fallback:', error);
+    }
+    
+    // Fallback para localização padrão
+    console.log('⚠️ Using fallback location');
+    const fallbackCoords = {
+      latitude: -23.5505,
+      longitude: -46.6333,
+    };
+    setCurrentLocation(fallbackCoords);
+    let label = 'São Paulo, SP (localização padrão)';
+    try {
+      const fallbackLabel = await fetchLocationLabel(fallbackCoords);
+      if (fallbackLabel !== 'Localização atual') {
+        label = fallbackLabel;
+      }
+    } catch (labelError) {
+      console.log('Could not get fallback label');
+    }
+    setStartLocation(label);
+    setRouteStatus('Usando localização aproximada. Ative a geolocalização para rota mais precisa');
+    setLoading(false);
+    console.log('=== getCurrentLocation DONE ===');
+  };
+
+  const fetchDestinationSuggestions = async (query) => {
+    try {
+      console.log('Fetching destination suggestions for query:', query);
+      setSearchingDestination(true);
+
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&accept-language=pt-BR&q=${encodeURIComponent(query)}`;
+      console.log('Request URL:', url);
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          'Accept-Language': 'pt-BR',
+          'User-Agent': 'AMP-App/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch destination suggestions: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('API response data:', data);
+
+      const suggestions = data.map((item) => {
+        const address = item.address || {};
+        const titleParts = [
+          address.road,
+          address.house_number,
+          address.neighbourhood || address.suburb,
+          address.city_district,
+          address.city || address.town || address.village || address.municipality || address.county,
+        ].filter(Boolean);
+        const subtitleParts = [
+          address.state,
+          address.region,
+          address.country,
+        ].filter(Boolean);
+        const fallbackParts = item.display_name.split(',').map((part) => part.trim());
+        const title = titleParts.slice(0, 3).join(', ') || fallbackParts.slice(0, 2).join(', ');
+        const subtitle = subtitleParts.join(', ') || fallbackParts.slice(2).join(', ');
+
+        return {
+          id: `${item.place_id}`,
+          label: title || item.display_name,
+          subtitle,
+          latitude: Number(item.lat),
+          longitude: Number(item.lon),
+        };
+      });
+
+      console.log('Processed suggestions:', suggestions);
       setDestinationSuggestions(suggestions);
-      setShowSuggestions(true);
+      setShowDestinationSuggestions(true);
     } catch (error) {
       console.error('Error fetching destination suggestions:', error);
       setDestinationSuggestions([]);
@@ -312,14 +471,14 @@ export default function TravelPlanningScreen(props) {
     setMapPreviewUrl('');
     setMapEmbedHtml('');
     setRouteStatus('Selecione um destino sugerido para calcular a rota');
-    setShowSuggestions(true);
+    setShowDestinationSuggestions(true);
   };
 
   const handleSelectDestination = (destination) => {
     setSelectedDestination(destination);
     setEndLocation(destination.label);
     setDestinationSuggestions([]);
-    setShowSuggestions(false);
+    setShowDestinationSuggestions(false);
     setDistance('0.0 KM');
     setDuration('');
     setMapPreviewUrl('');
@@ -328,8 +487,10 @@ export default function TravelPlanningScreen(props) {
   };
 
   const handleCalculateDistance = async () => {
-    if (!currentLocation) {
-      Alert.alert('Aviso', 'Aguardando localização atual...');
+    const origin = selectedStartLocation || currentLocation;
+
+    if (!origin) {
+      Alert.alert('Aviso', 'Aguardando localização de partida...');
       return;
     }
 
@@ -347,7 +508,7 @@ export default function TravelPlanningScreen(props) {
       setLoading(true);
       setRouteStatus('Calculando rota...');
 
-      const routeUrl = `https://router.project-osrm.org/route/v1/driving/${currentLocation.longitude},${currentLocation.latitude};${selectedDestination.longitude},${selectedDestination.latitude}?overview=full&geometries=geojson&steps=false`;
+      const routeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${selectedDestination.longitude},${selectedDestination.latitude}?overview=full&geometries=geojson&steps=false`;
       const response = await fetch(routeUrl, {
         headers: {
           Accept: 'application/json',
@@ -369,12 +530,12 @@ export default function TravelPlanningScreen(props) {
       setDistance(formatDistance(routeData.distance));
       setDuration(formatDuration(routeData.duration));
       setMapPreviewUrl(buildStaticMapUrl(
-        currentLocation,
+        origin,
         selectedDestination,
         routeData.geometry?.coordinates || []
       ));
       setMapEmbedHtml(buildMapEmbedHtml(
-        currentLocation,
+        origin,
         selectedDestination,
         routeData.geometry?.coordinates || []
       ));
@@ -392,12 +553,72 @@ export default function TravelPlanningScreen(props) {
     }
   };
 
+  const getMaintenanceRecommendations = (distanceKm) => {
+    if (!distanceKm) {
+      return [
+        'Verificar nível do óleo',
+        'Checar pressão dos pneus'
+      ];
+    }
+
+    if (distanceKm < 500) {
+      return [
+        'Verificar nível do óleo',
+        'Checar pressão dos pneus'
+      ];
+    } else if (distanceKm >= 500 && distanceKm < 1500) {
+      return [
+        'Verificar nível do óleo',
+        'Checar pressão dos pneus',
+        'Verificar sistema de freios',
+        'Revisar nível do líquido de arrefecimento'
+      ];
+    } else if (distanceKm >= 1500 && distanceKm < 3000) {
+      return [
+        'Trocar óleo do motor (se próximo do vencimento)',
+        'Verificar sistema de freios completo',
+        'Checar alinhamento e balanceamento',
+        'Revisar nível do líquido de arrefecimento',
+        'Inspecionar bateria e cabos',
+        'Verificar pressão e estado dos pneus'
+      ];
+    } else {
+      return [
+        'Trocar óleo do motor e filtro',
+        'Revisar sistema de freios completo (pastilhas, discos, fluido)',
+        'Verificar alinhamento e balanceamento',
+        'Checar nível e qualidade do líquido de arrefecimento',
+        'Inspecionar sistema de suspensão',
+        'Verificar bateria, cabos e terminais',
+        'Checar estado dos pneus (desgaste, pressão)',
+        'Revisar nível do fluido de direção hidráulica',
+        'Inspecionar correias e mangueiras do motor'
+      ];
+    }
+  };
+
   const handleGenerateReport = () => {
     if (distance === '0.0 KM') {
       Alert.alert('Aviso', 'Calcule a distância primeiro');
       return;
     }
-    Alert.alert('Relatório', 'Relatório de viagem gerado com sucesso!\nDistância: ' + distance);
+    // Extrair o valor numérico da distância (remover " KM")
+    const numericDistance = parseFloat(distance.replace(' KM', '').replace(',', '.'));
+    
+    // Criar nova viagem para adicionar ao histórico
+    const newTrip = {
+      id: Date.now().toString(),
+      date: new Date().toLocaleDateString('pt-BR'),
+      startLocation: startLocation,
+      endLocation: endLocation,
+      distance: distance,
+      duration: duration,
+      vehicleStatus: numericDistance < 1500 ? 'Bom estado geral' : 'Requer atenção',
+      maintenanceItems: getMaintenanceRecommendations(numericDistance)
+    };
+
+    // Navegar para a tela de histórico de viagens e passar a nova viagem
+    navigation.navigate('TripHistory', { user: loggedUser, newTrip: newTrip });
   };
 
   if (loading) {
@@ -425,47 +646,47 @@ export default function TravelPlanningScreen(props) {
         showsVerticalScrollIndicator={true}
       >
         <View style={styles.mapContainer}>
-          {(Platform.OS === 'web' ? mapEmbedHtml : mapPreviewUrl) ? (
-            <View style={styles.mapPreviewWrapper}>
-              {Platform.OS === 'web' ? (
-                <iframe
-                  title="Mapa da rota"
-                  srcDoc={mapEmbedHtml}
-                  style={styles.mapIframe}
-                />
-              ) : (
-                <Image
-                  source={{ uri: mapPreviewUrl }}
-                  style={styles.mapImage}
-                  resizeMode="cover"
-                />
-              )}
-              <View style={styles.mapOverlay}>
-                <View style={styles.routeBadge}>
-                  <Text style={styles.routeBadgeText}>{distance}</Text>
-                  {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
+            {(Platform.OS === 'web' ? mapEmbedHtml : mapPreviewUrl) ? (
+              <View style={styles.mapPreviewWrapper}>
+                {Platform.OS === 'web' ? (
+                  <iframe
+                    title="Mapa da rota"
+                    srcDoc={mapEmbedHtml}
+                    style={styles.mapIframe}
+                  />
+                ) : (
+                  <Image
+                    source={{ uri: mapPreviewUrl }}
+                    style={styles.mapImage}
+                    resizeMode="cover"
+                  />
+                )}
+                <View style={styles.mapOverlay}>
+                  <View style={styles.routeBadge}>
+                    <Text style={styles.routeBadgeText}>{distance}</Text>
+                    {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
+                  </View>
+                  <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
+                    <MaterialIcons name="open-in-new" size={18} color="#FFF" />
+                    <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
-                  <MaterialIcons name="open-in-new" size={18} color="#FFF" />
-                  <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
-                </TouchableOpacity>
               </View>
-            </View>
-          ) : (
-            <View style={styles.mapPlaceholder}>
-              <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
-              <Text style={styles.mapText}>{routeStatus}</Text>
-              {currentLocation && (
-                <View style={styles.locationInfoContainer}>
-                  <MaterialIcons name="my-location" size={20} color="#4CAF50" />
-                  <Text style={styles.locationInfo}>
-                    {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
+            ) : (
+              <View style={styles.mapPlaceholder}>
+                <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
+                <Text style={styles.mapText}>{routeStatus}</Text>
+                {currentLocation && (
+                  <View style={styles.locationInfoContainer}>
+                    <MaterialIcons name="my-location" size={20} color="#4CAF50" />
+                    <Text style={styles.locationInfo}>
+                      {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
         <View style={styles.formContainer}>
           <View style={styles.inputGroup}>
@@ -476,9 +697,39 @@ export default function TravelPlanningScreen(props) {
                 style={styles.input}
                 placeholder="Local de partida"
                 value={startLocation}
-                editable={false}
+                onChangeText={handleStartChange}
+                onFocus={() => setShowStartSuggestions(true)}
+                editable={true}
               />
+              <TouchableOpacity onPress={handleResetToCurrentLocation} style={styles.resetButton}>
+                <MaterialIcons name="refresh" size={18} color="#4CAF50" />
+              </TouchableOpacity>
             </View>
+            {(searchingStart || (showStartSuggestions && startSuggestions.length > 0)) && (
+              <View style={styles.suggestionsContainer}>
+                {searchingStart && (
+                  <View style={styles.suggestionLoading}>
+                    <ActivityIndicator size="small" color="#2C2C2C" />
+                    <Text style={styles.suggestionLoadingText}>Buscando endereços...</Text>
+                  </View>
+                )}
+                {!searchingStart && startSuggestions.map((suggestion) => (
+                  <TouchableOpacity
+                    key={suggestion.id}
+                    style={styles.suggestionItem}
+                    onPress={() => handleSelectStart(suggestion)}
+                  >
+                    <MaterialIcons name="location-on" size={18} color="#4CAF50" />
+                    <View style={styles.suggestionTextContainer}>
+                      <Text style={styles.suggestionTitle}>{suggestion.label}</Text>
+                      {!!suggestion.subtitle && (
+                        <Text style={styles.suggestionSubtitle}>{suggestion.subtitle}</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -490,10 +741,10 @@ export default function TravelPlanningScreen(props) {
                 placeholder="Pra onde?"
                 value={endLocation}
                 onChangeText={handleDestinationChange}
-                onFocus={() => setShowSuggestions(true)}
+                onFocus={() => setShowDestinationSuggestions(true)}
               />
             </View>
-            {(searchingDestination || (showSuggestions && destinationSuggestions.length > 0)) && (
+            {(searchingDestination || (showDestinationSuggestions && destinationSuggestions.length > 0)) && (
               <View style={styles.suggestionsContainer}>
                 {searchingDestination && (
                   <View style={styles.suggestionLoading}>
@@ -735,6 +986,9 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginRight: 8,
+  },
+  resetButton: {
+    padding: 4,
   },
   input: {
     flex: 1,

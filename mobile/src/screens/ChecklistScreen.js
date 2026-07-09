@@ -243,14 +243,24 @@ const ChecklistScreen = ({ navigation, route }) => {
                 </View>
               </View>
               
-              <TouchableOpacity 
-                style={[styles.markDoneButton, isMarkingDone && { opacity: 0.5 }]} 
-                onPress={() => handleMarkAsDone(item)}
-                disabled={isMarkingDone}
-              >
-                <MaterialCommunityIcons name="check-circle" size={18} color="#FFCF00" />
-                <Text style={styles.markDoneText}>{isMarkingDone ? 'Processando...' : 'Marcar como Feito'}</Text>
-              </TouchableOpacity>
+              <View style={styles.buttonsContainer}>
+                <TouchableOpacity 
+                  style={[styles.reminderButton, isMarkingDone && { opacity: 0.5 }]} 
+                  onPress={() => navigation.navigate('Reminders', { user: loggedUser })}
+                  disabled={isMarkingDone}
+                >
+                  <MaterialCommunityIcons name="clock-alert" size={18} color="#2D2D2D" />
+                  <Text style={styles.reminderButtonText}>Lembrete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.markDoneButton, isMarkingDone && { opacity: 0.5 }]} 
+                  onPress={() => handleMarkAsDone(item)}
+                  disabled={isMarkingDone}
+                >
+                  <MaterialCommunityIcons name="check-circle" size={18} color="#FFCF00" />
+                  <Text style={styles.markDoneText}>{isMarkingDone ? 'Processando...' : 'Marcar como Feito'}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
@@ -483,6 +493,27 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     textAlign: 'justify',
   },
+  buttonsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  reminderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFCF00',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    flex: 1,
+  },
+  reminderButtonText: {
+    color: '#2D2D2D',
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
   markDoneButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -491,7 +522,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    marginTop: 10,
+    flex: 1,
   },
   markDoneText: {
     color: '#FFCF00',
