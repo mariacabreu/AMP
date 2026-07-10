@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform, TextInput, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, Alert } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import API_BASE_URL from '../api';
+import API_BASE_URL from '../../api';
 
-const DebitPaymentScreen = ({ navigation, route }) => {
+/**
+ * CardPaymentScreen
+ *
+ * Tela base compartilhada por pagamento com Cartão de Crédito e Cartão de Débito.
+ * O que muda entre os dois é só o título exibido — toda a lógica de formulário,
+ * validação e confirmação de pagamento é idêntica.
+ *
+ * Props:
+ * - navigation, route: parâmetros padrão de navegação
+ * - title: título exibido no topo (ex: "CARTÃO DE CRÉDITO" ou "CARTÃO DE DÉBITO")
+ */
+const CardPaymentScreen = ({ navigation, route, title }) => {
   const loggedUser = route.params?.user;
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
@@ -29,23 +40,23 @@ const DebitPaymentScreen = ({ navigation, route }) => {
       {/* Header Fixo */}
       <View style={styles.header}>
         <Image
-          source={require('../assets/logo.png')}
+          source={require('../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
+            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
+            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.mainContent}>
-        <ScrollView 
-          style={styles.scrollView} 
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
           scrollEnabled={true}
@@ -54,13 +65,13 @@ const DebitPaymentScreen = ({ navigation, route }) => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <Ionicons name="arrow-back-circle" size={32} color="#2C2C2C" />
             </TouchableOpacity>
-            <Text style={styles.screenTitle}>CARTÃO DE DÉBITO</Text>
+            <Text style={styles.screenTitle}>{title}</Text>
           </View>
-          
+
           {/* Card Visual */}
           <View style={styles.cardVisual}>
-            <Image 
-              source={require('../assets/screenshot_834_1190.png')} 
+            <Image
+              source={require('../../assets/screenshot_834_1190.png')}
               style={styles.cardImage}
               resizeMode="cover"
             />
@@ -69,7 +80,7 @@ const DebitPaymentScreen = ({ navigation, route }) => {
           {/* Form Fields */}
           <View style={styles.form}>
             <Text style={styles.inputLabel}>Nº do Cartão</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="0000 0000 0000 0000"
               value={cardNumber}
@@ -80,7 +91,7 @@ const DebitPaymentScreen = ({ navigation, route }) => {
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
                 <Text style={styles.inputLabel}>Vencimento</Text>
-                <TextInput 
+                <TextInput
                   style={styles.input}
                   placeholder="MM/AA"
                   value={expiry}
@@ -90,7 +101,7 @@ const DebitPaymentScreen = ({ navigation, route }) => {
               <View style={[styles.inputGroup, { flex: 1 }]}>
                 <Text style={styles.inputLabel}>CVV</Text>
                 <View style={styles.cvvContainer}>
-                  <TextInput 
+                  <TextInput
                     style={[styles.input, { flex: 1 }]}
                     placeholder="123"
                     value={cvv}
@@ -104,7 +115,7 @@ const DebitPaymentScreen = ({ navigation, route }) => {
             </View>
 
             <Text style={styles.inputLabel}>Nome Completo</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Como está no cartão"
               value={fullName}
@@ -112,7 +123,7 @@ const DebitPaymentScreen = ({ navigation, route }) => {
             />
 
             <Text style={styles.inputLabel}>CPF</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="000.000.000-00"
               value={cpf}
@@ -375,4 +386,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default DebitPaymentScreen;
+export default CardPaymentScreen;
