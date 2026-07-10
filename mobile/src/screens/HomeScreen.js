@@ -34,13 +34,17 @@ const HomeScreen = ({ navigation, route }) => {
   const vehicleCount = vehicles.length;
 
   useEffect(() => {
+  console.log('loggedUser mudou:', loggedUser);
+  if (loggedUser?.id) {
     fetchUserStatus();
     fetchNotifications();
-  }, [route.params?.user]);
+  }
+  }, [route.params?.user, loggedUser?.id]);
 
   const fetchUserStatus = async () => {
+    if (!loggedUser?.id) return;
     try {
-      const userId = loggedUser?.id || 1;
+      const userId = loggedUser.id;
       const response = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
 
       let isPremium = loggedUser?.is_premium || false;
@@ -59,10 +63,12 @@ const HomeScreen = ({ navigation, route }) => {
         : [];
       setVehicles(vehiclesData);
 
-      setStatus({
+      setStatus((prev) => ({
+        ...prev,
         ...response.data,
+        user_name: response.data?.user_name || loggedUser?.full_name || 'Usuário',
         is_premium: isPremium
-      });
+      }));
     } catch (error) {
       console.error('Error fetching status:', error);
       setStatus({
@@ -136,7 +142,7 @@ const HomeScreen = ({ navigation, route }) => {
   };
 
   const handleAddVehicle = () => {
-    navigation.navigate('VehicleRegistration', { user: loggedUser });
+    navigation.navigate('VehicleEditScreen', { user: loggedUser });
   };
 
   return (
@@ -180,15 +186,15 @@ const HomeScreen = ({ navigation, route }) => {
               : navigation.navigate('OBD', { user: loggedUser })
           }
           onPressTravelPlanning={() => navigation.navigate('TravelPlanning', { user: loggedUser })}
-          onPressVehicleRegistration={() => navigation.navigate('VehicleRegistration', { user: loggedUser })}
+          onPressVehicleEditScreen={() => navigation.navigate('VehicleEditScreen', { user: loggedUser })}
           onPressMaintenanceTips={
             status.is_premium
               ? () => navigation.navigate('MaintenanceTips', { user: loggedUser })
               : handlePremiumButton
           }
-          onPressPartsCatalog={
+          OBDHistory={
             status.is_premium
-              ? () => navigation.navigate('PartsCatalog', { user: loggedUser })
+              ? () => navigation.navigate('OBDHistory', { user: loggedUser })
               : handlePremiumButton
           }
           onPressTripHistory={() => navigation.navigate('TripHistory', { user: loggedUser })}

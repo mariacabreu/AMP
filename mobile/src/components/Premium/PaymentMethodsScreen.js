@@ -42,7 +42,7 @@ const PaymentMethodsScreen = ({ navigation, route }) => {
         >
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="arrow-back-circle" size={32} color="#2C2C2C" />
+              <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
             <Text style={styles.screenTitle}>FORMAS DE PAGAMENTOS</Text>
           </View>

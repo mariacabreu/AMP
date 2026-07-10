@@ -6,9 +6,9 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@
 const DashboardGrid = ({
   onPressOBD,
   onPressTravelPlanning,
-  onPressVehicleRegistration,
+  onPressVehicleEditScreen,
   onPressMaintenanceTips,
-  onPressPartsCatalog,
+  OBDHistory,
   onPressTripHistory,
   onPressCompatibility
 }) => {
@@ -32,11 +32,11 @@ const DashboardGrid = ({
       </View>
 
       <View style={styles.row}>
-        <TouchableOpacity style={styles.gridButton} onPress={onPressVehicleRegistration}>
+        <TouchableOpacity style={styles.gridButton} onPress={onPressVehicleEditScreen}>
           <View style={styles.iconCircle}>
             <MaterialCommunityIcons name="car-info" size={50} color="#FFCF00" />
           </View>
-          <Text style={styles.gridButtonTitle}>Dados do veículo</Text>
+          <Text style={styles.gridButtonTitle}>Gerencimento de Veículos</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.gridButton} onPress={onPressMaintenanceTips}>
@@ -48,7 +48,7 @@ const DashboardGrid = ({
       </View>
 
       <View style={styles.row}>
-        <TouchableOpacity style={styles.gridButton} onPress={onPressPartsCatalog}>
+        <TouchableOpacity style={styles.gridButton} onPress={OBDHistory}>
           <View style={styles.iconCircle}>
             <MaterialIcons name="settings-input-component" size={50} color="#FFCF00" />
           </View>

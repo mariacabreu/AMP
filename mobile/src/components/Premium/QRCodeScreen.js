@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, 
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
+import Header from '../Header/Header';
 
 const QRCodeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
@@ -32,22 +33,8 @@ const QRCodeScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header Fixo */}
-      <View style={styles.header}>
-        <Image
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Header Padrão */}
+      <Header showIcons={false} />
 
       <View style={styles.mainContent}>
         <ScrollView 
@@ -58,7 +45,7 @@ const QRCodeScreen = ({ navigation, route }) => {
         >
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="arrow-back-circle" size={32} color="#2C2C2C" />
+              <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
             <Text style={styles.screenTitle}>ÁREA PIX</Text>
           </View>

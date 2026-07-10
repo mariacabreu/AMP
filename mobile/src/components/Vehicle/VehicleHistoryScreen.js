@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Modal, Image, Platform } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
-import API_BASE_URL from '../api';
-import BottomNav from '../components/NavBar/BottomNav';
+import API_BASE_URL from '../../api';
+import BottomNav from '../NavBar/BottomNav';
 
 const VehicleHistoryScreen = ({ navigation, route }) => {
   const { vehicleId, user } = route.params || { vehicleId: 1, user: null };
@@ -109,7 +109,7 @@ const VehicleHistoryScreen = ({ navigation, route }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Image
-              source={require('../assets/logo.png')}
+              source={require('../../assets/logo.png')}
               style={styles.modalLogo}
               resizeMode="contain"
             />

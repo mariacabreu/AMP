@@ -263,29 +263,47 @@ const OBDScreen = ({ navigation, route }) => {
     try {
       if (!connectionRef.current || Platform.OS !== 'android') {
         setTimeout(() => {
-          setDtcCodes([
+          const fallbackCodes = [
             { code: 'P0300', description: 'Mau funcionamento do sistema de ignição aleatório/múltiplo', severity: 'high' },
             { code: 'P0420', description: 'Eficiência do sistema de catalisador abaixo do limiar', severity: 'medium' }
-          ]);
+          ];
+          setDtcCodes(fallbackCodes);
+          saveOBDScanRecord(fallbackCodes);
           setIsLoadingDTC(false);
         }, 1500);
         return;
       }
 
       const resp = await sendOBDCommand('03');
+      let codes = [];
 
       if (resp && !resp.includes('NO DATA')) {
-        setDtcCodes([
+        codes = [
           { code: 'P0300', description: 'Mau funcionamento do sistema de ignição aleatório/múltiplo', severity: 'high' }
-        ]);
-      } else {
-        setDtcCodes([]);
+        ];
       }
+
+      setDtcCodes(codes);
+      await saveOBDScanRecord(codes);
     } catch (err) {
       console.error('Erro ao ler DTCs:', err);
       setDtcCodes([]);
     } finally {
       setIsLoadingDTC(false);
+    }
+  };
+  const saveOBDScanRecord = async (dtcList) => {
+    if (!vehicle?.id) return;
+    try {
+      await axios.post(`${API_BASE_URL}/vehicle/obd-scan`, {
+        vehicle_id: vehicle.id,
+        scan_date: new Date().toISOString(),
+        dtc_codes: dtcList,
+        live_data: liveData,
+        connected_device: connectedDevice?.name || null
+      });
+    } catch (err) {
+      console.error('Erro ao salvar registro de scanner:', err);
     }
   };
 
@@ -445,17 +463,21 @@ const OBDScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
+        <View style={styles.logoContainer} pointerEvents="none">
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>DIAGNÓSTICO EM TEMPO REAL</Text>
+          {vehicle && (
+            <Text style={styles.vehicleSubtitle}>
+              {vehicle.brand} {vehicle.model} • {vehicle.year} • {vehicle.engine_type} • {vehicle.transmission}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -467,13 +489,6 @@ const OBDScreen = ({ navigation, route }) => {
         nestedScrollEnabled={true}
         overScrollMode="always"
       >
-        <Text style={styles.title}>DIAGNÓSTICO EM TEMPO REAL</Text>
-        {vehicle && (
-          <Text style={styles.vehicleSubtitle}>
-            {vehicle.brand} {vehicle.model} • {vehicle.year} • {vehicle.engine_type} • {vehicle.transmission}
-          </Text>
-        )}
-
         <View style={styles.statusHelpRow}>
           <View style={styles.statusContainerCentered}>
             <View style={[styles.statusDot, isConnected ? styles.statusDotConnected : styles.statusDotDisconnected]} />
@@ -481,9 +496,17 @@ const OBDScreen = ({ navigation, route }) => {
               {isConnected ? 'Conectado' : 'Desconectado'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(true)}>
-            <MaterialCommunityIcons name="help-circle" size={20} color="#FFCF00" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity
+              style={[styles.helpButton, { marginRight: 8 }]}
+              onPress={() => navigation.navigate('OBDHistory', { user: loggedUser })}
+            >
+              <MaterialCommunityIcons name="history" size={20} color="#FFCF00" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(true)}>
+              <MaterialCommunityIcons name="help-circle" size={20} color="#FFCF00" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {!showDashboard && (
@@ -775,25 +798,44 @@ const styles = StyleSheet.create({
     })
   },
   header: {
+    position: 'relative',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 15,
-    backgroundColor: '#FFFFFF'
+    paddingTop: 40,
+    paddingBottom: 50,
+    backgroundColor: '#fff',
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000',
+    marginTop: 6,
+    letterSpacing: 0.5,
+  },
+  vehicleSubtitle: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
   },
   backButton: {
-    marginRight: 10,
-    padding: 4
+    width: 40,
+    zIndex: 2,
+    alignSelf: 'flex-start',
   },
-  logo: {
+  logoContainer: {
+    position: 'absolute',
+    top: 40,
+    bottom: 16,
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerLogo: {
     width: 120,
-    height: 50,
-    flex: 1
-  },
-  headerIcons: {
-    flexDirection: 'row'
+    height: 40,
   },
   iconButton: {
     marginLeft: 10,
@@ -816,23 +858,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 100,
     alignItems: 'center'
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#000000',
-    marginTop: 10,
-    marginBottom: 5,
-    fontFamily: 'Inter, sans-serif'
-  },
-  vehicleSubtitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 12,
-    fontFamily: 'Inter, sans-serif'
   },
   statusHelpRow: {
     flexDirection: 'row',
@@ -1189,8 +1214,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    borderRadius: 12
+    marginBottom: 12
   },
   deviceInfo: {
     flex: 1,

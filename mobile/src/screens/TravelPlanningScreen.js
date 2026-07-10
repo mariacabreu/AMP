@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Location from 'expo-location';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import BottomNav from '../components/NavBar/BottomNav';
-import Header from '../components/Header/Header';
 
 export default function TravelPlanningScreen(props) {
   const { navigation, route } = props;
@@ -633,17 +632,28 @@ export default function TravelPlanningScreen(props) {
 
   return (
     <View style={styles.container}>
-      <Header
-        showIcons={false}
-        navigation={navigation}
-        loggedUser={loggedUser}
-      />
+      {/* Header Fixo */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <View style={styles.logoContainer} pointerEvents="none">
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>PLANEJAMENTO DE VIAGEM</Text>
+        </View>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={true}
       >
+        <Text style={styles.subtitle}>Planeje a sua viagem com segurança.</Text>
+
         <View style={styles.mapContainer}>
             {(Platform.OS === 'web' ? mapEmbedHtml : mapPreviewUrl) ? (
               <View style={styles.mapPreviewWrapper}>
@@ -828,30 +838,39 @@ const styles = StyleSheet.create({
       }
     })
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-  },
-  loadingText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: '#2C2C2C',
-  },
   header: {
+    position: 'relative',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 40,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    width: 40,
+    zIndex: 2,
+    alignSelf: 'flex-start',
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 40,
+    bottom: 16,
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 120,
+    height: 40,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000',
+    marginTop: 6,
+    letterSpacing: 0.5,
   },
   scrollView: {
     flex: 1,
@@ -864,7 +883,26 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 100,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: '#2C2C2C',
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontStyle: 'italic',
   },
   mapContainer: {
     width: '100%',

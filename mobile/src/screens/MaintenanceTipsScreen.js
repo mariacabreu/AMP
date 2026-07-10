@@ -48,8 +48,14 @@ const MaintenanceTipsScreen = ({ navigation, route }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>DICAS DE MANUTENÇÃO</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.logoContainer} pointerEvents="none">
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>DICAS DE MANUTENÇÃO</Text>
+        </View>
       </View>
 
       {/* Conteúdo Scrollable */}
@@ -114,21 +120,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
+    position: 'relative',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 40,
-    paddingBottom: 20,
+    paddingBottom: 16,
     backgroundColor: '#fff',
   },
   backButton: {
     width: 40,
+    zIndex: 2,
+    alignSelf: 'flex-start',
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 40,
+    bottom: 16,
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 120,
+    height: 40,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '800',
     color: '#000',
+    marginTop: 6,
+    letterSpacing: 0.5,
   },
   scrollView: {
     flex: 1,

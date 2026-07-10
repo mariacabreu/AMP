@@ -8,8 +8,9 @@ import {
   Platform,
   Alert
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header/Header';
+import BottomNav from '../components/NavBar/BottomNav';
 
 const VehicleCompatibilityScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -89,6 +90,13 @@ const VehicleCompatibilityScreen = ({ navigation, route }) => {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
+        <View style={styles.titleRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.screenTitle}>COMPATIBILIDADE</Text>
+        </View>
+
         <View style={styles.iconContainer}>
           <MaterialCommunityIcons
             name="engine"
@@ -189,6 +197,8 @@ const VehicleCompatibilityScreen = ({ navigation, route }) => {
 
         <View style={styles.emptySpace} />
       </ScrollView>
+
+      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
     </View>
   );
 };
@@ -213,24 +223,25 @@ const styles = StyleSheet.create({
       }
     })
   },
-  header: {
+  titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff'
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+    position: 'relative',
+    width: '100%'
   },
   backButton: {
-    padding: 4
+    position: 'absolute',
+    left: 0,
+    zIndex: 2
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+  screenTitle: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#000000',
-    textAlign: 'center',
-    flex: 1
+    textAlign: 'center'
   },
   scrollView: {
     flex: 1,
@@ -243,7 +254,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 120,
     alignItems: 'center'
   },
   iconContainer: {
