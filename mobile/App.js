@@ -16,8 +16,8 @@ import ChecklistScreen from './src/screens/ChecklistScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PremiumPlanScreen from './src/screens/PremiumPlanScreen';
 import PaymentMethodsScreen from './src/screens/PaymentMethodsScreen';
-import CreditPaymentScreen from './src/screens/CreditPaymentScreen';
-import DebitPaymentScreen from './src/screens/DebitPaymentScreen';
+import CreditPaymentScreen from './src/components/PaymentMethods/CreditPaymentScreen';
+import DebitPaymentScreen from './src/components/PaymentMethods/DebitPaymentScreen';
 import QRCodeScreen from './src/screens/QRCodeScreen';
 import MaintenanceTipsScreen from './src/screens/MaintenanceTipsScreen';
 import OBDScreen from './src/screens/OBDScreen';
@@ -39,7 +39,7 @@ export default function App() {
   return (
     <LanguageProvider>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Initial" screenOptions={{ headerShown: false }}>
+        <Stack.Navigator initialRouteName="PaymentMethods" screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Initial" component={InitialScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
