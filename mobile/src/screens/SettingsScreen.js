@@ -1,34 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, ActivityIndicator, Alert } from 'react-native';
-import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
-
-// Toggle customizado - substitui o Switch nativo para evitar o verde/teal do sistema na web
-const CustomSwitch = ({ value, onValueChange }) => {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => onValueChange(!value)}
-      style={[
-        toggleStyles.track,
-        { backgroundColor: value ? '#FFCF00' : '#D9D9D9' }
-      ]}
-    >
-      <View
-        style={[
-          toggleStyles.thumb,
-          { alignSelf: value ? 'flex-end' : 'flex-start' }
-        ]}
-      />
-    </TouchableOpacity>
-  );
-};
+import Header from '../components/Header/Header';
+import SectionCard from '../components/Settings/SectionCard';
+import MenuItem from '../components/Settings/MenuItem';
+import DeleteAccountModal from '../components/Settings/DeleteAccountModal';
 
 const SettingsScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
-  
+
   const [notificationsDisabled, setNotificationsDisabled] = useState(false);
   const [biometryEnabled, setBiometryEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
@@ -57,7 +40,6 @@ const SettingsScreen = ({ navigation, route }) => {
 
       Alert.alert('Conta excluída', 'Sua conta e todos os dados foram removidos com sucesso.');
 
-      // Reseta a pilha de navegação e volta para o login/onboarding
       navigation.reset({
         index: 0,
         routes: [{ name: 'Login' }], // ajuste para o nome real da sua tela inicial/login
@@ -72,225 +54,96 @@ const SettingsScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header Fixo */}
-      <View style={styles.header}>
-        <Image
-          source={require('../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header
+        onLeftIconPress={() => navigation.navigate('Notifications', { user: loggedUser })}
+        onRightIconPress={() => navigation.navigate('Profile', { user: loggedUser })}
+        avatarUri={loggedUser?.avatar_url}
+      />
 
-      {/* Conteúdo Scrollable */}
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
       >
         <Text style={styles.screenTitle}>CONFIGURAÇÕES</Text>
 
-        {/* Notificações */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Notificações</Text>
-          <View style={styles.separator} />
-          
-          <View style={styles.menuItem}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="bell-off-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Desativar Notificações</Text>
-            </View>
-            <CustomSwitch
-              value={notificationsDisabled}
-              onValueChange={setNotificationsDisabled}
-            />
-          </View>
-          <View style={styles.separator} />
-          
-          <TouchableOpacity 
-            style={[styles.menuItem, notificationsDisabled && { opacity: 0.5 }]} 
-            onPress={() => !notificationsDisabled && navigation.navigate('Reminders', { user: loggedUser })}
+        <SectionCard title="Notificações">
+          <MenuItem
+            icon={<MaterialCommunityIcons name="bell-off-outline" size={20} color="#2D2D2D" />}
+            label="Desativar Notificações"
+            switchValue={notificationsDisabled}
+            onSwitchChange={setNotificationsDisabled}
+          />
+          <MenuItem
+            icon={<MaterialCommunityIcons name="car-cog" size={20} color="#2D2D2D" />}
+            label="Lembretes Programáveis"
             disabled={notificationsDisabled}
-          >
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="car-cog" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Lembretes Programáveis</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-          <View style={styles.separator} />
-          
-          <TouchableOpacity 
-            style={[styles.menuItem, notificationsDisabled && { opacity: 0.5 }]} 
-            onPress={() => !notificationsDisabled && navigation.navigate('ReminderFrequency', { user: loggedUser })}
+            onPress={() => navigation.navigate('Reminders', { user: loggedUser })}
+          />
+          <MenuItem
+            icon={<MaterialCommunityIcons name="cash-multiple" size={20} color="#2D2D2D" />}
+            label="Frequência dos Lembretes"
             disabled={notificationsDisabled}
-          >
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="cash-multiple" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Frequência dos Lembretes</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
+            onPress={() => navigation.navigate('ReminderFrequency', { user: loggedUser })}
+          />
+        </SectionCard>
 
-        {/* Preferências */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Preferências</Text>
-          <View style={styles.separator} />
-          
-          <View style={styles.menuItem}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="fingerprint" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Ativar/Desativar Biometria</Text>
-            </View>
-            <CustomSwitch
-              value={biometryEnabled}
-              onValueChange={setBiometryEnabled}
-            />
-          </View>
-        </View>
+        <SectionCard title="Preferências">
+          <MenuItem
+            icon={<MaterialCommunityIcons name="fingerprint" size={20} color="#2D2D2D" />}
+            label="Ativar/Desativar Biometria"
+            switchValue={biometryEnabled}
+            onSwitchChange={setBiometryEnabled}
+          />
+        </SectionCard>
 
-        {/* Ajuda e Suporte */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Ajuda e Suporte</Text>
-            <MaterialIcons name="info" size={20} color="#2D2D2D" />
-          </View>
-          <View style={styles.separator} />
-          
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('FAQ', { user: loggedUser })}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="help-circle-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>FAQ</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-          <View style={styles.separator} />
-          
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('LanguageSelection', { user: loggedUser })}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="translate" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Idioma</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
+        <SectionCard title="Ajuda e Suporte" headerIcon="info">
+          <MenuItem
+            icon={<MaterialCommunityIcons name="help-circle-outline" size={20} color="#2D2D2D" />}
+            label="FAQ"
+            onPress={() => navigation.navigate('FAQ', { user: loggedUser })}
+          />
+          <MenuItem
+            icon={<MaterialCommunityIcons name="translate" size={20} color="#2D2D2D" />}
+            label="Idioma"
+            onPress={() => navigation.navigate('LanguageSelection', { user: loggedUser })}
+          />
+        </SectionCard>
 
-        {/* Privacidade e Segurança */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Privacidade e Segurança</Text>
-            <MaterialIcons name="lock" size={20} color="#2D2D2D" />
-          </View>
-          <View style={styles.separator} />
-          
-          <View style={styles.menuItem}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="map-marker-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Permitir Localização</Text>
-            </View>
-            <CustomSwitch
-              value={locationEnabled}
-              onValueChange={setLocationEnabled}
-            />
-          </View>
-          <View style={styles.separator} />
-          
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('TermsOfService', { user: loggedUser })}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="file-document-outline" size={20} color="#2D2D2D" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>Política de Termos e Condições</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-          <View style={styles.separator} />
-          
-          <TouchableOpacity style={styles.menuItem} onPress={openDeleteModal}>
-            <View style={styles.menuLabelRow}>
-              <MaterialCommunityIcons name="trash-can-outline" size={20} color="#FF4444" style={styles.menuIcon} />
-              <Text style={[styles.menuLabel, { color: '#FF4444' }]}>Apagar Conta/Apagar Dados</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#FF4444" />
-          </TouchableOpacity>
-        </View>
+        <SectionCard title="Privacidade e Segurança" headerIcon="lock">
+          <MenuItem
+            icon={<MaterialCommunityIcons name="map-marker-outline" size={20} color="#2D2D2D" />}
+            label="Permitir Localização"
+            switchValue={locationEnabled}
+            onSwitchChange={setLocationEnabled}
+          />
+          <MenuItem
+            icon={<MaterialCommunityIcons name="file-document-outline" size={20} color="#2D2D2D" />}
+            label="Política de Termos e Condições"
+            onPress={() => navigation.navigate('TermsOfService', { user: loggedUser })}
+          />
+          <MenuItem
+            icon={<MaterialCommunityIcons name="trash-can-outline" size={20} color="#FF4444" />}
+            label="Apagar Conta/Apagar Dados"
+            danger
+            onPress={openDeleteModal}
+          />
+        </SectionCard>
 
         <View style={styles.footerSpace} />
       </ScrollView>
 
       <BottomNav navigation={navigation} user={loggedUser} activeScreen="Config" />
 
-      {/* Modal de Confirmação de Exclusão de Conta */}
-      {deleteModalVisible && (
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={deleteModalVisible}
-          onRequestClose={cancelDelete}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <MaterialCommunityIcons name="alert-octagon" size={50} color="#FF4444" />
-              <Text style={styles.modalTitle}>Excluir Conta</Text>
-              <Text style={styles.modalText}>
-                Esta ação é <Text style={{ fontWeight: '800', color: '#FF4444' }}>permanente e irreversível</Text>.
-                Todos os seus dados, veículos cadastrados e histórico de manutenção serão apagados
-                e não poderão ser recuperados. Tem certeza que deseja continuar?
-              </Text>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={cancelDelete}
-                  disabled={isDeleting}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.deleteConfirmButton, isDeleting && { opacity: 0.6 }]}
-                  onPress={confirmDeleteAccount}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.deleteConfirmButtonText}>Sim, Excluir</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        isDeleting={isDeleting}
+        onCancel={cancelDelete}
+        onConfirm={confirmDeleteAccount}
+      />
     </View>
   );
 };
-
-const toggleStyles = StyleSheet.create({
-  track: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    padding: 3,
-    justifyContent: 'center',
-  },
-  thumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -312,29 +165,6 @@ const styles = StyleSheet.create({
       }
     })
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    height: 70,
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 50,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    marginLeft: 15,
-  },
-  topIcon: {
-    width: 30,
-    height: 30,
-  },
   scrollView: {
     flex: 1,
     ...Platform.select({
@@ -355,149 +185,8 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginVertical: 15,
   },
-  sectionCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 15,
-    paddingVertical: 10,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingBottom: 5,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    paddingHorizontal: 15,
-    paddingBottom: 5,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#0000001A',
-    marginHorizontal: 15,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  menuLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    paddingRight: 10,
-  },
-  menuIcon: {
-    marginRight: 12,
-  },
-  menuLabel: {
-    fontSize: 16,
-    color: '#333',
-    flexShrink: 1,
-  },
   footerSpace: {
     height: 20,
-  },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#2C2C2C',
-    height: 70,
-    width: '100%',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navText: {
-    fontSize: 10,
-    color: '#D9D9D9',
-    marginTop: 4,
-    fontWeight: '700',
-  },
-  navTextActive: {
-    color: '#FFCF00',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 25,
-    alignItems: 'center',
-    width: '85%',
-    ...Platform.select({
-      web: {
-        maxWidth: 400,
-      }
-    })
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 15,
-    marginBottom: 10,
-    color: '#000',
-  },
-  modalText: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 25,
-    lineHeight: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    marginHorizontal: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#e0e0e0',
-  },
-  deleteConfirmButton: {
-    backgroundColor: '#FF4444',
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  deleteConfirmButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
   },
 });
 

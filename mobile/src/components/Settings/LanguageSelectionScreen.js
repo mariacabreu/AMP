@@ -1,18 +1,30 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import BottomNav from '../components/NavBar/BottomNav';
+import BottomNav from '../NavBar/BottomNav';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const LanguageSelectionScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
-  
+  const { language, setLanguage, t } = useLanguage();
+
   const languages = [
     { code: 'pt', name: 'Português', flag: '🇧🇷' },
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Español', flag: '🇪🇸' }
   ];
 
-  const [selectedLanguage, setSelectedLanguage] = useState('pt');
+  // Estado local só pra deixar o usuário escolher antes de confirmar
+  const [selectedLanguage, setSelectedLanguage] = useState(language);
+
+  const handleSave = () => {
+    setLanguage(selectedLanguage); // <- isso muda o app inteiro, instantaneamente
+    Alert.alert(
+      t('preferences_saved_title'),
+      `${t('preferences_saved_message')} ${languages.find(l => l.code === selectedLanguage)?.name}`,
+      [{ text: t('ok'), onPress: () => navigation.goBack() }]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -20,13 +32,13 @@ const LanguageSelectionScreen = ({ navigation, route }) => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Idioma</Text>
+        <Text style={styles.headerTitle}>{t('language_screen_title')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>
-          Escolha o idioma do aplicativo
+          {t('language_screen_subtitle')}
         </Text>
 
         {languages.map((lang) => (
@@ -55,16 +67,8 @@ const LanguageSelectionScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         ))}
 
-        <TouchableOpacity style={styles.saveButton} onPress={() => {
-          Alert.alert(
-            'Preferências Salvas',
-            `Idioma alterado para ${languages.find(l => l.code === selectedLanguage)?.name}`,
-            [
-              { text: 'OK', onPress: () => navigation.goBack() }
-            ]
-          );
-        }}>
-          <Text style={styles.saveButtonText}>Salvar Preferências</Text>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>{t('save_preferences')}</Text>
         </TouchableOpacity>
 
         <View style={styles.footerSpace} />
