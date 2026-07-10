@@ -98,7 +98,17 @@ android {
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
         
         ndk {
-            abiFilters "arm64-v8a", "x86_64"
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
+
+        python {
+            version "3.10"
+            buildPython "python3"
+            pip {
+                install "flask"
+                install "flask-sqlalchemy"
+                install "flask-cors"
+            }
         }
     }
     signingConfigs {
@@ -133,18 +143,6 @@ android {
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
-    }
-}
-
-chaquopy {
-    defaultConfig {
-        version "3.12"
-        buildPython "python3"
-        pip {
-            install "flask"
-            install "flask-sqlalchemy"
-            install "flask-cors"
-        }
     }
 }
 
