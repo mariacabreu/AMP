@@ -22,7 +22,7 @@ import QRCodeScreen from './src/screens/QRCodeScreen';
 import MaintenanceTipsScreen from './src/screens/MaintenanceTipsScreen';
 import OBDScreen from './src/screens/OBDScreen';
 import TravelPlanningScreen from './src/screens/TravelPlanningScreen';
-import MaintenanceEditScreen from './src/screens/MaintenanceEditScreen';
+import MaintenanceEditScreen from './src/components/Report/ReportFormEdit/MaintenanceEditScreen';
 import TripHistoryScreen from './src/screens/TripHistoryScreen';
 import VehicleCompatibilityScreen from './src/screens/VehicleCompatibilityScreen';
 import RemindersScreen from './src/components/Settings/RemindersScreen';

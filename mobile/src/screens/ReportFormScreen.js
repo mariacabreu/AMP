@@ -1,386 +1,181 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Platform, Modal } from 'react-native';
-import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Alert } from 'react-native';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
-
-// Dropdown customizado, no mesmo padrão usado no VehicleRegistrationScreen
-const CustomDropdown = ({ label, items, selectedValue, onSelect, isOpen, setIsOpen }) => {
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (Platform.OS === 'web' && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
-    }
-
-    return () => {
-      if (Platform.OS === 'web') {
-        document.removeEventListener('mousedown', handleClickOutside);
-        document.removeEventListener('touchstart', handleClickOutside);
-      }
-    };
-  }, [setIsOpen]);
-
-  const displayLabel = items.find(item => item.value === selectedValue)?.label || selectedValue;
-
-  return (
-    <View style={[styles.inputGroup, isOpen && styles.inputGroupOpen]} ref={dropdownRef}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={[styles.customPickerContainer, isOpen && styles.customPickerContainerOpen]}>
-        <TouchableOpacity
-          style={styles.customPickerButton}
-          activeOpacity={0.7}
-          onPress={() => setIsOpen(!isOpen)}
-        >
-          <Text style={styles.customPickerText}>{displayLabel}</Text>
-          <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#666" />
-        </TouchableOpacity>
-        {isOpen && Platform.select({
-          web: (
-            <div style={{
-              position: 'absolute',
-              top: 52,
-              left: 0,
-              right: 0,
-              backgroundColor: '#ffffff',
-              borderRadius: 8,
-              border: '1px solid #E0E0E0',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-              zIndex: 1000000
-            }}>
-              {items.map((item, index) => (
-                <div
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelect(item.value);
-                    setIsOpen(false);
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    backgroundColor: selectedValue === item.value ? '#F5F5F5' : '#ffffff',
-                    padding: '12px 16px',
-                    borderBottom: index < items.length - 1 ? '1px solid #F0F0F0' : 'none',
-                    cursor: 'pointer',
-                    fontSize: 16,
-                    color: '#333',
-                    userSelect: 'none'
-                  }}
-                >
-                  {item.label}
-                </div>
-              ))}
-            </div>
-          ),
-          default: (
-            <View style={styles.dropdownList}>
-              {items.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.dropdownItem,
-                    selectedValue === item.value && styles.selectedDropdownItem,
-                    index === items.length - 1 && { borderBottomWidth: 0 }
-                  ]}
-                  onPress={() => {
-                    onSelect(item.value);
-                    setIsOpen(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.dropdownItemText,
-                    selectedValue === item.value && styles.selectedDropdownItemText
-                  ]}>
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )
-        })}
-      </View>
-    </View>
-  );
-};
-
-// Mini calendário customizado, funciona igual em web e mobile
-const MONTH_NAMES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-];
-const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-
-const CustomCalendarModal = ({ visible, selectedDate, onSelect, onClose }) => {
-  const [viewDate, setViewDate] = useState(selectedDate || new Date());
-
-  useEffect(() => {
-    if (visible) {
-      setViewDate(selectedDate || new Date());
-    }
-  }, [visible, selectedDate]);
-
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
-
-  const goToPreviousMonth = () => {
-    setViewDate(new Date(year, month - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setViewDate(new Date(year, month + 1, 1));
-  };
-
-  const daysGrid = useMemo(() => {
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const grid = [];
-
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      grid.push(null);
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      grid.push(day);
-    }
-    return grid;
-  }, [year, month]);
-
-  const isSelectedDay = (day) => {
-    if (!selectedDate || !day) return false;
-    return (
-      selectedDate.getFullYear() === year &&
-      selectedDate.getMonth() === month &&
-      selectedDate.getDate() === day
-    );
-  };
-
-  const isToday = (day) => {
-    if (!day) return false;
-    const today = new Date();
-    return (
-      today.getFullYear() === year &&
-      today.getMonth() === month &&
-      today.getDate() === day
-    );
-  };
-
-  const handleSelectDay = (day) => {
-    if (!day) return;
-    onSelect(new Date(year, month, day));
-    onClose();
-  };
-
-  return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity style={styles.calendarOverlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} style={styles.calendarModalContent}>
-          {/* Cabeçalho com navegação de mês */}
-          <View style={styles.calendarHeader}>
-            <TouchableOpacity onPress={goToPreviousMonth} style={styles.calendarNavButton}>
-              <Ionicons name="chevron-back" size={22} color="#333" />
-            </TouchableOpacity>
-            <Text style={styles.calendarMonthLabel}>{MONTH_NAMES[month]} {year}</Text>
-            <TouchableOpacity onPress={goToNextMonth} style={styles.calendarNavButton}>
-              <Ionicons name="chevron-forward" size={22} color="#333" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Cabeçalho dos dias da semana */}
-          <View style={styles.calendarWeekRow}>
-            {WEEKDAY_LABELS.map((label, idx) => (
-              <View key={idx} style={styles.calendarWeekdayCell}>
-                <Text style={styles.calendarWeekdayText}>{label}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Grade de dias */}
-          <View style={styles.calendarDaysGrid}>
-            {daysGrid.map((day, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.calendarDayCell}
-                onPress={() => handleSelectDay(day)}
-                disabled={!day}
-                activeOpacity={0.7}
-              >
-                {day && (
-                  <View style={[
-                    styles.calendarDayCircle,
-                    isSelectedDay(day) && styles.calendarDaySelected,
-                    !isSelectedDay(day) && isToday(day) && styles.calendarDayToday
-                  ]}>
-                    <Text style={[
-                      styles.calendarDayText,
-                      isSelectedDay(day) && styles.calendarDayTextSelected
-                    ]}>
-                      {day}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity style={styles.calendarCloseButton} onPress={onClose}>
-            <Text style={styles.calendarCloseButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
-  );
-};
+import Header from '../components/Header/Header';
+import CustomDropdown from '../components/Report/ReportFormEdit/CustomDropdown';
+import CustomCalendarModal from '../components/Report/ReportFormEdit/CustomCalendarModal';
+import useReportForm from '../components/Report/ReportFormEdit/UseReportForm';
+import sharedStyles from '../components/Report/ReportFormEdit/SharedStyles';
 
 const ReportFormScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
   const vehicleId = route.params?.vehicleId;
-  const editItem = route.params?.editItem; // Novo parâmetro para edição
+  const editItem = route.params?.editItem;
 
-  const gasTypeOptions = [
-    { label: 'Comum', value: 'Comum' },
-    { label: 'Aditivada', value: 'Aditivada' },
-    { label: 'Premium', value: 'Premium' }
-  ];
+  const {
+    gasTypeOptions,
+    gasType,
+    setGasType,
+    gasTypeDropdownOpen,
+    setGasTypeDropdownOpen,
+    date,
+    setDate,
+    showDatePicker,
+    setShowDatePicker,
+    formattedLiters,
+    formattedPricePerLiter,
+    onChangeLiters,
+    onChangePrice,
+    totalValue,
+    handleAddCost,
+  } = useReportForm({ editItem, vehicleId, loggedUser, navigation });
 
-  const [gasType, setGasType] = useState(editItem ? editItem.item.split(' ').pop() : 'Comum');
-  const [gasTypeDropdownOpen, setGasTypeDropdownOpen] = useState(false);
-  
-  // Função para converter string DD/MM/YYYY para objeto Date
-  const parseDate = (dateStr) => {
-    if (!dateStr) return new Date();
-    const [day, month, year] = dateStr.split('/').map(Number);
-    return new Date(year, month - 1, day);
+  // ----- Estado do Header (igual à HomeScreen) -----
+  const [status, setStatus] = useState({
+    user_name: loggedUser?.full_name || 'Usuário',
+    is_premium: loggedUser?.is_premium || false,
+  });
+  const [profileForm, setProfileForm] = useState({
+    full_name: loggedUser?.full_name || '',
+    email: loggedUser?.email || '',
+    phone: loggedUser?.phone || '',
+  });
+  const [avatarUri, setAvatarUri] = useState(loggedUser?.avatar_url || null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [planType, setPlanType] = useState(loggedUser?.plan_type || null);
+  const [vehicles, setVehicles] = useState([]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const vehicleCount = vehicles.length;
+
+  useEffect(() => {
+    fetchUserStatus();
+    fetchNotifications();
+  }, [route.params?.user]);
+
+  const fetchUserStatus = async () => {
+    try {
+      const userId = loggedUser?.id || 1;
+      const response = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
+
+      let isPremium = loggedUser?.is_premium || false;
+      try {
+        const userResponse = await axios.get(`${API_BASE_URL}/user/${userId}`);
+        isPremium = userResponse.data.is_premium;
+        setPlanType(userResponse.data.plan_type || null);
+      } catch (err) {
+        console.error('Error fetching user details:', err);
+      }
+
+      const vehiclesData = Array.isArray(response.data?.vehicles)
+        ? response.data.vehicles
+        : response.data?.vehicle
+        ? [response.data.vehicle]
+        : [];
+      setVehicles(vehiclesData);
+
+      setStatus((prev) => ({
+        ...prev,
+        ...response.data,
+        is_premium: isPremium,
+      }));
+    } catch (error) {
+      console.error('Error fetching status:', error);
+    }
   };
 
-  const [date, setDate] = useState(editItem ? parseDate(editItem.last_date) : new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  // Litros: armazenado como dígitos brutos, mascarado com 2 casas decimais + sufixo "L"
-  const [rawLiters, setRawLiters] = useState(
-    editItem ? String(Math.round(editItem.liters * 100)) : ''
-  );
-
-  // Valor por Litro: armazenado como dígitos brutos, mascarado com 2 casas decimais + prefixo "R$"
-  const [rawPricePerLiter, setRawPricePerLiter] = useState(
-    editItem ? String(Math.round((editItem.cost / editItem.liters) * 100)) : ''
-  );
-
-  // Litros formatado para exibição (ex: "30,50")
-  const formattedLiters = useMemo(() => {
-    const cleaned = rawLiters.replace(/[^0-9]/g, '');
-    if (cleaned.length === 0) return '0,00';
-    const num = parseInt(cleaned, 10) / 100;
-    return num.toFixed(2).replace('.', ',');
-  }, [rawLiters]);
-
-  // Valor por litro formatado para exibição (ex: "5,49")
-  const formattedPricePerLiter = useMemo(() => {
-    const cleaned = rawPricePerLiter.replace(/[^0-9]/g, '');
-    if (cleaned.length === 0) return '0,00';
-    const num = parseInt(cleaned, 10) / 100;
-    return num.toFixed(2).replace('.', ',');
-  }, [rawPricePerLiter]);
-
-  // Valores numéricos reais calculados a partir dos dígitos brutos
-  const litersNum = useMemo(() => {
-    const cleaned = rawLiters.replace(/[^0-9]/g, '');
-    return cleaned.length > 0 ? parseInt(cleaned, 10) / 100 : 0;
-  }, [rawLiters]);
-
-  const priceNum = useMemo(() => {
-    const cleaned = rawPricePerLiter.replace(/[^0-9]/g, '');
-    return cleaned.length > 0 ? parseInt(cleaned, 10) / 100 : 0;
-  }, [rawPricePerLiter]);
-
-  // Valor total calculado automaticamente
-  const totalValue = useMemo(() => {
-    if (litersNum > 0 && priceNum > 0) {
-      return (litersNum * priceNum).toFixed(2);
-    }
-    return '';
-  }, [litersNum, priceNum]);
-
-  const handleAddCost = async () => {
-    if (litersNum <= 0 || priceNum <= 0) {
-      Alert.alert('Erro', 'Por favor, preencha a quantidade de litros e o valor por litro.');
-      return;
-    }
-
-    const calculatedTotal = litersNum * priceNum;
-    
+  const fetchNotifications = async () => {
     try {
-      // Priorizando o vehicleId que vem do parâmetro, senão usa 1 como fallback seguro
-      const vId = vehicleId || 1;
-      console.log('Enviando custo para veículo ID:', vId);
-      
-      const response = await axios.post(`${API_BASE_URL}/vehicle/maintenance`, {
-        vehicle_id: vId,
-        history: [{
-          item: `Gasolina tipo ${gasType}`,
-          last_km: 0, 
-          last_date: date.toLocaleDateString('pt-BR'),
-          cost: calculatedTotal,
-          liters: litersNum
-        }]
-      });
-
-      console.log('Resposta servidor:', response.data);
-      navigation.navigate('Report', { user: loggedUser });
+      const userId = loggedUser?.id || 1;
+      const res = await axios.get(`${API_BASE_URL}/user/notifications/${userId}`);
+      const notifData = Array.isArray(res.data?.notifications) ? res.data.notifications : [];
+      setNotifications(notifData);
     } catch (error) {
-      console.error('Erro detalhado:', error.response?.data || error.message);
-      Alert.alert('Erro', 'Não foi possível salvar o custo. Verifique se você possui um veículo cadastrado.');
+      console.error('Error fetching notifications:', error);
     }
+  };
+
+  const handleProfileFieldChange = (field, value) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleChangePhoto = () => {
+    Alert.alert('Alterar foto', 'Conecte o expo-image-picker aqui para trocar a foto do perfil.');
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setSavingProfile(true);
+      const userId = loggedUser?.id || 1;
+      await axios.put(`${API_BASE_URL}/user/${userId}`, {
+        full_name: profileForm.full_name,
+        email: profileForm.email,
+        phone: profileForm.phone,
+      });
+      setStatus((prev) => ({ ...prev, user_name: profileForm.full_name }));
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      Alert.alert('Erro', 'Não foi possível salvar suas informações agora.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: () => {
+          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+        },
+      },
+    ]);
+  };
+
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleAddVehicle = () => {
+    navigation.navigate('VehicleRegistration', { user: loggedUser });
   };
 
   return (
     <View style={styles.container}>
-      {/* Header Fixo */}
-      <View style={styles.header}>
-        {editItem ? (
-          <Image
-            source={require('../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        ) : (
-          <>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="#333" />
-            </TouchableOpacity>
-            <Image
-              source={require('../assets/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <View style={styles.headerIcons}>
-              <TouchableOpacity style={styles.iconButton}>
-                <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton}>
-                <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+      {/* Header padrão, igual ao HomeScreen */}
+      <Header
+        avatarUri={avatarUri}
+        notifications={notifications}
+        notificationCount={unreadCount}
+        onMarkAllAsRead={markAllAsRead}
+        profileForm={profileForm}
+        onChangeField={handleProfileFieldChange}
+        onChangePhoto={handleChangePhoto}
+        onSaveProfile={handleSaveProfile}
+        savingProfile={savingProfile}
+        onLogout={handleLogout}
+        isPremium={status.is_premium}
+        planType={planType}
+        vehicleCount={vehicleCount}
+        vehicles={vehicles}
+        onAddVehicle={handleAddVehicle}
+      />
+
+      <View style={styles.backRow}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent} 
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
       >
@@ -398,13 +193,9 @@ const ReportFormScreen = ({ navigation, route }) => {
             setIsOpen={setGasTypeDropdownOpen}
           />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Data de abastecimento</Text>
-            <TouchableOpacity 
-              style={styles.inputContainer} 
-              onPress={() => setShowDatePicker(true)}
-              activeOpacity={0.7}
-            >
+          <View style={sharedStyles.inputGroup}>
+            <Text style={sharedStyles.label}>Data de abastecimento</Text>
+            <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
               <Text style={[styles.input, { textAlignVertical: 'center', lineHeight: 45 }]}>
                 {date.toLocaleDateString('pt-BR')}
               </Text>
@@ -413,16 +204,13 @@ const ReportFormScreen = ({ navigation, route }) => {
           </View>
 
           {/* Campo Litros com marca "L" fixa e máscara numérica */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Litros de combustível</Text>
+          <View style={sharedStyles.inputGroup}>
+            <Text style={sharedStyles.label}>Litros de combustível</Text>
             <View style={styles.unitInputWrapper}>
               <TextInput
                 style={styles.unitInput}
                 value={formattedLiters}
-                onChangeText={(text) => {
-                  const cleanedText = text.replace(/[^0-9]/g, '');
-                  setRawLiters(cleanedText);
-                }}
+                onChangeText={onChangeLiters}
                 keyboardType="numeric"
                 placeholder="0,00"
                 placeholderTextColor="#999"
@@ -432,17 +220,14 @@ const ReportFormScreen = ({ navigation, route }) => {
           </View>
 
           {/* Campo Valor por Litro com marca "R$" fixa e máscara numérica */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Valor por Litro de combustível</Text>
+          <View style={sharedStyles.inputGroup}>
+            <Text style={sharedStyles.label}>Valor por Litro de combustível</Text>
             <View style={styles.unitInputWrapper}>
               <Text style={styles.unitPrefix}>R$ </Text>
               <TextInput
                 style={styles.unitInput}
                 value={formattedPricePerLiter}
-                onChangeText={(text) => {
-                  const cleanedText = text.replace(/[^0-9]/g, '');
-                  setRawPricePerLiter(cleanedText);
-                }}
+                onChangeText={onChangePrice}
                 keyboardType="numeric"
                 placeholder="0,00"
                 placeholderTextColor="#999"
@@ -450,12 +235,10 @@ const ReportFormScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Valor Total Gasto</Text>
+          <View style={sharedStyles.inputGroup}>
+            <Text style={sharedStyles.label}>Valor Total Gasto</Text>
             <View style={styles.totalDisplay}>
-              <Text style={styles.totalText}>
-                {totalValue ? `R$ ${totalValue.replace('.', ',')}` : 'R$ 0,00'}
-              </Text>
+              <Text style={styles.totalText}>{totalValue ? `R$ ${totalValue.replace('.', ',')}` : 'R$ 0,00'}</Text>
             </View>
           </View>
 
@@ -519,8 +302,16 @@ const styles = StyleSheet.create({
       },
       default: {
         flex: 1,
-      }
-    })
+      },
+    }),
+  },
+  backRow: {
+    paddingHorizontal: 20,
+    paddingTop: 5,
+  },
+  backButton: {
+    padding: 5,
+    alignSelf: 'flex-start',
   },
   scrollView: {
     flex: 1,
@@ -528,51 +319,15 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         overflowY: 'scroll',
-      }
-    })
-  },
-  header: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    height: 70,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    position: 'relative',
-  },
-  backButton: {
-    padding: 5,
-    zIndex: 2,
-  },
-  // Logo centralizada de forma absoluta, sem alterar suas dimensões originais (100x50)
-  logo: {
-    width: 100,
-    height: 50,
-    position: 'absolute',
-    left: '50%',
-    marginLeft: -50, // metade da largura (100/2), garante centralização exata
-    top: 10, // (altura do header 70 - altura da logo 50) / 2
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    zIndex: 2,
-  },
-  iconButton: {
-    marginLeft: 15,
-  },
-  topIcon: {
-    width: 30,
-    height: 30,
+      },
+    }),
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 100, // Espaço para não cobrir pela sidebar
-    alignItems: 'center', 
+    paddingTop: 10,
+    paddingBottom: 100,
+    alignItems: 'center',
   },
   screenTitle: {
     fontSize: 20,
@@ -598,83 +353,8 @@ const styles = StyleSheet.create({
       web: {
         position: 'relative',
         zIndex: 1,
-      }
-    })
-  },
-  inputGroup: {
-    marginBottom: 20,
-    position: 'relative',
-    zIndex: 1,
-  },
-  inputGroupOpen: {
-    zIndex: 1000,
-  },
-  label: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  // Dropdown customizado, no mesmo padrão do VehicleRegistrationScreen
-  customPickerContainer: {
-    position: 'relative',
-  },
-  customPickerContainerOpen: {
-    zIndex: 10000,
-  },
-  customPickerButton: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  customPickerText: {
-    fontSize: 16,
-    color: '#333',
-    flex: 1,
-  },
-  dropdownList: {
-    position: 'absolute',
-    top: 52,
-    left: 0,
-    right: 0,
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 100000,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  selectedDropdownItem: {
-    backgroundColor: '#F5F5F5',
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  selectedDropdownItemText: {
-    color: '#2D2D2D',
-    fontWeight: '600',
+      },
+    }),
   },
   inputContainer: {
     flexDirection: 'row',
@@ -694,7 +374,6 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginLeft: 10,
   },
-  // Campo com marca fixa (L ou R$), mesmo padrão visual dos demais inputs
   unitInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -772,123 +451,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFCF00',
   },
-  navBar: {
-     position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-     bottom: 0,
-     left: 0,
-     right: 0,
-     flexDirection: 'row',
-     backgroundColor: '#2b2b2b',
-     height: 70,
-     justifyContent: 'space-around',
-     alignItems: 'center',
-     paddingBottom: 10,
-     zIndex: 1000,
-   },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    fontSize: 10,
-    color: '#D9D9D9',
-    marginTop: 4,
-    fontWeight: '800',
-  },
-  navTextActive: {
-    color: '#FFCF00',
-  },
   emptySpace: {
     height: 100,
   },
-  // Estilos do mini calendário customizado
-  calendarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calendarModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    width: '90%',
-    maxWidth: 340,
-  },
-  calendarHeader: {
+  formActionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  calendarNavButton: {
-    padding: 8,
-  },
-  calendarMonthLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
-    textTransform: 'capitalize',
-  },
-  calendarWeekRow: {
-    flexDirection: 'row',
-    marginBottom: 5,
-  },
-  calendarWeekdayCell: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  calendarWeekdayText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#999',
-  },
-  calendarDaysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  calendarDayCell: {
-    width: `${100 / 7}%`,
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  calendarDayCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calendarDaySelected: {
-    backgroundColor: '#FFCF00',
-  },
-  calendarDayToday: {
-    borderWidth: 1.5,
-    borderColor: '#FFCF00',
-  },
-  calendarDayText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  calendarDayTextSelected: {
-    color: '#000',
-    fontWeight: '700',
-  },
-  calendarCloseButton: {
-    marginTop: 15,
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  calendarCloseButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  formActionButtons: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginTop: 10,
+    marginTop: 10,
   },
   formActionButton: {
     flex: 1,
