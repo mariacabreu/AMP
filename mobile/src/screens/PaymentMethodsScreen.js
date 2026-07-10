@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import Header from '../components/Header/Header';
 import BottomNav from '../components/NavBar/BottomNav';
 
 const PaymentMethodsScreen = ({ navigation, route }) => {
@@ -30,21 +31,7 @@ const PaymentMethodsScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       {/* Header Fixo */}
-      <View style={styles.header}>
-        <Image
-          source={require('../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header showIcons={false} />
 
       <View style={styles.mainContent}>
         <ScrollView 
@@ -141,29 +128,6 @@ const styles = StyleSheet.create({
       }
     })
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    height: 70,
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 50,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    marginLeft: 15,
-  },
-  topIcon: {
-    width: 30,
-    height: 30,
-  },
   mainContent: {
     flex: 1,
   },
@@ -171,9 +135,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 120,
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
+    flexGrow: 1,
   },
   titleRow: {
     flexDirection: 'row',
@@ -214,8 +182,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
-    borderWidth: 2,
-    borderColor: '#FFCF00',
   },
   methodLeft: {
     flexDirection: 'row',

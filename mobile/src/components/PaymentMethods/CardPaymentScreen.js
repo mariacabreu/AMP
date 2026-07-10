@@ -1,8 +1,59 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, Alert } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, Alert, Animated } from 'react-native';
+import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import Header from '../../components/Header/Header';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
+
+// Funções auxiliares para formatação
+const formatCardNumber = (text) => {
+  const cleaned = text.replace(/\D/g, '');
+  const grouped = cleaned.match(/.{1,4}/g);
+  return grouped ? grouped.join(' ') : cleaned;
+};
+
+const formatExpiry = (text) => {
+  const cleaned = text.replace(/\D/g, '');
+  if (cleaned.length >= 2) {
+    return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}`;
+  }
+  return cleaned;
+};
+
+const formatCPF = (text) => {
+  const cleaned = text.replace(/\D/g, '');
+  if (cleaned.length >= 9) {
+    return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9, 11)}`;
+  } else if (cleaned.length >= 6) {
+    return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}`;
+  } else if (cleaned.length >= 3) {
+    return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}`;
+  }
+  return cleaned;
+};
+
+// Função para detectar bandeira do cartão
+const getCardBrand = (cardNumber) => {
+  const num = cardNumber.replace(/\D/g, '');
+  if (/^4/.test(num)) return 'visa';
+  if (/^5[1-5]/.test(num) || /^2[2-7]/.test(num)) return 'mastercard';
+  if (/^3[47]/.test(num)) return 'amex';
+  if (/^3(?:0[0-5]|[68])/.test(num)) return 'diners';
+  if (/^6(?:011|5)/.test(num)) return 'discover';
+  if (/^9/.test(num)) return 'elo';
+  return null;
+};
+
+// Cores para cada bandeira
+const getCardColors = (brand) => {
+  switch (brand) {
+    case 'visa': return { start: '#1A1F71', end: '#1A1F71' };
+    case 'mastercard': return { start: '#EB001B', end: '#F79E1B' };
+    case 'amex': return { start: '#2557D6', end: '#183BC1' };
+    case 'elo': return { start: '#00AEEF', end: '#50B848' };
+    default: return { start: '#2C2C2C', end: '#3D3D3D' };
+  }
+};
 
 /**
  * CardPaymentScreen
@@ -22,6 +73,21 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
   const [cvv, setCvv] = useState('');
   const [fullName, setFullName] = useState('');
   const [cpf, setCpf] = useState('');
+  const [isFlipped, setIsFlipped] = useState(false);
+  const flipAnim = useRef(new Animated.Value(0)).current;
+
+  const cardBrand = getCardBrand(cardNumber);
+  const cardColors = getCardColors(cardBrand);
+
+  const flipCard = () => {
+    Animated.spring(flipAnim, {
+      toValue: isFlipped ? 0 : 1,
+      friction: 8,
+      tension: 10,
+      useNativeDriver: true,
+    }).start();
+    setIsFlipped(!isFlipped);
+  };
 
   const handlePaymentConfirm = async () => {
     try {
@@ -38,21 +104,7 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
   return (
     <View style={styles.container}>
       {/* Header Fixo */}
-      <View style={styles.header}>
-        <Image
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header showIcons={false} />
 
       <View style={styles.mainContent}>
         <ScrollView
@@ -70,11 +122,125 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
 
           {/* Card Visual */}
           <View style={styles.cardVisual}>
-            <Image
-              source={require('../../assets/screenshot_834_1190.png')}
-              style={styles.cardImage}
-              resizeMode="cover"
-            />
+            <Animated.View
+              style={[
+                styles.cardSide,
+                {
+                  transform: [
+                    {
+                      rotateY: flipAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '180deg']
+                      })
+                    }
+                  ],
+                  opacity: flipAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [1, 0, 0]
+                  })
+                }
+              ]}
+            >
+              {/* Frente do cartão */}
+              <View style={[
+                styles.cardBackground, 
+                {
+                  ...Platform.select({
+                    web: {
+                      background: `linear-gradient(135deg, ${cardColors.start}, ${cardColors.end})`
+                    },
+                    default: {
+                      backgroundColor: cardColors.start
+                    }
+                  })
+                }
+              ]}>
+                {/* Parte superior: bandeira e chip */}
+                <View style={styles.cardTopRow}>
+                  {/* Chip do cartão */}
+                  <View style={styles.chipContainer}>
+                    <View style={styles.chip} />
+                  </View>
+                  {/* Bandeira do cartão */}
+                  <View style={styles.cardBrandContainer}>
+                    {cardBrand && (
+                      <FontAwesome5 
+                        name={cardBrand === 'elo' ? 'credit-card' : `cc-${cardBrand}`} 
+                        size={40} 
+                        color="#FFFFFF" 
+                      />
+                    )}
+                  </View>
+                </View>
+                
+                {/* Número do cartão */}
+                <View style={styles.cardNumberContainer}>
+                  <Text style={styles.cardNumberDisplay}>
+                    {cardNumber || '**** **** **** ****'}
+                  </Text>
+                </View>
+                
+                {/* Informações inferiores */}
+                <View style={styles.cardBottomRow}>
+                  <View>
+                    <Text style={styles.cardLabel}>NOME DO TITULAR</Text>
+                    <Text style={styles.cardValueDisplay}>
+                      {fullName || 'NOME AQUI'}
+                    </Text>
+                  </View>
+                  <View style={styles.expiryContainer}>
+                    <Text style={styles.cardLabel}>VALIDADE</Text>
+                    <Text style={styles.cardValueDisplay}>
+                      {expiry || 'MM/AA'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </Animated.View>
+
+            <Animated.View
+              style={[
+                styles.cardSide,
+                styles.cardBack,
+                {
+                  transform: [
+                    {
+                      rotateY: flipAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['180deg', '360deg']
+                      })
+                    }
+                  ],
+                  opacity: flipAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0, 0, 1]
+                  })
+                }
+              ]}
+            >
+              {/* Verso do cartão */}
+              <View style={[
+                styles.cardBackground, 
+                {
+                  ...Platform.select({
+                    web: {
+                      background: `linear-gradient(135deg, ${cardColors.start}, ${cardColors.end})`
+                    },
+                    default: {
+                      backgroundColor: cardColors.start
+                    }
+                  })
+                }
+              ]}>
+                {/* Faixa magnética */}
+                <View style={styles.magneticStripe} />
+                {/* Área do CVV */}
+                <View style={styles.cvvArea}>
+                  <Text style={styles.cvvLabel}>CVV</Text>
+                  <Text style={styles.cvvValue}>{cvv || '•••'}</Text>
+                </View>
+              </View>
+            </Animated.View>
           </View>
 
           {/* Form Fields */}
@@ -84,8 +250,10 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
               style={styles.input}
               placeholder="0000 0000 0000 0000"
               value={cardNumber}
-              onChangeText={setCardNumber}
+              onChangeText={(text) => setCardNumber(formatCardNumber(text))}
               keyboardType="numeric"
+              maxLength={19}
+              onFocus={() => isFlipped && flipCard()}
             />
 
             <View style={styles.row}>
@@ -95,7 +263,9 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
                   style={styles.input}
                   placeholder="MM/AA"
                   value={expiry}
-                  onChangeText={setExpiry}
+                  onChangeText={(text) => setExpiry(formatExpiry(text))}
+                  maxLength={5}
+                  onFocus={() => isFlipped && flipCard()}
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -105,9 +275,14 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
                     style={[styles.input, { flex: 1 }]}
                     placeholder="123"
                     value={cvv}
-                    onChangeText={setCvv}
+                    onChangeText={(text) => {
+                      const numbersOnly = text.replace(/[^0-9]/g, '');
+                      setCvv(numbersOnly);
+                    }}
                     keyboardType="numeric"
                     secureTextEntry
+                    maxLength={3}
+                    onFocus={() => !isFlipped && flipCard()}
                   />
                   <View style={styles.cvvIcon} />
                 </View>
@@ -120,6 +295,8 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
               placeholder="Como está no cartão"
               value={fullName}
               onChangeText={setFullName}
+              autoCapitalize="characters"
+              onFocus={() => isFlipped && flipCard()}
             />
 
             <Text style={styles.inputLabel}>CPF</Text>
@@ -127,8 +304,10 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
               style={styles.input}
               placeholder="000.000.000-00"
               value={cpf}
-              onChangeText={setCpf}
+              onChangeText={(text) => setCpf(formatCPF(text))}
               keyboardType="numeric"
+              maxLength={14}
+              onFocus={() => isFlipped && flipCard()}
             />
 
             <Text style={styles.termsText}>
@@ -175,29 +354,6 @@ const styles = StyleSheet.create({
       }
     })
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    height: 70,
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 50,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    marginLeft: 15,
-  },
-  topIcon: {
-    width: 30,
-    height: 30,
-  },
   mainContent: {
     flex: 1,
   },
@@ -205,9 +361,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 40,
+    paddingBottom: 100,
+    flexGrow: 1,
   },
   titleRow: {
     flexDirection: 'row',
@@ -230,72 +387,116 @@ const styles = StyleSheet.create({
   },
   cardVisual: {
     width: '100%',
-    height: 200,
+    maxWidth: 400,
+    aspectRatio: 1.6,
     borderRadius: 15,
-    overflow: 'hidden',
+    overflow: 'visible',
     marginBottom: 25,
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    alignSelf: 'center',
+    position: 'relative',
   },
-  cardImage: {
+  cardSide: {
+    position: 'absolute',
     width: '100%',
     height: '100%',
+    borderRadius: 15,
+    overflow: 'hidden',
+    backfaceVisibility: 'hidden',
   },
-  cardInfoOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  cardBack: {
+    transform: [{ rotateY: '180deg' }],
+  },
+  cardBackground: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 15,
     padding: 20,
     justifyContent: 'space-between',
   },
-  cardBrand: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+  magneticStripe: {
+    width: 'calc(100% + 40px)',
+    height: 40,
+    backgroundColor: '#000000',
+    marginLeft: -20,
+    marginTop: 10,
   },
-  bankName: {
-    color: '#fff',
+  cvvArea: {
+    backgroundColor: '#FFFFFF',
+    width: '25%',
+    height: 30,
+    marginTop: 8,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 8,
+  },
+  cvvLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginRight: 8,
+  },
+  cvvValue: {
     fontSize: 14,
-    position: 'absolute',
-    top: 20,
-    right: 20,
+    fontWeight: 'bold',
+    color: '#000000',
+    letterSpacing: 2,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  cardBrandContainer: {
+    alignItems: 'flex-end',
   },
   chipContainer: {
-    marginTop: 10,
+    marginTop: 0,
   },
   chip: {
-    width: 40,
-    height: 30,
+    width: 45,
+    height: 32,
     backgroundColor: '#FFD700',
-    borderRadius: 5,
+    borderRadius: 8,
+    opacity: 0.9,
+  },
+  cardNumberContainer: {
+    marginTop: 20,
   },
   cardNumberDisplay: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 20,
-    letterSpacing: 2,
-    marginTop: 10,
+    letterSpacing: 3,
+    fontWeight: '600',
   },
   cardBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    marginTop: 20,
   },
   cardLabel: {
-    color: '#ccc',
-    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10,
+    marginBottom: 4,
+    fontWeight: '500',
   },
   cardValueDisplay: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   form: {
     width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   inputLabel: {
     fontSize: 14,
