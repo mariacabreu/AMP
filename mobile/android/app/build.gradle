@@ -102,7 +102,7 @@ android {
         }
         
         python {
-            version "3.11"
+            version "3.10"
             pip {
                 install "flask"
                 install "flask-sqlalchemy"
