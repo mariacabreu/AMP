@@ -28,7 +28,7 @@ const PLAN_ALIASES = {
 };
 
 const PLAN_INFO = {
-  [PLAN_TYPES.FREE]: { label: 'Plano Free', maxVehicles: 0 },
+  [PLAN_TYPES.FREE]: { label: 'Plano Free', maxVehicles: 1 },
   [PLAN_TYPES.MONTHLY]: { label: 'Plano Mensal', maxVehicles: 1 },
   [PLAN_TYPES.QUARTERLY]: { label: 'Plano Trimestral', maxVehicles: 3 },
   [PLAN_TYPES.ANNUAL]: { label: 'Plano Anual', maxVehicles: 5 }

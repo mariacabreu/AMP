@@ -6,6 +6,7 @@ import BottomNav from '../NavBar/BottomNav';
 
 const PaymentMethodsScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
+  const planType = route.params?.planType || 'mensal';
 
   const paymentMethods = [
     {
@@ -53,7 +54,7 @@ const PaymentMethodsScreen = ({ navigation, route }) => {
             <TouchableOpacity 
               key={method.id} 
               style={styles.methodCard}
-              onPress={() => navigation.navigate(method.screen, { user: loggedUser })}
+              onPress={() => navigation.navigate(method.screen, { user: loggedUser, planType: planType })}
             >
               <View style={styles.methodLeft}>
                 {method.id === 'pix' ? (

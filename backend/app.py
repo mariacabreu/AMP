@@ -30,7 +30,9 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     is_premium = db.Column(db.Boolean, default=False)
+    plan_type = db.Column(db.String(20), default='free')  # 'free', 'mensal', 'trimestral', 'anual'
     reminder_frequency = db.Column(db.String(50), default='biweekly')
+    phone = db.Column(db.String(20), nullable=True)
     vehicles = db.relationship('Vehicle', backref='owner', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
@@ -38,7 +40,9 @@ class User(db.Model):
             'id': self.id,
             'full_name': self.full_name,
             'email': self.email,
+            'phone': self.phone,
             'is_premium': self.is_premium,
+            'plan_type': self.plan_type,
             'reminder_frequency': self.reminder_frequency
         }
 
@@ -100,6 +104,38 @@ class MaintenanceHistory(db.Model):
             'cost': self.cost,
             'liters': self.liters
         }
+
+# OBD Scan Model
+class OBDScan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
+    scan_date = db.Column(db.String(50), nullable=False)
+    dtc_codes = db.Column(db.JSON, default=[])
+    live_data = db.Column(db.JSON, default={})
+    connected_device = db.Column(db.String(100))
+    
+    vehicle = db.relationship('Vehicle', backref=db.backref('obd_scans', lazy=True, cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'vehicle_id': self.vehicle_id,
+            'scan_date': self.scan_date,
+            'dtc_codes': self.dtc_codes,
+            'live_data': self.live_data,
+            'connected_device': self.connected_device
+        }
+
+# Plan Vehicle Limits
+PLAN_VEHICLE_LIMITS = {
+    'free': 1,
+    'mensal': 1,
+    'trimestral': 3,
+    'anual': 5
+}
+
+def get_vehicle_limit(plan_type):
+    return PLAN_VEHICLE_LIMITS.get(plan_type, 1)  # fallback seguro: 1 veículo
 
 # Predefined "Supported" Vehicle Data (OBD-II Bluetooth + API/Doc compatible)
 SUPPORTED_BRANDS = {
@@ -470,6 +506,23 @@ def register_vehicle():
     if not data or not all(k in data for k in ('brand', 'model', 'year', 'user_id')):
         return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
     
+    # --- VALIDAÇÃO: limite de veículos por plano ---
+    user = User.query.get(data['user_id'])
+    if not user:
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+
+    current_vehicle_count = Vehicle.query.filter_by(user_id=user.id).count()
+    vehicle_limit = get_vehicle_limit(user.plan_type)
+
+    if current_vehicle_count >= vehicle_limit:
+        return jsonify({
+            'error': f'Limite de veículos atingido para o plano "{user.plan_type or "free"}". '
+                     f'Máximo permitido: {vehicle_limit}. Faça upgrade do plano para cadastrar mais veículos.',
+            'limit_reached': True,
+            'current_count': current_vehicle_count,
+            'limit': vehicle_limit
+        }), 403
+    
     # Validação: apenas veículos compatíveis com OBD-II Bluetooth
     if data['brand'] not in SUPPORTED_BRANDS:
         return jsonify({'error': 'Marca não compatível com OBD-II Bluetooth'}), 400
@@ -511,6 +564,36 @@ def register_vehicle():
         return jsonify({'message': 'Veículo registrado com sucesso', 'vehicle': new_vehicle.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/vehicle/obd-scan', methods=['POST'])
+def save_obd_scan():
+    try:
+        data = request.get_json()
+        required_fields = ['vehicle_id', 'scan_date']
+        if not data or not all(field in data for field in required_fields):
+            return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
+        
+        # Verify vehicle exists
+        vehicle = Vehicle.query.get(data['vehicle_id'])
+        if not vehicle:
+            return jsonify({'error': 'Veículo não encontrado'}), 404
+        
+        # Create new scan
+        new_scan = OBDScan(
+            vehicle_id=data['vehicle_id'],
+            scan_date=data['scan_date'],
+            dtc_codes=data.get('dtc_codes', []),
+            live_data=data.get('live_data', {}),
+            connected_device=data.get('connected_device')
+        )
+        
+        db.session.add(new_scan)
+        db.session.commit()
+        return jsonify({'message': 'Scan OBD salvo com sucesso', 'scan': new_scan.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        print('Erro ao salvar scan OBD:', str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/vehicle/checklist/<int:vehicle_id>', methods=['GET'])
@@ -818,11 +901,27 @@ def get_user_vehicles(user_id):
     vehicles = Vehicle.query.filter_by(user_id=user_id).all()
     return jsonify({'vehicles': [v.to_dict() for v in vehicles]}), 200
 
-@app.route('/user/<int:user_id>', methods=['GET'])
-def get_user(user_id):
+@app.route('/user/<int:user_id>', methods=['GET', 'PUT', 'PATCH'])
+def get_or_update_user(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'Usuário não encontrado'}), 404
+    
+    if request.method in ['PUT', 'PATCH']:
+        data = request.json
+        if 'full_name' in data:
+            user.full_name = data['full_name']
+        if 'email' in data:
+            user.email = data['email']
+        if 'phone' in data:
+            user.phone = data['phone']
+        if 'reminder_frequency' in data:
+            user.reminder_frequency = data['reminder_frequency']
+        
+        db.session.commit()
+        return jsonify({'message': 'Usuário atualizado com sucesso', 'user': user.to_dict()}), 200
+    
+    # GET request
     return jsonify(user.to_dict()), 200
 
 @app.route('/user/<int:user_id>', methods=['DELETE'])
@@ -855,6 +954,27 @@ def activate_premium(user_id):
     
     return jsonify({
         'message': 'Premium ativado com sucesso',
+        'user': user.to_dict()
+    }), 200
+
+@app.route('/user/set-plan/<int:user_id>', methods=['POST'])
+def set_user_plan(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+
+    data = request.json
+    plan_type = data.get('plan_type')
+
+    if plan_type not in PLAN_VEHICLE_LIMITS:
+        return jsonify({'error': f'Plano inválido. Opções: {list(PLAN_VEHICLE_LIMITS.keys())}'}), 400
+
+    user.plan_type = plan_type
+    user.is_premium = plan_type != 'free'
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Plano atualizado com sucesso',
         'user': user.to_dict()
     }), 200
 

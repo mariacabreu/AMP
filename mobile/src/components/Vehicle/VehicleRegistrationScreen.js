@@ -147,9 +147,9 @@ const VehicleRegistrationScreen = ({ navigation, route }) => {
       Alert.alert('Sucesso', 'Veículo cadastrado com sucesso!');
       console.log('Resposta do servidor:', response.data);
 
-      // Navega para a tela de edição do veículo recém-criado, se existir a rota
+      // Navega para a tela de histórico inicial do veículo
       if (navigation && response.data?.vehicle?.id) {
-        navigation.replace('VehicleEditScreen', { user, vehicleId: response.data.vehicle.id });
+        navigation.replace('VehicleHistory', { user, vehicleId: response.data.vehicle.id });
       }
     } catch (error) {
       console.error('Erro ao cadastrar veículo:', error.response?.data || error.message);
