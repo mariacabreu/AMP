@@ -8,7 +8,8 @@ import {
   Platform,
   Alert
 } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Header from '../components/Header/Header';
 
 const VehicleCompatibilityScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -78,13 +79,11 @@ const VehicleCompatibilityScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>VERIFICAÇÃO DE COMPATIBILIDADE</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      <Header
+        showIcons={false}
+        navigation={navigation}
+        loggedUser={loggedUser}
+      />
 
       <ScrollView
         style={styles.scrollView}

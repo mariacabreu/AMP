@@ -17,7 +17,9 @@ const ProfileModal = ({
   planType,
   vehicleCount = 0,
   vehicles = [], // ex: [{ id, brand, model, plate }]
-  onAddVehicle
+  onAddVehicle,
+  navigation,
+  loggedUser
 }) => {
   const planInfo = getPlanInfo(planType);
   const canAdd = canAddVehicle(planType, vehicleCount);
@@ -37,7 +39,14 @@ const ProfileModal = ({
           </View>
 
           <View style={styles.planBadgeWrap}>
-            <View style={[styles.planBadge, isPremium ? styles.planBadgePremium : styles.planBadgeFree]}>
+            <TouchableOpacity 
+              style={[styles.planBadge, isPremium ? styles.planBadgePremium : styles.planBadgeFree]}
+              onPress={() => {
+                onClose();
+                navigation.navigate('PremiumPlan', { user: loggedUser });
+              }}
+              activeOpacity={0.8}
+            >
               <MaterialCommunityIcons
                 name="crown"
                 size={16}
@@ -47,7 +56,7 @@ const ProfileModal = ({
               <Text style={[styles.planBadgeText, isPremium ? styles.planBadgeTextPremium : styles.planBadgeTextFree]}>
                 {planInfo.label.toUpperCase()}
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>

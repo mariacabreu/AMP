@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator 
 import axios from 'axios';
 import API_BASE_URL from '../../api';
 import BottomNav from '../NavBar/BottomNav';
-import BackHeader from '../Common/BackHeader';
+import Header from '../Header/Header';
 import SelectableOptionCard from '../Common/SelectableOptionCard';
 import PrimaryButton from '../Common/PrimaryButton';
 
@@ -68,7 +68,11 @@ const ReminderFrequencyScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <BackHeader title="FREQUÊNCIA DOS LEMBRETES" onBack={() => navigation.goBack()} />
+      <Header
+        showIcons={false}
+        navigation={navigation}
+        loggedUser={loggedUser}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>

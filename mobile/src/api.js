@@ -5,13 +5,9 @@ const getBaseUrl = () => {
   if (Platform.OS === 'web') {
     return 'http://localhost:5000';
   }
-  // Para emuladores Android:
+  // Para Android: servidor local no dispositivo
   if (Platform.OS === 'android') {
-    // Para emulador oficial: 10.0.2.2
-    // Para dispositivo físico: use seu IP local da rede (ex: 192.168.1.100)
-    // Para testar, substitua pelo seu IP:
-    return 'http://10.0.2.2:5000'; // Emulador Android
-    // return 'http://SEU_IP_LOCAL:5000'; // Dispositivo físico (ex: 192.168.1.100)
+    return 'http://127.0.0.1:5000';
   }
   return 'http://localhost:5000';
 };

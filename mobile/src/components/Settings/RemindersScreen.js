@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../NavBar/BottomNav';
-import BackHeader from '../Common/BackHeader';
+import Header from '../Header/Header';
 import CustomCalendarModal from '../Common/CustomCalendarModal';
 import CustomSwitch from '../Settings/CustomSwitch';
 
@@ -132,7 +132,11 @@ const RemindersScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <BackHeader title="LEMBRETES PROGRAMÁVEIS" onBack={() => navigation.goBack()} />
+      <Header
+        showIcons={false}
+        navigation={navigation}
+        loggedUser={loggedUser}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>

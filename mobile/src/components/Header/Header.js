@@ -33,7 +33,9 @@ const Header = ({
   vehicles = [],
   onAddVehicle,
   showIcons = true,
-  style
+  style,
+  navigation,
+  loggedUser
 }) => {
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
@@ -55,7 +57,7 @@ const Header = ({
   };
 
   return (
-    <View style={[styles.header, style]}>
+    <View style={[styles.header, showIcons ? styles.headerWithIcons : styles.headerWithoutIcons, style]}>
       <NotificationsModal
         visible={notificationsVisible}
         onClose={() => setNotificationsVisible(false)}
@@ -78,6 +80,8 @@ const Header = ({
         vehicleCount={vehicleCount}
         vehicles={vehicles}
         onAddVehicle={onAddVehicle}
+        navigation={navigation}
+        loggedUser={loggedUser}
       />
 
       <Image source={logoSource} style={styles.logo} resizeMode="contain" />
@@ -131,6 +135,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     height: 70,
     backgroundColor: '#fff'
+  },
+  headerWithIcons: {
+    justifyContent: 'space-between'
+  },
+  headerWithoutIcons: {
+    justifyContent: 'center'
   },
   logo: {
     width: 100,

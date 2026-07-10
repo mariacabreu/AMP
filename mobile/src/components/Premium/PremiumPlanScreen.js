@@ -1,43 +1,158 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
-import BottomNav from '../components/NavBar/BottomNav';
+import BottomNav from '../NavBar/BottomNav';
+import Header from '../Header/Header';
+import axios from 'axios';
+import API_BASE_URL from '../../api';
 
 const PremiumPlanScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
+  const [avatarUri, setAvatarUri] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [profileForm, setProfileForm] = useState({ full_name: '', email: '', phone: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [vehicles, setVehicles] = useState([]);
+  const [vehicleCount, setVehicleCount] = useState(0);
+  const [isPremium, setIsPremium] = useState(false);
+  const [planType, setPlanType] = useState('');
+
+  const fetchUserStatus = async () => {
+    try {
+      const userId = loggedUser?.id || 1;
+      const res = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
+      if (res.data?.user) {
+        setIsPremium(res.data.user.is_premium || false);
+        setPlanType(res.data.user.plan_type || '');
+      }
+    } catch (error) {
+      console.error('Error fetching status:', error);
+    }
+  };
+
+  const fetchVehicles = async () => {
+    try {
+      const userId = loggedUser?.id || 1;
+      const res = await axios.get(`${API_BASE_URL}/user/vehicles/${userId}`);
+      const data = Array.isArray(res.data?.vehicles) ? res.data.vehicles : [];
+      setVehicles(data);
+      setVehicleCount(data.length);
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const userId = loggedUser?.id || 1;
+      const res = await axios.get(`${API_BASE_URL}/user/notifications/${userId}`);
+      const data = Array.isArray(res.data?.notifications) ? res.data.notifications : [];
+      setNotifications(data);
+      setUnreadCount(data.filter(n => !n.read).length);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setSavingProfile(true);
+      const userId = loggedUser?.id || 1;
+      await axios.put(`${API_BASE_URL}/user/${userId}`, profileForm);
+      alert('Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Erro ao salvar perfil.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleProfileFieldChange = (field, value) => {
+    setProfileForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleChangePhoto = () => {
+    alert('Função de alterar foto em desenvolvimento');
+  };
+
+  const handleLogout = () => {
+    navigation.navigate('Login');
+  };
+
+  const handleAddVehicle = () => {
+    navigation.navigate('VehicleForm', { user: loggedUser });
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const userId = loggedUser?.id || 1;
+      await axios.post(`${API_BASE_URL}/user/notifications/mark-read/${userId}`);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (loggedUser) {
+      setProfileForm({
+        full_name: loggedUser.full_name || '',
+        email: loggedUser.email || '',
+        phone: loggedUser.phone || ''
+      });
+      if (loggedUser.avatar_url) {
+        setAvatarUri(loggedUser.avatar_url);
+      }
+    }
+    fetchUserStatus();
+    fetchVehicles();
+    fetchNotifications();
+  }, [loggedUser]);
 
   const plans = [
     {
       id: 1,
       title: 'Plano Mensal',
-      price: '00,00',
+      price: '19,99',
       benefits: [
-        'Sem anúncios',
-        'Planejamento de viagens',
-        'Controle de notificações',
-        'Inserção de dados manualmente'
+        { text: 'Sem anúncios', icon: 'advertisements-off' },
+        { text: 'Planejamento de viagens', icon: 'map-marker-path' },
+        { text: 'Inteligência artificial para recomendações preventivas', icon: 'robot' },
+        { text: 'Notificações inteligentes', icon: 'bell-ring' },
+        { text: 'Captura automática de dados', icon: 'cloud-sync' },
+        { text: 'Backup em nuvem', icon: 'cloud-check' },
+        { text: 'Cadastro de 1 veículo', icon: 'car' }
       ],
       buttonText: 'Assinar'
     },
     {
       id: 2,
       title: 'Plano Trimestral',
-      price: '00,00',
+      price: '56,99',
       benefits: [
-        'Desconto de 5%',
-        'Captação de dados automático',
-        'Scanner com OBD'
+        { text: 'Sem anúncios', icon: 'advertisements-off' },
+        { text: 'Planejamento de viagens', icon: 'map-marker-path' },
+        { text: 'Inteligência artificial para recomendações preventivas', icon: 'robot' },
+        { text: 'Notificações inteligentes', icon: 'bell-ring' },
+        { text: 'Captura automática de dados', icon: 'cloud-sync' },
+        { text: 'Backup em nuvem', icon: 'cloud-check' },
+        { text: 'Cadastro de até 3 veículos', icon: 'car-multiple' }
       ],
       buttonText: 'Assinar'
     },
     {
       id: 3,
-      title: 'Plano Semestral', // Ajustado de Trimestral para Semestral conforme lógica de descontos progressivos comum
-      price: '00,00',
+      title: 'Plano Anual',
+      price: '215,99',
       benefits: [
-        'Desconto de 10%',
-        'Tudo incluso',
-        'Gerenciamento de até 2 veículos'
+        { text: 'Tudo dos outros planos', icon: 'all-inclusive' },
+        { text: 'Cadastro de até 5 veículos', icon: 'car-multiple' },
+        { text: 'Prioridade no suporte', icon: 'headset' },
+        { text: 'Economia de 10%', icon: 'percent' },
+        { text: 'Futuras funcionalidades Premium incluídas', icon: 'star' }
       ],
       buttonText: 'Assinar'
     }
@@ -45,22 +160,25 @@ const PremiumPlanScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header Fixo */}
-      <View style={styles.header}>
-        <Image
-          source={require('../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header
+        avatarUri={avatarUri}
+        notifications={notifications}
+        notificationCount={unreadCount}
+        onMarkAllAsRead={markAllAsRead}
+        profileForm={profileForm}
+        onChangeField={handleProfileFieldChange}
+        onChangePhoto={handleChangePhoto}
+        onSaveProfile={handleSaveProfile}
+        savingProfile={savingProfile}
+        onLogout={handleLogout}
+        isPremium={isPremium}
+        planType={planType}
+        vehicleCount={vehicleCount}
+        vehicles={vehicles}
+        onAddVehicle={handleAddVehicle}
+        navigation={navigation}
+        loggedUser={loggedUser}
+      />
 
       <View style={styles.mainContent}>
         <ScrollView 
@@ -99,8 +217,8 @@ const PremiumPlanScreen = ({ navigation, route }) => {
               <View style={styles.benefitsList}>
                 {plan.benefits.map((benefit, index) => (
                   <View key={index} style={styles.benefitItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.benefitText}>{benefit}</Text>
+                    <MaterialCommunityIcons name={benefit.icon} size={20} color="#FFCF00" style={styles.benefitIcon} />
+                    <Text style={styles.benefitText}>{benefit.text}</Text>
                   </View>
                 ))}
               </View>
@@ -134,41 +252,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
-    height: Platform.OS === 'web' ? '100vh' : '100%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    height: 70,
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 50,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    marginLeft: 15,
-  },
-  topIcon: {
-    width: 30,
-    height: 30,
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+    }),
   },
   mainContent: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+      },
+    }),
   },
   scrollContent: {
     paddingHorizontal: 15,
     paddingTop: 10,
-    paddingBottom: 100, // Espaço para não cobrir o conteúdo com a barra
+    paddingBottom: 100,
   },
   titleRow: {
     flexDirection: 'row',
@@ -262,16 +374,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 5,
   },
-  bullet: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#333',
+  benefitIcon: {
     marginRight: 10,
   },
   benefitText: {
     fontSize: 14,
     color: '#333',
+    flex: 1,
   },
   subscribeButton: {
     backgroundColor: '#2C2C2C',
@@ -312,33 +421,6 @@ const styles = StyleSheet.create({
     borderColor: '#FFCF00',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#2C2C2C',
-    height: 70,
-    width: '100%',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navText: {
-    fontSize: 10,
-    color: '#D9D9D9',
-    marginTop: 4,
-    fontWeight: '700',
-  },
-  navTextActive: {
-    color: '#FFCF00',
   },
 });
 

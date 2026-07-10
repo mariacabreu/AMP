@@ -9,7 +9,8 @@ const DashboardGrid = ({
   onPressVehicleRegistration,
   onPressMaintenanceTips,
   onPressPartsCatalog,
-  onPressTripHistory
+  onPressTripHistory,
+  onPressCompatibility
 }) => {
   return (
     <View style={styles.buttonGrid}>
@@ -62,6 +63,22 @@ const DashboardGrid = ({
           <Text style={styles.gridButtonSub}>Relatório de Viagens</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Botão de Compatibilidade — ocupa a linha inteira, leva para VehicleCompatibilityScreen */}
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.gridButtonFull} onPress={onPressCompatibility}>
+          <View style={styles.fullButtonContent}>
+            <View style={styles.iconCircle}>
+              <MaterialCommunityIcons name="car-search" size={44} color="#FFCF00" />
+            </View>
+            <View style={styles.fullButtonTextContainer}>
+              <Text style={styles.gridButtonTitleFull}>Compatibilidade com OBD</Text>
+              <Text style={styles.gridButtonSubFull}>Verifique se seu veículo é compatível</Text>
+            </View>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={26} color="#FFCF00" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -98,6 +115,35 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 10,
     textAlign: 'center',
+    marginTop: 2
+  },
+  gridButtonFull: {
+    backgroundColor: '#2C2C2C',
+    width: '100%',
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  fullButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1
+  },
+  fullButtonTextContainer: {
+    marginLeft: 12,
+    flex: 1
+  },
+  gridButtonTitleFull: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold'
+  },
+  gridButtonSubFull: {
+    color: '#cccccc',
+    fontSize: 11,
     marginTop: 2
   }
 });

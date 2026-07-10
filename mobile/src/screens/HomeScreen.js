@@ -161,6 +161,8 @@ const HomeScreen = ({ navigation, route }) => {
         vehicleCount={vehicleCount}
         vehicles={vehicles}
         onAddVehicle={handleAddVehicle}
+        navigation={navigation}
+        loggedUser={loggedUser}
       />
 
       <ScrollView
@@ -190,6 +192,9 @@ const HomeScreen = ({ navigation, route }) => {
               : handlePremiumButton
           }
           onPressTripHistory={() => navigation.navigate('TripHistory', { user: loggedUser })}
+          onPressCompatibility={() =>
+            navigation.navigate('VehicleCompatibility', { user: loggedUser, vehicle: status.vehicle })
+          }
         />
 
         <View style={styles.emptySpace} />

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platfo
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import BottomNav from '../components/NavBar/BottomNav';
+import Header from '../components/Header/Header';
 
 export default function TravelPlanningScreen(props) {
   const { navigation, route } = props;
@@ -632,13 +633,11 @@ export default function TravelPlanningScreen(props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={28} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>PLANEJE SUA VIAGEM</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      <Header
+        showIcons={false}
+        navigation={navigation}
+        loggedUser={loggedUser}
+      />
 
       <ScrollView
         style={styles.scrollView}

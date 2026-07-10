@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import Header from '../components/Header/Header';
-import BottomNav from '../components/NavBar/BottomNav';
+import Header from '../Header/Header';
+import BottomNav from '../NavBar/BottomNav';
 
 const PaymentMethodsScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };

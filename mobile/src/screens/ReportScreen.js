@@ -211,6 +211,8 @@ const ReportScreen = ({ navigation, route }) => {
         vehicleCount={vehicleCount}
         vehicles={vehicles}
         onAddVehicle={handleAddVehicle}
+        navigation={navigation}
+        loggedUser={loggedUser}
       />
 
       <View style={styles.backRow}>

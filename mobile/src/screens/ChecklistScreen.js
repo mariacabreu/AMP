@@ -295,6 +295,8 @@ const ChecklistScreen = ({ navigation, route }) => {
         vehicleCount={vehicleCount}
         vehicles={vehicles}
         onAddVehicle={handleAddVehicle}
+        navigation={navigation}
+        loggedUser={loggedUser}
       />
 
       <ScrollView

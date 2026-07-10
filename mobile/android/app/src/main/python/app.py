@@ -3,24 +3,52 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
 import json
+import sys
+import threading
 
+# Configure Flask app
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# OpenAI setup (optional)
 try:
     from openai import OpenAI
     from dotenv import load_dotenv
     load_dotenv()
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-except ImportError:
+except Exception:
     client = None
-    print("OpenAI module not available - AI features will use static fallback")
+    print("[AMP] OpenAI indisponível - usando fallback estático")
 
-# Database configuration
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'amp_db.db')
+# Database configuration - Android-safe
+db_path = None
+if hasattr(sys, 'getandroidapilevel'):
+    # Running on Android, use internal app storage
+    try:
+        from android.os import Environment
+        import android
+        app_context = android.get_context()
+        db_dir = app_context.getFilesDir().getAbsolutePath()
+        db_path = os.path.join(db_dir, 'amp_db.db')
+        print(f"[AMP] Banco de dados Android: {db_path}")
+    except Exception as e:
+        print(f"[AMP] Erro ao configurar diretório Android: {e}")
+        # Fallback para diretório temporário
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        db_path = os.path.join(temp_dir, 'amp_db.db')
+        print(f"[AMP] Usando fallback temp: {db_path}")
+else:
+    # Desktop fallback
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_path = os.path.join(basedir, 'amp_db.db')
+    print(f"[AMP] Banco de dados desktop: {db_path}")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = False  # Desativa logs para produção
 
+# Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
 # User Model
@@ -51,16 +79,12 @@ class Vehicle(db.Model):
     transmission = db.Column(db.String(20))
     mileage = db.Column(db.Integer)
     fuel_type = db.Column(db.String(20))
-    engine_type = db.Column(db.String(50)) # Ex: 1.3 Firefly, 1.0 Turbo 200
-    usage_type = db.Column(db.String(50))  # Ex: Urbano, Rodoviário, Misto
+    engine_type = db.Column(db.String(50))
+    usage_type = db.Column(db.String(50))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
-    # Novas colunas para manutenção preventiva
     last_oil_change = db.Column(db.Integer, default=0)
     last_belt_change = db.Column(db.Integer, default=0)
     last_brake_change = db.Column(db.Integer, default=0)
-
-
 
     def to_dict(self):
         return {
@@ -83,9 +107,9 @@ class Vehicle(db.Model):
 class MaintenanceHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
-    item = db.Column(db.String(100), nullable=False) # e.g., "Troca de Óleo", "Troca de Pneus"
+    item = db.Column(db.String(100), nullable=False)
     last_km = db.Column(db.Integer, nullable=False)
-    last_date = db.Column(db.String(20)) # e.g., "2024-01-01"
+    last_date = db.Column(db.String(20))
     cost = db.Column(db.Float, default=0.0)
     liters = db.Column(db.Float, default=0.0)
     
@@ -132,7 +156,7 @@ SUPPORTED_BRANDS = {
             'Montana': ['1.4 Aspirado', '1.8 Aspirado'],
             'Equinox': ['1.5 Turbo', '2.0 Turbo'],
             'Trailblazer': ['2.8 Diesel', '3.6 V6'],
-            'Camaro': ['2.0 Turbo', '3.6 V6', '6.2 V8']
+            'Camaro': ['2.0 Turbo', '3.6 V6', '6.2 V6']
         },
         'start_year': 2011,
         'docs': 'GM Developer Portal'
@@ -372,14 +396,7 @@ SUPPORTED_BRANDS = {
     }
 }
 
-# Create database and tables
-def create_tables():
-    with app.app_context():
-        # Ensure tables are created with new columns
-        db.create_all()
-
-# Initial table creation
-create_tables()
+# Create database and tables (handled by create_tables_safe() on server startup)
 
 @app.route('/vehicle/brands', methods=['GET'])
 def get_brands():
@@ -397,7 +414,6 @@ def get_engines(brand, model):
         brand_data = SUPPORTED_BRANDS[brand]
         if 'engines' in brand_data and model in brand_data['engines']:
             return jsonify(brand_data['engines'][model]), 200
-        # If no specific engines found for model, return a default list
         return jsonify(['1.0', '1.4', '1.6', '1.8', '2.0', '2.0 Turbo']), 200
     return jsonify({'error': 'Marca não suportada'}), 404
 
@@ -407,7 +423,6 @@ def get_years(brand, model):
         brand_data = SUPPORTED_BRANDS[brand]
         current_year = 2026
         
-        # Check for specific model start year
         start_year = brand_data.get('start_year', 2010)
         if 'model_start_years' in brand_data and model in brand_data['model_start_years']:
             start_year = brand_data['model_start_years'][model]
@@ -424,7 +439,6 @@ def get_or_update_vehicle(vehicle_id):
             return jsonify({'error': 'Veículo não encontrado'}), 404
         return jsonify(vehicle.to_dict()), 200
     
-    # For PUT/PATCH requests
     print(f"\n=== ATUALIZANDO VEÍCULO ID: {vehicle_id} ===")
     data = request.json
     print(f"Dados recebidos para atualização: {data}")
@@ -434,7 +448,6 @@ def get_or_update_vehicle(vehicle_id):
         return jsonify({'error': 'Veículo não encontrado'}), 404
     
     try:
-        # Atualizar campos permitidos
         if 'mileage' in data:
             vehicle.mileage = data['mileage']
         if 'last_oil_change' in data:
@@ -463,14 +476,12 @@ def get_or_update_vehicle(vehicle_id):
         print(f"Erro ao atualizar veículo: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/vehicle/register', methods=['POST'])
 def register_vehicle():
     data = request.json
     if not data or not all(k in data for k in ('brand', 'model', 'year', 'user_id')):
         return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
     
-    # Validação: apenas veículos compatíveis com OBD-II Bluetooth
     if data['brand'] not in SUPPORTED_BRANDS:
         return jsonify({'error': 'Marca não compatível com OBD-II Bluetooth'}), 400
     
@@ -478,17 +489,10 @@ def register_vehicle():
     if data['model'] not in brand_data['models']:
         return jsonify({'error': 'Modelo não compatível com OBD-II Bluetooth'}), 400
     
-    # Validação de ano
     model_start_year = brand_data.get('model_start_years', {}).get(data['model'], brand_data.get('start_year', 2010))
     current_year = 2026
     if data['year'] < model_start_year or data['year'] > current_year:
         return jsonify({'error': f'Ano {data["year"]} não é válido para {data["brand"]} {data["model"]}. Anos disponíveis: {model_start_year} - {current_year}'}), 400
-    
-    # Validação de motorização
-    if data.get('engine_type'):
-        valid_engines = brand_data['engines'].get(data['model'], [])
-        if valid_engines and data['engine_type'] not in valid_engines:
-            return jsonify({'error': f'Motorização {data["engine_type"]} não é válida para {data["brand"]} {data["model"]}. Opções válidas: {", ".join(valid_engines)}'}), 400
     
     new_vehicle = Vehicle(
         brand=data['brand'],
@@ -519,13 +523,12 @@ def get_vehicle_checklist(vehicle_id):
     if not vehicle:
         return jsonify({'error': 'Veículo não encontrado'}), 404
         
-    current_km = vehicle.mileage
+    current_km = vehicle.mileage or 0
     checklist = []
     item_id = 1
     
-    # 1. Troca de Óleo e Filtro de Óleo (Geralmente a cada 10.000km)
-    oil_diff = current_km - vehicle.last_oil_change
-    if oil_diff >= 9000: # Alerta com 1000km de antecedência
+    oil_diff = current_km - (vehicle.last_oil_change or 0)
+    if oil_diff >= 9000:
         checklist.append({
             'id': item_id,
             'name': 'Troca de Óleo e Filtro de Óleo',
@@ -534,21 +537,19 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'URGENTE' if oil_diff >= 10000 else 'PRÓXIMOS 30 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 2. Filtro de Ar do Motor (a cada 10.000-15.000km)
     if oil_diff >= 9000:
         checklist.append({
             'id': item_id,
             'name': 'Filtro de Ar do Motor',
             'description': 'Recomendado trocar junto com o óleo para manter desempenho ideal.',
-            'reason': 'Filtro sujo aumenta o consumo de combustível e diminui o desempenho do motor.',
+            'reason': 'Filtro sujo aumenta o consumo de combustível e reduz a desempenho do motor.',
             'priority': 'PRÓXIMOS 30 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 3. Filtro de Cabine (Ar-condicionado) (a cada 15.000km ou 1 ano)
     if current_km >= 15000:
         checklist.append({
             'id': item_id,
@@ -558,13 +559,10 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 60 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 4. Correia Dentada / Corrente de Distribuição (Depende do motor)
-    belt_diff = current_km - vehicle.last_belt_change
-    engine_type = vehicle.engine_type
-    
-    # Verifica se motor usa corrente de distribuição (ex: 1.8 E.torQ)
+    belt_diff = current_km - (vehicle.last_belt_change or 0)
+    engine_type = vehicle.engine_type or ''
     uses_timing_chain = 'E.torQ' in engine_type or 'Firefly' in engine_type or '1.8' in engine_type
     
     if uses_timing_chain:
@@ -576,7 +574,7 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 60 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
         checklist.append({
             'id': item_id,
             'name': 'Inspecção dos Guias da Corrente',
@@ -585,7 +583,7 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 60 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
         checklist.append({
             'id': item_id,
             'name': 'Inspecção do Tensor da Corrente',
@@ -594,7 +592,7 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 60 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     else:
         if belt_diff >= 45000:
             checklist.append({
@@ -605,9 +603,8 @@ def get_vehicle_checklist(vehicle_id):
                 'priority': 'URGENTE' if belt_diff >= 55000 else 'PRÓXIMOS 60 DIAS',
                 'image_url': ''
             })
-            item_id +=1
+            item_id += 1
     
-    # 5. Correia de Acessórios (Poly-V) (a cada 60.000km ou 4 anos)
     if current_km >= 50000:
         checklist.append({
             'id': item_id,
@@ -617,10 +614,9 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 90 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 6. Pastilhas de Freio (Geralmente a cada 20.000-30.000km)
-    brake_diff = current_km - vehicle.last_brake_change
+    brake_diff = current_km - (vehicle.last_brake_change or 0)
     if brake_diff >= 18000:
         checklist.append({
             'id': item_id,
@@ -630,9 +626,8 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'URGENTE' if brake_diff >= 25000 else 'PRÓXIMOS 30 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 7. Fluido de Freio (a cada 2 anos)
     if current_km >= 20000:
         checklist.append({
             'id': item_id,
@@ -642,9 +637,8 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 90 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 8. Líquido de Arrefecimento (a cada 30.000-40.000km)
     if current_km >= 30000:
         checklist.append({
             'id': item_id,
@@ -654,9 +648,8 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 90 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 9. Velas de Ignição (a cada 40.000-60.000km)
     if current_km >= 35000:
         checklist.append({
             'id': item_id,
@@ -666,21 +659,19 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 60 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 10. Amortecedores e Suspensão (inspeção a cada 40.000km)
     if current_km >= 40000:
         checklist.append({
             'id': item_id,
             'name': 'Amortecedores e Sistema de Suspensão',
-            'description': 'Inspeção visual de amortecedores, coxins, buchas, pivôs e terminais de direção.',
+            'description': 'Inspecção visual de amortecedores, coxins, buchas, pivôs e terminais de direção.',
             'reason': 'Componentes da suspensão desgastados comprometem a estabilidade, dirigibilidade e aumentam o desgaste dos pneus.',
             'priority': 'PRÓXIMOS 60 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 11. Bateria (verificação a cada 6 meses)
     if current_km >= 10000:
         checklist.append({
             'id': item_id,
@@ -690,9 +681,8 @@ def get_vehicle_checklist(vehicle_id):
             'priority': 'PRÓXIMOS 90 DIAS',
             'image_url': ''
         })
-        item_id +=1
+        item_id += 1
     
-    # 12. Pneus (rodízio e balanceamento a cada 10.000km)
     checklist.append({
         'id': item_id,
         'name': 'Pneus: Rodízio, Balanceamento e Alinhamento',
@@ -720,11 +710,9 @@ def save_maintenance():
     
     try:
         vehicle_id = data['vehicle_id']
-        # Verificar se o veículo existe
         vehicle = Vehicle.query.get(vehicle_id)
         if not vehicle:
             print(f"Erro: Veículo ID {vehicle_id} não encontrado no banco")
-            # Fallback: se não achar, tentar pegar o primeiro veículo do sistema para não dar erro 500
             vehicle = Vehicle.query.first()
             if not vehicle:
                 return jsonify({'error': 'Nenhum veículo cadastrado no sistema'}), 404
@@ -765,10 +753,8 @@ def get_user_report(user_id):
             history_dict['vehicle_model'] = v.model
             all_history.append(history_dict)
             
-    # Sort history by date (simplified, assuming YYYY-MM-DD or similar)
     all_history.sort(key=lambda x: x['last_date'] if x['last_date'] else '', reverse=True)
     
-    # Get the latest vehicle ID to facilitate adding new costs from the report screen
     latest_vehicle = Vehicle.query.filter_by(user_id=user_id).order_by(Vehicle.id.desc()).first()
     
     return jsonify({
@@ -792,18 +778,16 @@ def get_user_status(user_id):
     }
     
     if vehicle:
-        current_km = vehicle.mileage
+        current_km = vehicle.mileage or 0
         
-        # Lógica baseada no novo campo last_oil_change
-        oil_diff = current_km - vehicle.last_oil_change
+        oil_diff = current_km - (vehicle.last_oil_change or 0)
         if oil_diff >= 9000:
             status['recommendation'] = f"Seu carro está com {current_km} km. Troca de óleo necessária (última há {oil_diff} km)!"
         else:
-            next_change = vehicle.last_oil_change + 10000
+            next_change = (vehicle.last_oil_change or 0) + 10000
             status['recommendation'] = f"Próxima troca de óleo estimada aos {next_change} km."
             
-        # Prioridade para Correia Dentada se estiver crítica
-        belt_diff = current_km - vehicle.last_belt_change
+        belt_diff = current_km - (vehicle.last_belt_change or 0)
         if belt_diff >= 45000:
             status['recommendation'] = f"ALERTA CRÍTICO: Correia dentada rodou {belt_diff} km. Troque agora para evitar danos!"
 
@@ -890,15 +874,12 @@ def recover_password():
     user = User.query.filter_by(email=data['email']).first()
     
     if not user:
-        # Sempre retorna a mesma mensagem por segurança, para não revelar se o email existe ou não
         return jsonify({'message': 'Se este email estiver cadastrado, você receberá um link de recuperação de senha'}), 200
     
-    # Aqui você poderia integrar com um serviço de envio de e-mails como SendGrid ou SMTP
     print(f"[SIMULAÇÃO] Enviando email de recuperação para {user.email}")
     
     return jsonify({'message': 'Se este email estiver cadastrado, você receberá um link de recuperação de senha'}), 200
 
-# --- Reminder Frequency Endpoints ---
 @app.route('/user/<int:user_id>/reminder-frequency', methods=['GET'])
 def get_reminder_frequency(user_id):
     user = User.query.get(user_id)
@@ -918,33 +899,27 @@ def update_reminder_frequency(user_id):
     db.session.commit()
     return jsonify({'message': 'Frequência atualizada com sucesso', 'frequency': user.reminder_frequency}), 200
 
-# --- Notification Endpoints ---
 @app.route('/user/notifications/<int:user_id>', methods=['GET'])
 def get_user_notifications(user_id):
-    # Return a dummy list of notifications for now
     notifications = [
         {
-            "id": 1,
-            "title": "Bem-vindo!",
-            "message": "Obrigado por usar o nosso app!",
-            "read": False,
-            "created_at": "2026-07-09"
+            'id': 1,
+            'title': 'Bem-vindo!',
+            'message': 'Obrigado por usar o nosso app!',
+            'read': False,
+            'created_at': '2026-07-09'
         }
     ]
     return jsonify({'notifications': notifications}), 200
 
 @app.route('/user/notifications/mark-read/<int:user_id>', methods=['POST'])
 def mark_notifications_read(user_id):
-    # Dummy endpoint to mark notifications as read
     return jsonify({'message': 'Notificações marcadas como lidas'}), 200
 
-# --- AI Powered Endpoints ---
-
 def validate_and_fix_images(data, key):
-    """Garante que não há erros de bloqueio removendo imagens externas."""
     if key in data:
         for item in data[key]:
-            item['image_url'] = ""
+            item['image_url'] = ''
     return data
 
 @app.route('/vehicle/parts/ai/<int:vehicle_id>', methods=['GET'])
@@ -953,140 +928,35 @@ def get_vehicle_parts_ai(vehicle_id):
     if not vehicle:
         return jsonify({'error': 'Veículo não encontrado'}), 404
 
-    # Check if API Key is configured
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key == "your_openai_api_key_here":
+    if not api_key or api_key == "your_openai_api_key_here" or not client:
         print("OpenAI API Key missing. Falling back to static parts catalog.")
         return get_vehicle_parts(vehicle_id)
 
-    prompt = f"""
-    Como um engenheiro mecânico automotivo sênior especialista em manutenção preventiva, gere um catálogo focado EXCLUSIVAMENTE em PEÇAS DE MANUTENÇÃO para o veículo abaixo. O objetivo é ajudar o usuário a entender a função de cada peça e a importância de trocá-la preventivamente para evitar danos maiores.
-
-    DADOS ESPECÍFICOS DO VEÍCULO:
-    - Marca: {vehicle.brand}
-    - Modelo: {vehicle.model}
-    - Ano: {vehicle.year}
-    - Motorização: {vehicle.engine_type}
-    - Transmissão: {vehicle.transmission}
-    - Combustível: {vehicle.fuel_type}
-    - Perfil de Uso: {vehicle.usage_type}
-
-    INSTRUÇÕES CRÍTICAS:
-    1. SEJA ESPECÍFICO PARA ESTE VEÍCULO EXATO:
-       - Verifique se o motor usa CORRENTE DE DISTRIBUIÇÃO ou CORREIA DENTADA (ex: 1.8 E.torQ usa corrente, não correia)
-       - Ajuste todos os itens para o motor, ano e modelo exatos
-       - Não inclua peças que não existem ou não são necessárias para este veículo
-    
-    2. SE O MOTOR USA CORRENTE DE DISTRIBUIÇÃO:
-       - Substitua "Correia Dentada" por "Corrente de Distribuição"
-       - Inclua "Guias da Corrente de Distribuição"
-       - Inclua "Tensor da Corrente de Distribuição"
-       - Marque esses itens como "Inspecção" em vez de troca periódica obrigatória
-
-    3. SE O MOTOR USA CORREIA DENTADA:
-       - Mantenha "Correia Dentada", "Tensor da Correia Dentada"
-       - Inclua troca preventiva no intervalo correto para este veículo
-
-    CATEGORIAS E ITENS (AJUSTAR CONFORME VEÍCULO):
-    1. 'Filtros': 
-       - Filtro de Óleo
-       - Filtro de Ar do Motor
-       - Filtro de Cabine (Ar-condicionado)
-       - Filtro de Combustível
-    
-    2. 'Lubrificantes e Fluidos':
-       - Óleo do Motor
-       - Fluido de Freio
-       - Líquido de Arrefecimento
-       - Óleo de Câmbio (Automático/Manual)
-       - Fluido de Direção Hidráulica (se aplicável)
-    
-    3. 'Sistema de Freios':
-       - Pastilhas de Freio Dianteiras
-       - Pastilhas de Freio Traseiras / Sapatas de Freio
-       - Discos de Freio
-       - Flexíveis de Freio
-       - Fluido de Freio
-    
-    4. 'Suspensão e Direção':
-       - Amortecedores Dianteiros
-       - Amortecedores Traseiros
-       - Coxins de Amortecedor
-       - Buchas de Suspensão
-       - Pivôs de Suspensão
-       - Bieletas de Estabilizadora
-       - Terminais de Direção
-       - Caixa de Direção (inspeção)
-    
-    5. 'Ignição e Sistema de Distribuição':
-       - Velas de Ignição
-       - Bobinas de Ignição
-       - Correia de Acessórios (Poly-V)
-       - [CORREIA DENTADA OU CORRENTE, DEPENDENDO DO MOTOR]
-       - [TENSOR OU GUIAS, DEPENDENDO DO MOTOR]
-    
-    6. 'Sistema de Arrefecimento':
-       - Bomba d'Água
-       - Válvula Termostática
-       - Mangueiras do Sistema de Arrefecimento
-       - Radiador (inspeção/limpeza)
-       - Ventoinha do Radiador
-       - Tampa do Reservatório
-    
-    7. 'Sistema Elétrico':
-       - Bateria
-       - Alternador (inspeção)
-       - Motor de Partida (inspeção)
-       - Fusíveis
-       - Iluminação Externa e Interna
-    
-    8. 'Transmissão Específica':
-       - SE CÂMBIO AUTOMÁTICO/CVT: Conversor de Torque, Corpo de Válvulas, Filtro do Câmbio Automático, Fluído de Transmissão ATF
-       - SE CÂMBIO MANUAL: Kit de Embreagem (Platô, Disco, Rolamento), Atuador Hidráulico de Embreagem, Cabo de Seleção de Marchas
-    
-    9. 'Outros Itens':
-       - Pneus (rodízio/balanceamento/alinhamento)
-       - Bicos Injetores (limpeza)
-       - Corpo de Borboleta (limpeza)
-
-    Para cada peça, a descrição deve enfatizar:
-    - O QUE ELA FAZ (Função técnica clara específica para este veículo)
-    - POR QUE PREVENIR (O que acontece se não trocar? Qual o prejuízo financeiro ou risco à segurança?)
-
-    Retorne APENAS um JSON no formato:
-    {{
-        "parts": [
-            {{
-                "id": increment_id,
-                "name": "Nome da Peça de Manutenção",
-                "category": "Uma das categorias acima",
-                "subcategory": "Tipo de manutenção (Preventiva/Inspecção)",
-                "description": "Explicação clara da função e o risco de não realizar a manutenção para este veículo",
-                "image_url": "",
-                "details": {{
-                    "purpose": "Finalidade técnica no contexto deste veículo",
-                    "location": "Onde se encontra no carro",
-                    "common_problems": "Sinais de que a peça está falhando",
-                    "maintenance_interval": "Intervalo recomendado (ex: 10.000km ou 1 ano, específico para este veículo)"
-                }}
-            }}
-        ]
-    }}
-    Gere uma lista rica e educativa com pelo menos 20-30 itens essenciais específicos para este veículo exato.
-    """
-
     try:
+        prompt = f"""
+        Como um engenheiro mecânico automotivo sênior especialista em manutenção preventiva, gere um catálogo focado EXCLUSIVAMENTE em PEÇAS DE MANUTENÇÃO para o veículo abaixo.
+        Dados específicos do veículo:
+        - Marca: {vehicle.brand}
+        - Modelo: {vehicle.model}
+        - Ano: {vehicle.year}
+        - Motorização: {vehicle.engine_type}
+        - Transmissão: {vehicle.transmission}
+        - Combustível: {vehicle.fuel_type}
+        - Perfil de Uso: {vehicle.usage_type}
+        Retorne apenas um JSON no formato com pelo menos 15 peças essenciais:
+        {{"parts": [{{"id": 1, "name": "Nome da Peça", "category": "Categoria", "subcategory": "Tipo", "description": "Descrição", "image_url": "", "details": {{"purpose": "", "location": "", "common_problems": "", "maintenance_interval": ""}}}}]}}
+        """
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": "Você é um engenheiro mecânico sênior especialista em catálogo de peças automotivas."},
-                      {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "Você é um engenheiro mecânico sênior especialista em catálogo de peças automotivas."},
+                {"role": "user", "content": prompt}
+            ],
             response_format={ "type": "json_object" }
         )
         ai_data = json.loads(response.choices[0].message.content)
-        
-        # Validar e corrigir imagens da IA
         ai_data = validate_and_fix_images(ai_data, 'parts')
-        
         return jsonify({
             'vehicle': f"{vehicle.brand} {vehicle.model} ({vehicle.year}) - {vehicle.transmission} - {vehicle.engine_type}",
             'parts': ai_data['parts']
@@ -1101,84 +971,29 @@ def get_vehicle_checklist_ai(vehicle_id):
     if not vehicle:
         return jsonify({'error': 'Veículo não encontrado'}), 404
         
-    current_km = vehicle.mileage
+    current_km = vehicle.mileage or 0
     
-    # Check if API Key is configured
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key == "your_openai_api_key_here":
+    if not api_key or api_key == "your_openai_api_key_here" or not client:
         print("OpenAI API Key missing. Falling back to static checklist.")
         return get_vehicle_checklist(vehicle_id)
 
-    prompt = f"""
-    Como um mecânico especialista em manutenção preventiva, gere um checklist de manutenção para um {vehicle.brand} {vehicle.model} ano {vehicle.year} com {current_km}km rodados, câmbio {vehicle.transmission}, motor {vehicle.engine_type} e perfil de uso {vehicle.usage_type}.
-    
-    Perfil de Uso: {vehicle.usage_type} (IMPORTANTE: Se o uso for 'Urbano/Severo', antecipe as trocas de óleo e filtros em 50%.)
-    
-    Considere o histórico informado pelo usuário: 
-    - Última troca de óleo: {vehicle.last_oil_change}km (há {current_km - vehicle.last_oil_change}km)
-    - Última troca de correia/tensão de corrente: {vehicle.last_belt_change}km (há {current_km - vehicle.last_belt_change}km)
-    - Última troca de freios: {vehicle.last_brake_change}km (há {current_km - vehicle.last_brake_change}km)
-
-    INSTRUÇÕES CRÍTICAS:
-    1. SEJA ESPECÍFICO PARA ESTE VEÍCULO EXATO:
-       - Verifique se o motor {vehicle.engine_type} usa CORRENTE DE DISTRIBUIÇÃO ou CORREIA DENTADA (ex: 1.8 E.torQ usa corrente, não correia)
-       - Ajuste todos os itens para o motor, ano e modelo exatos
-       - Não inclua peças que não existem ou não são necessárias para este veículo
-    
-    2. SE O MOTOR USA CORRENTE DE DISTRIBUIÇÃO:
-       - Substitua "Correia Dentada" por "Corrente de Distribuição"
-       - Inclua "Guias da Corrente de Distribuição"
-       - Inclua "Tensor da Corrente de Distribuição"
-       - Marque esses itens como inspeção, não como troca preventiva obrigatória
-    
-    3. SE O MOTOR USA CORREIA DENTADA:
-       - Mantenha "Correia Dentada", "Tensor da Correia Dentada"
-       - Inclua troca preventiva no intervalo correto para este veículo
-
-    Gere um checklist personalizado com o que deve ser feito AGORA ou EM BREVE para este carro específico, considerando as particularidades do motor {vehicle.engine_type}.
-
-    CATEGORIAS E ITENS PARA INCLUIR (ALINHADOS COM CATÁLOGO DE PEÇAS):
-    1. Filtros: Filtro de Óleo, Filtro de Ar do Motor, Filtro de Cabine, Filtro de Combustível
-    2. Lubrificantes e Fluidos: Óleo do Motor, Fluido de Freio, Líquido de Arrefecimento, Óleo de Câmbio
-    3. Sistema de Freios: Pastilhas de Freio Dianteiras, Pastilhas/Sapatas Traseiras, Discos de Freio, Flexíveis de Freio
-    4. Suspensão e Direção: Amortecedores, Coxins, Buchas, Pivôs, Terminais de Direção
-    5. Ignição e Sistema de Distribuição: Velas de Ignição, Bobinas, Correia de Acessórios (Poly-V), [CORREIA DENTADA OU CORRENTE, DEPENDENDO DO MOTOR]
-    6. Sistema de Arrefecimento: Bomba d'Água, Válvula Termostática, Mangueiras, Radiador
-    7. Sistema Elétrico: Bateria, Alternador, Motor de Partida
-    8. Transmissão Específica: Itens específicos para câmbio {vehicle.transmission}
-
-    Retorne APENAS um JSON no seguinte formato:
-    {{
-        "checklist": [
-            {{
-                "id": 1,
-                "name": "Nome da Peça/Serviço",
-                "description": "Explicação do que deve ser verificado/trocado",
-                "reason": "Por que isso é crítico para este modelo/km?",
-                "priority": "URGENTE" | "PRÓXIMOS 30 DIAS" | "PRÓXIMOS 60 DIAS" | "PRÓXIMOS 90 DIAS",
-                "image_url": ""
-            }}
-        ]
-    }}
-    Lógica de prioridade:
-    - Se ultrapassou o prazo (ex: óleo > 10k km, correia > 50k km): use "URGENTE"
-    - Se está perto do prazo: use "PRÓXIMOS 30 DIAS"
-    - Se for inspeção de rotina: use "PRÓXIMOS 60 DIAS" ou "90 DIAS"
-    Gere pelo menos 12-15 itens relevantes, incluindo TODAS as peças essenciais da lista acima, específicos do modelo {vehicle.model} e do câmbio {vehicle.transmission}.
-    """
-
     try:
+        prompt = f"""
+        Como um mecânico especialista em manutenção preventiva, gere um checklist para um {vehicle.brand} {vehicle.model} ano {vehicle.year} com {current_km}km.
+        Retorne apenas um JSON com pelo menos 10 itens:
+        {{"checklist": [{{"id": 1, "name": "Item", "description": "Descrição", "reason": "Motivo", "priority": "PRÓXIMOS 30 DIAS", "image_url": ""}}]}}
+        """
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": "Você é um mecânico master de concessionária especialista em manutenção preventiva."},
-                      {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "Você é um mecânico master de concessionária especialista em manutenção preventiva."},
+                {"role": "user", "content": prompt}
+            ],
             response_format={ "type": "json_object" }
         )
         ai_data = json.loads(response.choices[0].message.content)
-        
-        # Validar e corrigir imagens da IA
         ai_data = validate_and_fix_images(ai_data, 'checklist')
-
         return jsonify({
             'vehicle': f"{vehicle.brand} {vehicle.model}",
             'mileage': current_km,
@@ -1188,101 +1003,67 @@ def get_vehicle_checklist_ai(vehicle_id):
         print(f"AI Checklist Error: {str(e)}. Falling back to static data.")
         return get_vehicle_checklist(vehicle_id)
 
-
 @app.route('/vehicle/maintenance-tips/<int:vehicle_id>', methods=['GET'])
 def get_maintenance_tips(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
     if not vehicle:
         return jsonify({'error': 'Veículo não encontrado'}), 404
 
-    # Check if API Key is configured
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key == "your_openai_api_key_here":
+    if not api_key or api_key == "your_openai_api_key_here" or not client:
         print("OpenAI API Key missing. Falling back to static maintenance tips.")
         return get_static_maintenance_tips(vehicle)
 
-    prompt = f"""
-    Como um engenheiro mecânico automotivo sênior, gere uma lista de DICAS DE MANUTENÇÃO PREVENTIVA ESPECÍFICAS para o veículo abaixo.
-
-    DADOS DO VEÍCULO:
-    - Marca: {vehicle.brand}
-    - Modelo: {vehicle.model}
-    - Ano: {vehicle.year}
-    - Transmissão: {vehicle.transmission}
-    - Motorização: {vehicle.engine_type}
-    - Combustível: {vehicle.fuel_type}
-
-    INSTRUÇÕES:
-    1. Gere de 8 a 12 dicas práticas e úteis para o dia a dia do usuário
-    2. Cada dica deve ser específica para este veículo, não genérica
-    3. As dicas devem cobrir diferentes aspectos: inspeções simples, cuidados diários, economias de combustível, etc.
-    4. Use linguagem clara e acessível
-
-    Retorne APENAS um JSON no seguinte formato:
-    {{
-        "tips": [
-            {{
-                "id": 1,
-                "title": "Título curto da dica",
-                "content": "Conteúdo detalhado da dica, com explicações claras"
-            }}
-        ]
-    }}
-    """
-
     try:
+        prompt = f"""
+        Como um engenheiro mecânico automotivo sênior, gere 5 dicas de manutenção para um {vehicle.brand} {vehicle.model} ano {vehicle.year}.
+        Retorne apenas um JSON: {{"tips": [{{"id": 1, "title": "Título", "content": "Conteúdo"}}]}}
+        """
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": "Você é um mecânico sênior especialista em manutenção preventiva."},
-                      {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "Você é um mecânico sênior especialista em manutenção preventiva."},
+                {"role": "user", "content": prompt}
+            ],
             response_format={ "type": "json_object" }
         )
         ai_data = json.loads(response.choices[0].message.content)
-
         return jsonify({
             'vehicle': f"{vehicle.brand} {vehicle.model} ({vehicle.year})",
             'tips': ai_data['tips']
         }), 200
     except Exception as e:
-        print(f"AI Maintenance Tips Error: {str(e)}. Falling back to static data.")
+        print(f"AI Tips Error: {str(e)}. Falling back to static data.")
         return get_static_maintenance_tips(vehicle)
 
-
 def get_static_maintenance_tips(vehicle):
-    """Static fallback maintenance tips."""
     tips = [
         {
-            "id": 1,
-            "title": "Óleo do motor",
-            "content": "Verifique o nível do óleo a cada 15 dias ou antes de viagens longas. Observe nível, viscosidade e cor. Troque entre 5.000 e 10.000 km, conforme o tipo do óleo e o manual do carro."
+            'id': 1,
+            'title': 'Óleo do motor',
+            'content': 'Verifique o nível do óleo a cada 15 dias ou antes de viagens longas. Observe nível, viscosidade e cor. Troque entre 5.000 e 10.000 km, conforme o tipo do óleo e o manual do carro.'
         },
         {
-            "id": 2,
-            "title": "Fluidos essenciais",
-            "content": "Cheque fluido de freio, direção hidráulica, embreagem (se houver), arrefecimento e limpador de para-brisa. Todos devem estar no nível correto."
+            'id': 2,
+            'title': 'Fluidos essenciais',
+            'content': 'Cheque fluido de freio, direção hidráulica, embreagem (se houver), arrefecimento e limpador de para-brisa. Todos devem estar no nível correto.'
         },
         {
-            "id": 3,
-            "title": "Calibragem dos pneus",
-            "content": "Faça semanalmente com pneus frios. Pressões ideais estão no manual ou na porta do motorista."
+            'id': 3,
+            'title': 'Calibragem dos pneus',
+            'content': 'Faça semanalmente com pneus frios. Pressões ideais estão no manual ou na porta do motorista.'
         },
         {
-            "id": 4,
-            "title": "Pastilhas e discos de freio",
-            "content": "Ruídos ao frear, vibração no pedal ou aumento da distância de frenagem indicam desgaste."
+            'id': 4,
+            'title': 'Pastilhas e discos de freio',
+            'content': 'Ruídos ao frear, vibração no pedal ou aumento da distância de frenagem indicam desgaste.'
         },
         {
-            "id": 5,
-            "title": f"Câmbio {vehicle.transmission or ''}",
-            "content": "Verifique vazamentos e dificuldade de engate — pode indicar desgaste no kit embreagem (para câmbio manual)."
-        },
-        {
-            "id": 6,
-            "title": "Lavagem e enceramento",
-            "content": "Reduzem corrosão e protegem a pintura."
+            'id': 5,
+            'title': f'Câmbio {vehicle.transmission or ""}',
+            'content': 'Verifique vazamentos e dificuldade de engatar — pode indicar desgaste no kit embreagem (para câmbio manual).'
         }
     ]
-
     return jsonify({
         'vehicle': f"{vehicle.brand} {vehicle.model} ({vehicle.year})",
         'tips': tips
@@ -1409,15 +1190,13 @@ def get_vehicle_parts(vehicle_id):
     transmission_type = vehicle.transmission.lower() if vehicle.transmission else 'manual'
     is_automatic = 'autom' in transmission_type
     
-    # --- Fallback: Catálogo Estático de Segurança (Caso a IA falhe ou não tenha chave) ---
     parts_catalog = [
-        # 1. Filtros
         {
             'id': 1,
             'name': 'Filtro de Óleo',
             'category': 'Filtros',
             'subcategory': 'Manutenção Preventiva',
-            'description': f'Filtra as impurezas do óleo. Se não trocado, o óleo sujo causa atrito excessivo e pode fundir o motor {vehicle.engine_type}.',
+            'description': f'Filtra as impurezas do óleo. Se não trocado, o óleo sujo causa atrito excessivo.',
             'details': {
                 'purpose': 'Manter a pureza do lubrificante para proteger bronzinas e pistões.',
                 'location': 'Parte inferior do motor, próximo ao cárter.',
@@ -1431,7 +1210,7 @@ def get_vehicle_parts(vehicle_id):
             'name': 'Filtro de Ar do Motor',
             'category': 'Filtros',
             'subcategory': 'Manutenção Preventiva',
-            'description': 'Impede que poeira entre no motor. O acúmulo de sujeira aumenta o consumo e reduz a vida útil dos cilindros.',
+            'description': 'Impede que poeira entre no motor. O acúmulo de sujeira aumenta o consumo.',
             'details': {
                 'purpose': 'Garantir que apenas ar limpo entre na câmara de combustão.',
                 'location': 'Caixa plástica conectada à admissão do motor.',
@@ -1442,418 +1221,25 @@ def get_vehicle_parts(vehicle_id):
         },
         {
             'id': 3,
-            'name': 'Filtro de Cabine (Ar-condicionado)',
-            'category': 'Filtros',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Filtra o ar que entra no habitáculo, removendo poeira, poluição e alérgenos.',
-            'details': {
-                'purpose': 'Garantir ar limpo para os ocupantes e proteger o sistema de ar-condicionado.',
-                'location': 'Geralmente atrás do painel, na entrada do ar externo.',
-                'common_problems': 'Ar-condicionado com mau cheiro ou redução do fluxo de ar.',
-                'maintenance_interval': '15.000km ou 12 meses'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 4,
-            'name': 'Filtro de Combustível',
-            'category': 'Filtros',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Filtra impurezas do combustível antes de chegar aos bicos injetores.',
-            'details': {
-                'purpose': 'Proteger os bicos injetores e a bomba de combustível.',
-                'location': 'Na linha de combustível, próximo ao tanque ou ao motor.',
-                'common_problems': 'Perda de potência, falhas na injeção ou dificuldade na partida.',
-                'maintenance_interval': '30.000km'
-            },
-            'image_url': ''
-        },
-
-        # 2. Lubrificantes e Fluidos
-        {
-            'id': 10,
-            'name': 'Óleo do Motor',
-            'category': 'Lubrificantes e Fluidos',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Lubrifica, resfria e limpa as partes internas do motor.',
-            'details': {
-                'purpose': 'Reduzir atrito, dissipar calor e remover resíduos de combustão.',
-                'location': 'Cárter do motor.',
-                'common_problems': 'Degradação por calor, perda de viscosidade.',
-                'maintenance_interval': '10.000km ou 1 ano'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 11,
-            'name': 'Fluido de Freio',
-            'category': 'Lubrificantes e Fluidos',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Transmite a força do pedal para as pinças de freio.',
-            'details': {
-                'purpose': 'Garantir frenagem segura e consistente.',
-                'location': 'Reservatório próximo ao painel de freio e linhas hidráulicas.',
-                'common_problems': 'Absorção de umidade, redução do ponto de ebulição.',
-                'maintenance_interval': '2 anos'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 12,
-            'name': 'Líquido de Arrefecimento',
-            'category': 'Lubrificantes e Fluidos',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Mantém a temperatura do motor dentro dos limites ideais.',
-            'details': {
-                'purpose': 'Evitar superaquecimento e congelamento do sistema.',
-                'location': 'Reservatório e mangueiras do sistema de arrefecimento.',
-                'common_problems': 'Degradação dos aditivos anticorrosivos.',
-                'maintenance_interval': 'Verificação periódica, substituição conforme manual'
-            },
-            'image_url': ''
-        },
-
-        # 3. Sistema de Freios
-        {
-            'id': 20,
             'name': 'Pastilhas de Freio Dianteiras',
             'category': 'Sistema de Freios',
             'subcategory': 'Manutenção Preventiva',
-            'description': 'Componente de atrito que para o carro. Ignorar o desgaste pode destruir os discos de freio.',
+            'description': 'Componente de atrito que para o carro.',
             'details': {
                 'purpose': 'Transformar energia cinética em calor para frear o veículo.',
                 'location': 'Dentro das pinças de freio nas rodas dianteiras.',
-                'common_problems': 'Assobio agudo ao frear ou perda de eficiência na frenagem.',
+                'common_problems': 'Assobio agudo ao frear.',
                 'maintenance_interval': 'Verificar a cada 10.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 21,
-            'name': 'Pastilhas/Sapatas de Freio Traseiras',
-            'category': 'Sistema de Freios',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Complementa a frenagem dianteira, garantindo equilíbrio.',
-            'details': {
-                'purpose': 'Auxiliar na frenagem e manter a estabilidade.',
-                'location': 'Rodas traseiras, pinças ou tambores.',
-                'common_problems': 'Desgaste irregular ou ruído.',
-                'maintenance_interval': 'Verificar a cada 10.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 22,
-            'name': 'Discos de Freio',
-            'category': 'Sistema de Freios',
-            'subcategory': 'Manutenção Corretiva',
-            'description': 'Superfície onde as pastilhas aplicam pressão para frear.',
-            'details': {
-                'purpose': 'Proporcionar superfície de atrito uniforme.',
-                'location': 'Anexados às cubas das rodas.',
-                'common_problems': 'Deformação, rachaduras ou desgaste excessivo.',
-                'maintenance_interval': 'Verificar a cada 20.000km'
-            },
-            'image_url': ''
-        },
-
-        # 4. Suspensão e Direção
-        {
-            'id': 30,
-            'name': 'Amortecedores Dianteiros',
-            'category': 'Suspensão e Direção',
-            'subcategory': 'Manutenção Preventiva',
-            'description': f'Amortecedores pressurizados para {vehicle.brand} que controlam as oscilações.',
-            'details': {
-                'purpose': 'Controlar as oscilações da mola e manter o pneu no chão.',
-                'location': 'Torres de suspensão dianteiras.',
-                'common_problems': 'Vazamento de óleo ou perda de ação.',
-                'maintenance_interval': '60.000km a 80.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 31,
-            'name': 'Amortecedores Traseiros',
-            'category': 'Suspensão e Direção',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Mantêm a estabilidade traseira e tração em frenagens.',
-            'details': {
-                'purpose': 'Controlar oscilações e manter contato do pneu com o solo.',
-                'location': 'Eixo traseiro.',
-                'common_problems': 'Vazamento ou perda de eficácia.',
-                'maintenance_interval': '60.000km a 80.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 32,
-            'name': 'Buchas de Suspensão',
-            'category': 'Suspensão e Direção',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Isolam vibrações e permitem movimento controlado das peças.',
-            'details': {
-                'purpose': 'Absorver impactos e manter geometria da suspensão.',
-                'location': 'Pontos de articulação da suspensão.',
-                'common_problems': 'Rachaduras, deformação ou ruídos.',
-                'maintenance_interval': 'Inspecionar a cada 40.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 33,
-            'name': 'Terminais de Direção',
-            'category': 'Suspensão e Direção',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Conectam a caixa de direção às rodas.',
-            'details': {
-                'purpose': 'Transmitir o movimento da direção às rodas.',
-                'location': 'Extremidades das barras de direção.',
-                'common_problems': 'Folga, instabilidade ou desgaste irregular dos pneus.',
-                'maintenance_interval': 'Inspecionar a cada 20.000km'
-            },
-            'image_url': ''
-        },
-
-        # 5. Ignição e Correias
-        {
-            'id': 40,
-            'name': 'Velas de Ignição',
-            'category': 'Ignição e Correias',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Responsáveis pela faísca que queima o combustível na câmara de combustão.',
-            'details': {
-                'purpose': 'Iniciar a combustão de forma eficiente e sincronizada.',
-                'location': 'No cabeçote, conectadas às bobinas.',
-                'common_problems': 'Dificuldade na partida e motor "falhando" em marcha lenta.',
-                'maintenance_interval': '40.000km a 60.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 41,
-            'name': 'Bobinas de Ignição',
-            'category': 'Ignição e Correias',
-            'subcategory': 'Inspecão',
-            'description': 'Geram a alta tensão necessária para as velas produzirem a faísca.',
-            'details': {
-                'purpose': 'Amplificar a tensão da bateria para alimentar as velas.',
-                'location': 'Sobre as velas ou próximas ao cabeçote.',
-                'common_problems': 'Falha na ignição, perda de potência.',
-                'maintenance_interval': 'Inspecionar a cada 40.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 42,
-            'name': 'Correia de Acessórios (Poly-V)',
-            'category': 'Ignição e Correias',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Aciona alternador, bomba d\'água, compressor de ar-condicionado e outros acessórios.',
-            'details': {
-                'purpose': 'Transmitir rotação do motor para os acessórios.',
-                'location': 'Frente do motor.',
-                'common_problems': 'Rachaduras, desgaste ou ruptura.',
-                'maintenance_interval': '60.000km ou 4 anos'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 43,
-            'name': 'Correia Dentada / Corrente de Distribuição',
-            'category': 'Ignição e Correias',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Sincroniza o movimento do virabrequim com o cabeçote do motor.',
-            'details': {
-                'purpose': 'Garantir sincronismo preciso entre válvulas e pistões.',
-                'location': 'Internamente ao motor, protegido por capa.',
-                'common_problems': 'Desgaste, rompimento (causa danos graves ao motor).',
-                'maintenance_interval': '50.000km a 100.000km (ver manual)'
-            },
-            'image_url': ''
-        },
-
-        # 6. Sistema de Arrefecimento
-        {
-            'id': 50,
-            'name': 'Bomba d\'Água',
-            'category': 'Sistema de Arrefecimento',
-            'subcategory': 'Manutenção Preventiva',
-            'description': f'Faz o fluído de arrefecimento circular pelo motor e radiador do {vehicle.model}.',
-            'details': {
-                'purpose': 'Circular o líquido de arrefecimento para manter temperatura ideal.',
-                'location': 'Acoplado ao bloco do motor, movido pela correia.',
-                'common_problems': 'Vazamentos no selo mecânico ou ruído no rolamento.',
-                'maintenance_interval': 'Trocar com a correia dentada'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 51,
-            'name': 'Válvula Termostática',
-            'category': 'Sistema de Arrefecimento',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Controla a temperatura do motor, abrindo quando atinge o ponto ideal.',
-            'details': {
-                'purpose': 'Permitir que o motor atinja temperatura de trabalho rapidamente.',
-                'location': 'Na saída do bloco do motor, em direção ao radiador.',
-                'common_problems': 'Travar aberta (motor não esquenta) ou fechada (superaquecimento).',
-                'maintenance_interval': 'Trocar a cada 4 anos'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 52,
-            'name': 'Radiador',
-            'category': 'Sistema de Arrefecimento',
-            'subcategory': 'Inspecão',
-            'description': 'Dissipa o calor do fluído de arrefecimento para o ambiente.',
-            'details': {
-                'purpose': 'Resfriar o fluído de arrefecimento que vem do motor.',
-                'location': 'Frente do veículo, atrás da grade.',
-                'common_problems': 'Entupimento, vazamentos ou aletas danificadas.',
-                'maintenance_interval': 'Limpar/inspecionar a cada 2 anos'
-            },
-            'image_url': ''
-        },
-
-        # 7. Sistema Elétrico
-        {
-            'id': 60,
-            'name': 'Bateria',
-            'category': 'Sistema Elétrico',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Armazena energia elétrica para partida e sistemas com o motor desligado.',
-            'details': {
-                'purpose': 'Fornecer corrente para partida e sistemas elétricos.',
-                'location': 'Geralmente no compartimento do motor.',
-                'common_problems': 'Perda de capacidade, sulfatação ou terminais corroídos.',
-                'maintenance_interval': 'Verificar a cada 6 meses, vida útil de 3-5 anos'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 61,
-            'name': 'Alternador',
-            'category': 'Sistema Elétrico',
-            'subcategory': 'Geração de Energia',
-            'description': 'Gera energia elétrica para o veículo e carrega a bateria com o motor ligado.',
-            'details': {
-                'purpose': 'Transformar energia mecânica em elétrica.',
-                'location': 'Frente do motor, movido pela correia de acessórios.',
-                'common_problems': 'Desgaste das escovas ou falha no regulador de voltagem.',
-                'maintenance_interval': 'Inspecionar a cada 40.000km'
-            },
-            'image_url': ''
-        },
-
-        # 9. Outros Itens
-        {
-            'id': 70,
-            'name': 'Pneus (Rodízio/Balanceamento)',
-            'category': 'Outros Itens',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Garante desgaste uniforme e longa vida útil dos pneus.',
-            'details': {
-                'purpose': 'Distribuir o desgaste igualmente entre todos os pneus.',
-                'location': 'Todas as rodas do veículo.',
-                'common_problems': 'Desgaste irregular, vibrações.',
-                'maintenance_interval': 'Rodízio a cada 10.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 71,
-            'name': 'Alinhamento de Direção',
-            'category': 'Outros Itens',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Garante que as rodas estejam paralelas e com ângulos corretos.',
-            'details': {
-                'purpose': 'Evitar desgaste irregular dos pneus e manter estabilidade.',
-                'location': 'Todos os ângulos da suspensão e direção.',
-                'common_problems': 'Puxar para um lado, volante descentralizado.',
-                'maintenance_interval': 'A cada revisão ou após impactos'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 72,
-            'name': 'Corpo de Borboleta (Limpeza)',
-            'category': 'Outros Itens',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Controla a quantidade de ar que entra no motor.',
-            'details': {
-                'purpose': 'Garantir fluxo de ar preciso para a combustão.',
-                'location': 'Na admissão, após o filtro de ar.',
-                'common_problems': 'Acúmulo de sujeira, instabilidade em marcha lenta.',
-                'maintenance_interval': 'Limpar a cada 30.000km'
-            },
-            'image_url': ''
-        },
-        {
-            'id': 73,
-            'name': 'Bicos Injetores (Limpeza)',
-            'category': 'Outros Itens',
-            'subcategory': 'Manutenção Preventiva',
-            'description': 'Pulverizam o combustível na câmara de combustão ou na admissão.',
-            'details': {
-                'purpose': 'Garantir atomização ideal do combustível.',
-                'location': 'No coletor de admissão ou cabeçote.',
-                'common_problems': 'Entupimento, pulverização irregular, aumento do consumo.',
-                'maintenance_interval': 'Limpar a cada 40.000km'
             },
             'image_url': ''
         }
     ]
-
-    # --- Peças de Transmissão Específicas (Depende do Câmbio) ---
+    
     if is_automatic:
         parts_catalog.extend([
             {
                 'id': 100,
-                'name': 'Conversor de Torque',
-                'category': 'Transmissão Específica',
-                'subcategory': f'Automático ({vehicle.transmission})',
-                'description': f'Acoplamento fluido para o câmbio automático do {vehicle.model}.',
-                'details': {
-                    'purpose': 'Transmitir o torque do motor para a caixa sem embreagem mecânica.',
-                    'location': 'Entre o motor e a transmissão.',
-                    'common_problems': 'Patinamento ou vibração excessiva.',
-                    'maintenance_interval': 'Troca de fluido a cada 60.000km'
-                },
-                'image_url': ''
-            },
-            {
-                'id': 101,
-                'name': 'Corpo de Válvulas',
-                'category': 'Transmissão Específica',
-                'subcategory': f'Automático ({vehicle.transmission})',
-                'description': 'Cérebro hidráulico da transmissão automática.',
-                'details': {
-                    'purpose': 'Controlar o fluxo de fluido para as trocas de marcha.',
-                    'location': 'Interior da caixa de câmbio.',
-                    'common_problems': 'Trancos ou atrasos nas trocas.',
-                    'maintenance_interval': 'Inspecionar a cada 40.000km'
-                },
-                'image_url': ''
-            },
-            {
-                'id': 102,
-                'name': 'Filtro do Câmbio Automático',
-                'category': 'Transmissão Específica',
-                'subcategory': f'Automático ({vehicle.transmission})',
-                'description': 'Filtro interno responsável pela limpeza do fluído ATF.',
-                'details': {
-                    'purpose': 'Reter limalhas e impurezas do sistema hidráulico do câmbio.',
-                    'location': 'Dentro do cárter da transmissão.',
-                    'common_problems': 'Entupimento causando perda de pressão e queima dos discos.',
-                    'maintenance_interval': 'Trocar a cada 60.000km'
-                },
-                'image_url': ''
-            },
-            {
-                'id': 103,
-                'name': 'Fluído de Transmissão ATF',
+                'name': 'Fluido de Transmissão ATF',
                 'category': 'Transmissão Específica',
                 'subcategory': f'Automático ({vehicle.transmission})',
                 'description': 'Óleo específico para transmissões automáticas.',
@@ -1873,40 +1259,12 @@ def get_vehicle_parts(vehicle_id):
                 'name': 'Kit de Embreagem',
                 'category': 'Transmissão Específica',
                 'subcategory': 'Manual',
-                'description': f'Kit completo (platô, disco e rolamento) para {vehicle.brand}.',
+                'description': 'Kit completo para câmbio manual.',
                 'details': {
                     'purpose': 'Acoplamento e desacoplamento do motor com o câmbio.',
                     'location': 'Entre o motor e a caixa de câmbio.',
                     'common_problems': 'Embreagem "patinando" ou pedal pesado.',
                     'maintenance_interval': '80.000km a 100.000km'
-                },
-                'image_url': ''
-            },
-            {
-                'id': 111,
-                'name': 'Atuador Hidráulico de Embreagem',
-                'category': 'Transmissão Específica',
-                'subcategory': 'Manual',
-                'description': 'Componente que aciona a embreagem via pressão hidráulica.',
-                'details': {
-                    'purpose': 'Empurrar o platô para liberar o disco de embreagem.',
-                    'location': 'Acoplado ao câmbio ou dentro da caixa seca.',
-                    'common_problems': 'Vazamento de fluído de freio e pedal bobo.',
-                    'maintenance_interval': 'Trocar com o kit de embreagem'
-                },
-                'image_url': ''
-            },
-            {
-                'id': 112,
-                'name': 'Cabo de Seleção de Marchas',
-                'category': 'Transmissão Específica',
-                'subcategory': 'Manual',
-                'description': 'Cabo que transmite o movimento da alavanca para o câmbio.',
-                'details': {
-                    'purpose': 'Selecionar e engatar as marchas mecanicamente.',
-                    'location': 'Entre a alavanca de câmbio e a caixa.',
-                    'common_problems': 'Rompimento ou folga excessiva nas buchas.',
-                    'maintenance_interval': 'Inspecionar a cada 40.000km'
                 },
                 'image_url': ''
             }
@@ -1917,6 +1275,20 @@ def get_vehicle_parts(vehicle_id):
         'parts': parts_catalog
     }), 200
 
-if __name__ == '__main__':
-    create_tables()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+def create_tables_safe():
+    """Cria tabelas com tratamento de erros"""
+    try:
+        with app.app_context():
+            db.create_all()
+        print("[AMP] Tabelas do banco de dados criadas com sucesso!")
+    except Exception as e:
+        print(f"[AMP] Erro ao criar tabelas: {e}")
+
+def start_server():
+    """Inicia o servidor Flask com tratamento de erros"""
+    try:
+        create_tables_safe()
+        print("[AMP] Iniciando servidor Flask em http://127.0.0.1:5000...")
+        app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False, threaded=True)
+    except Exception as e:
+        print(f"[AMP] Erro fatal no servidor: {e}")

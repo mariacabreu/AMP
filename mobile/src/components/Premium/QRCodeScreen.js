@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, Alert } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import API_BASE_URL from '../api';
+import API_BASE_URL from '../../api';
 
 const QRCodeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
@@ -35,16 +35,16 @@ const QRCodeScreen = ({ navigation, route }) => {
       {/* Header Fixo */}
       <View style={styles.header}>
         <Image
-          source={require('../assets/logo.png')}
+          source={require('../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
+            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <Image source={require('../assets/logo.png')} style={styles.topIcon} />
+            <Image source={require('../../assets/logo.png')} style={styles.topIcon} />
           </TouchableOpacity>
         </View>
       </View>

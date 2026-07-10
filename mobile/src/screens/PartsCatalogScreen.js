@@ -175,6 +175,8 @@ const PartsCatalogScreen = ({ navigation, route }) => {
         vehicleCount={vehicleCount}
         vehicles={vehicles}
         onAddVehicle={handleAddVehicle}
+        navigation={navigation}
+        loggedUser={loggedUser}
       />
 
       <ScrollView

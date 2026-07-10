@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import BottomNav from '../components/NavBar/BottomNav';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import BottomNav from '../NavBar/BottomNav';
+import Header from '../Header/Header';
 
 const FAQScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -40,13 +41,11 @@ const FAQScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>FAQ</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      <Header
+        showIcons={false}
+        navigation={navigation}
+        loggedUser={loggedUser}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>

@@ -14,6 +14,7 @@ import {
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNav from '../components/NavBar/BottomNav';
+import Header from '../components/Header/Header';
 
 const STORAGE_KEY = 'trip_history';
 
@@ -103,13 +104,11 @@ const TripHistoryScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={28} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>HISTÓRICO DE VIAGENS</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      <Header
+        showIcons={false}
+        navigation={navigation}
+        loggedUser={loggedUser}
+      />
 
       <ScrollView
         style={styles.scrollView}
