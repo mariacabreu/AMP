@@ -1,18 +1,15 @@
-// components/Header/Header.js
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Image, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import NotificationsModal from './NotificationsModal';
+import ProfileModal from './ProfileModal';
 
 /**
  * Header fixo padrão do app.
  *
- * Uso básico:
- *   <Header
- *     onLeftIconPress={() => navigation.navigate('Notifications')}
- *     onRightIconPress={() => navigation.navigate('Profile')}
- *     notificationCount={unreadCount}
- *     avatarUri={loggedUser?.avatar_url}
- *   />
+ * Por padrão, tocar no sino abre o NotificationsModal e tocar no avatar
+ * abre o ProfileModal — ambos renderizados aqui dentro. Se quiser navegar
+ * para uma tela em vez de abrir o modal, passe onLeftIconPress/onRightIconPress.
  */
 const Header = ({
   logoSource = require('../../assets/logo.png'),
@@ -20,20 +17,76 @@ const Header = ({
   onRightIconPress,
   leftIcon,
   rightIcon,
+  notifications = [],
   notificationCount = 0,
+  onMarkAllAsRead,
   avatarUri,
+  profileForm = { full_name: '', email: '', phone: '' },
+  onChangeField,
+  onChangePhoto,
+  onSaveProfile,
+  savingProfile,
+  onLogout,
+  isPremium = false,
+  planType,
+  vehicleCount = 0,
+  vehicles = [],
+  onAddVehicle,
   showIcons = true,
   style
 }) => {
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
+
+  const handleLeftIconPress = () => {
+    if (onLeftIconPress) {
+      onLeftIconPress();
+      return;
+    }
+    setNotificationsVisible(true);
+  };
+
+  const handleRightIconPress = () => {
+    if (onRightIconPress) {
+      onRightIconPress();
+      return;
+    }
+    setProfileVisible(true);
+  };
+
   return (
     <View style={[styles.header, style]}>
+      <NotificationsModal
+        visible={notificationsVisible}
+        onClose={() => setNotificationsVisible(false)}
+        notifications={notifications}
+        unreadCount={notificationCount}
+        onMarkAllAsRead={onMarkAllAsRead}
+      />
+      <ProfileModal
+        visible={profileVisible}
+        onClose={() => setProfileVisible(false)}
+        profileForm={profileForm}
+        onChangeField={onChangeField}
+        avatarUri={avatarUri}
+        onChangePhoto={onChangePhoto}
+        onSave={onSaveProfile}
+        saving={savingProfile}
+        onLogout={onLogout}
+        isPremium={isPremium}
+        planType={planType}
+        vehicleCount={vehicleCount}
+        vehicles={vehicles}
+        onAddVehicle={onAddVehicle}
+      />
+
       <Image source={logoSource} style={styles.logo} resizeMode="contain" />
 
       {showIcons && (
         <View style={styles.headerIcons}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={onLeftIconPress}
+            onPress={handleLeftIconPress}
             activeOpacity={0.7}
           >
             {leftIcon || (
@@ -50,7 +103,7 @@ const Header = ({
 
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={onRightIconPress}
+            onPress={handleRightIconPress}
             activeOpacity={0.7}
           >
             {rightIcon || (

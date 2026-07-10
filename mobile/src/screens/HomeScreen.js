@@ -6,32 +6,6 @@ import BottomNav from '../components/NavBar/BottomNav';
 import Header from '../components/Header/Header';
 import WelcomeBanner from '../components/Home/WelcomeBanner';
 import DashboardGrid from '../components/Home/DashboardGrid';
-import ProfileModal from '../components/Home/ProfileModal';
-import NotificationsModal from '../components/Home/NotificationsModal';
-
-const MOCK_NOTIFICATIONS = [
-  {
-    id: '1',
-    title: 'Troca de óleo recomendada',
-    description: 'Seu veículo está próximo do prazo ideal para troca de óleo.',
-    time: 'Há 2 horas',
-    read: false
-  },
-  {
-    id: '2',
-    title: 'Diagnóstico OBD concluído',
-    description: 'Nenhuma falha crítica encontrada no último escaneamento.',
-    time: 'Ontem',
-    read: true
-  },
-  {
-    id: '3',
-    title: 'Bem-vindo ao app!',
-    description: 'Cadastre seu veículo para liberar todas as funcionalidades.',
-    time: 'Há 3 dias',
-    read: true
-  }
-];
 
 const HomeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -43,9 +17,6 @@ const HomeScreen = ({ navigation, route }) => {
     is_premium: loggedUser?.is_premium || false
   });
 
-  const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
-
   const [profileForm, setProfileForm] = useState({
     full_name: loggedUser?.full_name || '',
     email: loggedUser?.email || '',
@@ -54,11 +25,17 @@ const HomeScreen = ({ navigation, route }) => {
   const [avatarUri, setAvatarUri] = useState(loggedUser?.avatar_url || null);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  // ----- Estado do Header (notificações + plano/veículos) -----
+  const [notifications, setNotifications] = useState([]);
+  const [planType, setPlanType] = useState(loggedUser?.plan_type || null);
+  const [vehicles, setVehicles] = useState([]);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const vehicleCount = vehicles.length;
 
   useEffect(() => {
     fetchUserStatus();
+    fetchNotifications();
   }, [route.params?.user]);
 
   const fetchUserStatus = async () => {
@@ -70,9 +47,17 @@ const HomeScreen = ({ navigation, route }) => {
       try {
         const userResponse = await axios.get(`${API_BASE_URL}/user/${userId}`);
         isPremium = userResponse.data.is_premium;
+        setPlanType(userResponse.data.plan_type || null);
       } catch (err) {
         console.error('Error fetching user details:', err);
       }
+
+      const vehiclesData = Array.isArray(response.data?.vehicles)
+        ? response.data.vehicles
+        : response.data?.vehicle
+        ? [response.data.vehicle]
+        : [];
+      setVehicles(vehiclesData);
 
       setStatus({
         ...response.data,
@@ -89,19 +74,21 @@ const HomeScreen = ({ navigation, route }) => {
     }
   };
 
+  const fetchNotifications = async () => {
+    try {
+      const userId = loggedUser?.id || 1;
+      const res = await axios.get(`${API_BASE_URL}/user/notifications/${userId}`);
+      const data = Array.isArray(res.data?.notifications) ? res.data.notifications : [];
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
   const handlePremiumButton = () => {
     if (!status.is_premium) {
       navigation.navigate('VehicleCompatibility', { user: loggedUser, vehicle: status.vehicle });
     }
-  };
-
-  const openProfileModal = () => {
-    setProfileForm({
-      full_name: loggedUser?.full_name || status.user_name || '',
-      email: loggedUser?.email || '',
-      phone: loggedUser?.phone || ''
-    });
-    setProfileModalVisible(true);
   };
 
   const handleProfileFieldChange = (field, value) => {
@@ -123,7 +110,6 @@ const HomeScreen = ({ navigation, route }) => {
         phone: profileForm.phone
       });
       setStatus((prev) => ({ ...prev, user_name: profileForm.full_name }));
-      setProfileModalVisible(false);
     } catch (error) {
       console.error('Error saving profile:', error);
       Alert.alert('Erro', 'Não foi possível salvar suas informações agora.');
@@ -139,7 +125,6 @@ const HomeScreen = ({ navigation, route }) => {
         text: 'Sair',
         style: 'destructive',
         onPress: () => {
-          setProfileModalVisible(false);
           navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
         }
       }
@@ -150,13 +135,32 @@ const HomeScreen = ({ navigation, route }) => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  const handleAddVehicle = () => {
+    navigation.navigate('VehicleRegistration', { user: loggedUser });
+  };
+
   return (
     <View style={styles.container}>
+      {/*
+        O Header já renderiza o NotificationsModal e o ProfileModal
+        internamente, então não é preciso duplicá-los aqui.
+      */}
       <Header
-        onLeftIconPress={() => setNotificationModalVisible(true)}
-        onRightIconPress={openProfileModal}
-        notificationCount={unreadCount}
         avatarUri={avatarUri}
+        notifications={notifications}
+        notificationCount={unreadCount}
+        onMarkAllAsRead={markAllAsRead}
+        profileForm={profileForm}
+        onChangeField={handleProfileFieldChange}
+        onChangePhoto={handleChangePhoto}
+        onSaveProfile={handleSaveProfile}
+        savingProfile={savingProfile}
+        onLogout={handleLogout}
+        isPremium={status.is_premium}
+        planType={planType}
+        vehicleCount={vehicleCount}
+        vehicles={vehicles}
+        onAddVehicle={handleAddVehicle}
       />
 
       <ScrollView
@@ -192,26 +196,6 @@ const HomeScreen = ({ navigation, route }) => {
       </ScrollView>
 
       <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
-
-      <ProfileModal
-        visible={profileModalVisible}
-        onClose={() => setProfileModalVisible(false)}
-        profileForm={profileForm}
-        onChangeField={handleProfileFieldChange}
-        avatarUri={avatarUri}
-        onChangePhoto={handleChangePhoto}
-        onSave={handleSaveProfile}
-        saving={savingProfile}
-        onLogout={handleLogout}
-      />
-
-      <NotificationsModal
-        visible={notificationModalVisible}
-        onClose={() => setNotificationModalVisible(false)}
-        notifications={notifications}
-        unreadCount={unreadCount}
-        onMarkAllAsRead={markAllAsRead}
-      />
     </View>
   );
 };
