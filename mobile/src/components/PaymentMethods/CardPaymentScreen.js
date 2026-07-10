@@ -16,7 +16,7 @@ import API_BASE_URL from '../../api';
  * - title: título exibido no topo (ex: "CARTÃO DE CRÉDITO" ou "CARTÃO DE DÉBITO")
  */
 const CardPaymentScreen = ({ navigation, route, title }) => {
-  const loggedUser = route.params?.user;
+  const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');

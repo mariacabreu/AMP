@@ -39,7 +39,7 @@ export default function App() {
   return (
     <LanguageProvider>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Initial" screenOptions={{ headerShown: false }}>
+        <Stack.Navigator initialRouteName="PaymentMethods" screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Initial" component={InitialScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />

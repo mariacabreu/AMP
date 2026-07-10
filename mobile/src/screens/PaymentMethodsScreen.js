@@ -4,7 +4,7 @@ import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-ico
 import BottomNav from '../components/NavBar/BottomNav';
 
 const PaymentMethodsScreen = ({ navigation, route }) => {
-  const loggedUser = route.params?.user;
+  const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
 
   const paymentMethods = [
     {
@@ -70,17 +70,38 @@ const PaymentMethodsScreen = ({ navigation, route }) => {
             >
               <View style={styles.methodLeft}>
                 {method.id === 'pix' ? (
-                  <MaterialCommunityIcons name="rhombus-split" size={30} color="#32BCAD" />
+                  <MaterialCommunityIcons 
+                    name="rhombus-split" 
+                    size={36} 
+                    color="#32BCAD" 
+                    style={styles.paymentIcon}
+                  />
                 ) : (
                   <View style={styles.brandIcons}>
-                    <Text style={[styles.brandText, { color: '#1A1F71' }]}>VISA</Text>
-                    <Text style={[styles.brandText, { color: '#EB001B' }]}>Master</Text>
-                    <Text style={[styles.brandText, { color: '#00A4E4' }]}>elo</Text>
+                    <FontAwesome5 
+                      name="cc-visa" 
+                      size={36} 
+                      color="#1A1F71" 
+                      style={styles.brandIcon} 
+                    />
+                    <FontAwesome5 
+                      name="cc-mastercard" 
+                      size={36} 
+                      color="#EB001B" 
+                      style={styles.brandIcon} 
+                    />
                   </View>
                 )}
-                <Text style={styles.methodTitle}>{method.title}</Text>
+                <Text style={styles.methodTitle}>
+                  {method.title}
+                </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+              <Ionicons 
+                name="chevron-forward" 
+                size={28} 
+                color="#FFFFFF"
+                style={styles.chevronIcon}
+              />
             </TouchableOpacity>
           ))}
 
@@ -182,37 +203,41 @@ const styles = StyleSheet.create({
   },
   methodCard: {
     backgroundColor: '#2C2C2C',
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 16,
+    padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#FFCF00',
   },
   methodLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   methodTitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 15,
+    letterSpacing: 0.5,
   },
   brandIcons: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  brandText: {
-    fontSize: 12,
-    fontWeight: '900',
-    marginRight: 5,
-    fontStyle: 'italic',
+  brandIcon: {
+  },
+  paymentIcon: {
+  },
+  chevronIcon: {
   },
   fab: {
     position: 'absolute',

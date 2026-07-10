@@ -5,7 +5,7 @@ import axios from 'axios';
 import API_BASE_URL from '../api';
 
 const QRCodeScreen = ({ navigation, route }) => {
-  const loggedUser = route.params?.user;
+  const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const handleCopyCode = () => {
