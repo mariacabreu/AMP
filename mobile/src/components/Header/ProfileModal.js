@@ -1,22 +1,12 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Pressable } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Pressable, Platform } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
-
-// Limites de veículos por tipo de plano
-const PLAN_LIMITS = {
-  monthly: { label: 'Plano Mensal', maxVehicles: 1 },
-  quarterly: { label: 'Plano Trimestral', maxVehicles: 3 },
-  annual: { label: 'Plano Anual', maxVehicles: 5 }
-};
-
-const getPlanInfo = (planType) => {
-  return PLAN_LIMITS[planType] || { label: 'Plano Premium', maxVehicles: 1 };
-};
+import { getPlanInfo, canAddVehicle, getVehicleLimitLabel } from '../../utils/planLimits';
 
 const ProfileModal = ({
   visible,
   onClose,
-  profileForm,
+  profileForm = { full_name: '', email: '', phone: '' },
   onChangeField,
   avatarUri,
   onChangePhoto,
@@ -26,10 +16,12 @@ const ProfileModal = ({
   isPremium = false,
   planType,
   vehicleCount = 0,
+  vehicles = [], // ex: [{ id, brand, model, plate }]
   onAddVehicle
 }) => {
   const planInfo = getPlanInfo(planType);
-  const reachedLimit = vehicleCount >= planInfo.maxVehicles;
+  const canAdd = canAddVehicle(planType, vehicleCount);
+  const limitLabel = getVehicleLimitLabel(planType, vehicleCount);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -42,6 +34,20 @@ const ProfileModal = ({
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={26} color="#000000" />
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.planBadgeWrap}>
+            <View style={[styles.planBadge, isPremium ? styles.planBadgePremium : styles.planBadgeFree]}>
+              <MaterialCommunityIcons
+                name="crown"
+                size={16}
+                color="#FFCF00"
+                style={styles.planBadgeIcon}
+              />
+              <Text style={[styles.planBadgeText, isPremium ? styles.planBadgeTextPremium : styles.planBadgeTextFree]}>
+                {planInfo.label.toUpperCase()}
+              </Text>
+            </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -57,60 +63,55 @@ const ProfileModal = ({
                 <Ionicons name="camera-outline" size={16} color="#000000" />
                 <Text style={styles.changePhotoText}>Alterar foto</Text>
               </TouchableOpacity>
-
-              <View style={[styles.planBadge, isPremium ? styles.planBadgePremium : styles.planBadgeFree]}>
-                {isPremium ? (
-                  <View style={styles.crownIconWrap}>
-                    <MaterialCommunityIcons
-                      name="crown"
-                      size={19}
-                      color="#000000"
-                      style={styles.crownIconBorder}
-                    />
-                    <MaterialCommunityIcons
-                      name="crown"
-                      size={16}
-                      color="#FFCF00"
-                      style={styles.crownIconFront}
-                    />
-                  </View>
-                ) : (
-                  <Ionicons name="person" size={16} color="#999" style={styles.planBadgeIconFree} />
-                )}
-                <Text style={[styles.planBadgeText, isPremium ? styles.planBadgeTextPremium : styles.planBadgeTextFree]}>
-                  {isPremium ? planInfo.label.toUpperCase() : 'PLANO FREE'}
-                </Text>
-              </View>
             </View>
 
-            {isPremium && (
-              <View style={styles.vehicleLimitCard}>
-                <View style={styles.vehicleLimitInfo}>
-                  <MaterialCommunityIcons name="car-multiple" size={22} color="#1A1A1A" />
-                  <View style={styles.vehicleLimitTextWrap}>
-                    <Text style={styles.vehicleLimitTitle}>Veículos cadastrados</Text>
-                    <Text style={styles.vehicleLimitCount}>
-                      {vehicleCount} de {planInfo.maxVehicles} disponíveis
-                    </Text>
-                  </View>
+            {/*
+              Card de veículos: aparece para QUALQUER plano, inclusive Free.
+              O botão de adicionar só fica ativo se o plano ainda tiver vaga
+              (canAdd vem de planLimits.js, que centraliza os limites).
+            */}
+            <View style={styles.vehicleLimitCard}>
+              <View style={styles.vehicleLimitInfo}>
+                <MaterialCommunityIcons name="car-multiple" size={22} color="#1A1A1A" />
+                <View style={styles.vehicleLimitTextWrap}>
+                  <Text style={styles.vehicleLimitTitle}>Veículos cadastrados</Text>
+                  <Text style={styles.vehicleLimitCount}>{limitLabel}</Text>
                 </View>
-
-                <TouchableOpacity
-                  style={[styles.addVehicleButton, reachedLimit && styles.addVehicleButtonDisabled]}
-                  onPress={onAddVehicle}
-                  disabled={reachedLimit}
-                >
-                  <MaterialCommunityIcons
-                    name="plus"
-                    size={16}
-                    color={reachedLimit ? '#999' : '#FFCF00'}
-                  />
-                  <Text style={[styles.addVehicleButtonText, reachedLimit && styles.addVehicleButtonTextDisabled]}>
-                    {reachedLimit ? 'Limite atingido' : 'Adicionar veículo'}
-                  </Text>
-                </TouchableOpacity>
               </View>
-            )}
+
+              {vehicles.length > 0 && (
+                <View style={styles.vehicleList}>
+                  {vehicles.map((v) => (
+                    <View key={v.id} style={styles.vehicleListItem}>
+                      <MaterialCommunityIcons name="car" size={16} color="#666" />
+                      <Text style={styles.vehicleListItemText}>
+                        {v.brand ? `${v.brand} ${v.model || ''}`.trim() : v.model || 'Veículo'}
+                        {v.plate ? ` • ${v.plate}` : ''}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.addVehicleButton, !canAdd && styles.addVehicleButtonDisabled]}
+                onPress={onAddVehicle}
+                disabled={!canAdd}
+              >
+                <MaterialCommunityIcons
+                  name="plus"
+                  size={16}
+                  color={!canAdd ? '#999' : '#FFCF00'}
+                />
+                <Text style={[styles.addVehicleButtonText, !canAdd && styles.addVehicleButtonTextDisabled]}>
+                  {!canAdd
+                    ? planInfo.maxVehicles === 0
+                      ? 'Assine um plano'
+                      : 'Limite atingido'
+                    : 'Adicionar veículo'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.inputLabel}>Nome completo</Text>
             <TextInput
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16
+    marginBottom: 14
   },
   modalTitle: {
     fontSize: 18,
@@ -193,6 +194,51 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 30,
     maxHeight: '85%'
+  },
+  planBadgeWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18
+  },
+  planBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
+      },
+      default: {
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4
+      }
+    })
+  },
+  planBadgePremium: {
+    backgroundColor: '#1A1A1A'
+  },
+  planBadgeFree: {
+    backgroundColor: '#EDEDED'
+  },
+  planBadgeIcon: {
+    marginRight: 8
+  },
+  planBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6
+  },
+  planBadgeTextPremium: {
+    color: '#FFCF00'
+  },
+  planBadgeTextFree: {
+    color: '#666'
   },
   avatarSection: {
     alignItems: 'center',
@@ -227,47 +273,6 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginLeft: 6
   },
-  planBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20
-  },
-  planBadgePremium: {
-    backgroundColor: '#EDEDED'
-  },
-  planBadgeFree: {
-    backgroundColor: '#EDEDED'
-  },
-  crownIconWrap: {
-    width: 19,
-    height: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 6
-  },
-  crownIconBorder: {
-    position: 'absolute'
-  },
-  crownIconFront: {
-    position: 'absolute'
-  },
-  planBadgeIconFree: {
-    marginRight: 6
-  },
-  planBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5
-  },
-  planBadgeTextPremium: {
-    color: '#1A1A1A'
-  },
-  planBadgeTextFree: {
-    color: '#666'
-  },
   vehicleLimitCard: {
     backgroundColor: '#FAFAFA',
     borderWidth: 1,
@@ -293,6 +298,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2
+  },
+  vehicleList: {
+    marginBottom: 12
+  },
+  vehicleListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6
+  },
+  vehicleListItemText: {
+    fontSize: 12,
+    color: '#333',
+    marginLeft: 8
   },
   addVehicleButton: {
     flexDirection: 'row',

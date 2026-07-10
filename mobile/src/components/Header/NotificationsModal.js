@@ -2,7 +2,42 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const NotificationsModal = ({ visible, onClose, notifications, unreadCount, onMarkAllAsRead }) => {
+// Mock usado apenas como fallback caso nenhuma notificação real seja passada
+// (ex: durante desenvolvimento, antes do endpoint de notificações estar pronto).
+const MOCK_NOTIFICATIONS = [
+  {
+    id: '1',
+    title: 'Troca de óleo recomendada',
+    description: 'Seu veículo está próximo do prazo ideal para troca de óleo.',
+    time: 'Há 2 horas',
+    read: false
+  },
+  {
+    id: '2',
+    title: 'Diagnóstico OBD concluído',
+    description: 'Nenhuma falha crítica encontrada no último escaneamento.',
+    time: 'Ontem',
+    read: true
+  },
+  {
+    id: '3',
+    title: 'Bem-vindo ao app!',
+    description: 'Cadastre seu veículo para liberar todas as funcionalidades.',
+    time: 'Há 3 dias',
+    read: true
+  }
+];
+
+const NotificationsModal = ({
+  visible,
+  onClose,
+  notifications = MOCK_NOTIFICATIONS,
+  unreadCount,
+  onMarkAllAsRead
+}) => {
+  const effectiveUnreadCount =
+    unreadCount ?? notifications.filter((n) => !n.read).length;
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
@@ -16,7 +51,7 @@ const NotificationsModal = ({ visible, onClose, notifications, unreadCount, onMa
             </TouchableOpacity>
           </View>
 
-          {unreadCount > 0 && (
+          {effectiveUnreadCount > 0 && (
             <TouchableOpacity onPress={onMarkAllAsRead} style={styles.markAllButton}>
               <Text style={styles.markAllButtonText}>Marcar todas como lidas</Text>
             </TouchableOpacity>

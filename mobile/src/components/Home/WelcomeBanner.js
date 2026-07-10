@@ -16,7 +16,7 @@ const WelcomeBanner = ({ userName, recommendation }) => {
 
       <View style={styles.recommendationCard}>
         <View style={styles.alertIconBadge}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={22} color="#1A1A1A" />
+          <MaterialCommunityIcons name="lightbulb-on" size={22} color="#FFCF00" />
         </View>
         <Text style={styles.recommendationText}>{recommendation}</Text>
       </View>
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FFCF00',
+    backgroundColor: '#1A1A1A',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14

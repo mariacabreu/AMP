@@ -36,11 +36,27 @@ const ChecklistScreen = ({ navigation, route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const isFetchingRef = useRef(false);
 
+  // ----- Estado do Header (notificações + perfil) -----
+  const [notifications, setNotifications] = useState([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [avatarUri, setAvatarUri] = useState(loggedUser?.avatar_url || null);
+  const [profileForm, setProfileForm] = useState({
+    full_name: loggedUser?.full_name || loggedUser?.name || '',
+    email: loggedUser?.email || '',
+    phone: loggedUser?.phone || ''
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [isPremium, setIsPremium] = useState(!!loggedUser?.is_premium);
+  const [planType, setPlanType] = useState(loggedUser?.plan_type || null);
+  const [vehicles, setVehicles] = useState([]);
+  const vehicleCount = vehicles.length;
+
   // Garantir que checklist sempre seja um array
   const safeChecklist = Array.isArray(checklist) ? checklist : [];
 
   useEffect(() => {
     fetchChecklist();
+    fetchNotifications();
   }, []);
 
   const fetchChecklist = async () => {
@@ -52,6 +68,28 @@ const ChecklistScreen = ({ navigation, route }) => {
       const userId = loggedUser?.id || 1;
       const statusRes = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
       const vehicle = statusRes.data?.vehicle;
+      const vehiclesData = statusRes.data?.vehicles;
+
+      // Atualiza dados de perfil vindos do backend, se existirem
+      if (statusRes.data?.user) {
+        const u = statusRes.data.user;
+        setProfileForm({
+          full_name: u.full_name || u.name || '',
+          email: u.email || '',
+          phone: u.phone || ''
+        });
+        setAvatarUri(u.avatar_url || null);
+        setIsPremium(!!u.is_premium);
+        setPlanType(u.plan_type || null);
+      }
+
+      if (Array.isArray(vehiclesData)) {
+        setVehicles(vehiclesData);
+      } else if (vehicle) {
+        setVehicles([vehicle]);
+      } else {
+        setVehicles([]);
+      }
 
       if (vehicle && vehicle.id) {
         setVehicleId(vehicle.id);
@@ -86,6 +124,78 @@ const ChecklistScreen = ({ navigation, route }) => {
     }
   };
 
+  // ----- Notificações -----
+  const fetchNotifications = async () => {
+    try {
+      const userId = loggedUser?.id || 1;
+      const res = await axios.get(`${API_BASE_URL}/user/notifications/${userId}`);
+      const data = Array.isArray(res.data?.notifications) ? res.data.notifications : [];
+      setNotifications(data);
+      setNotificationCount(data.filter((n) => !n.read).length);
+    } catch (error) {
+      // Endpoint pode não existir ainda; falha silenciosa pra não travar a tela
+      console.error('Erro ao buscar notificações:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotificationCount(0);
+    try {
+      const userId = loggedUser?.id || 1;
+      await axios.patch(`${API_BASE_URL}/user/notifications/${userId}/read-all`);
+    } catch (error) {
+      console.error('Erro ao marcar notificações como lidas:', error);
+    }
+  };
+
+  // ----- Perfil -----
+  const handleChangeField = (field, value) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleChangePhoto = async () => {
+    // Se já tiver expo-image-picker configurado no projeto, a lógica de
+    // selecionar imagem e chamar setAvatarUri(uri) entra aqui.
+    Alert.alert('Em breve', 'Seleção de foto ainda não implementada.');
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setSavingProfile(true);
+      const userId = loggedUser?.id || 1;
+      await axios.patch(`${API_BASE_URL}/user/${userId}`, profileForm);
+      Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      Alert.alert('Erro', 'Não foi possível salvar o perfil. Tente novamente.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleAddVehicle = () => {
+    navigation.navigate('AddVehicle', { user: loggedUser });
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Sair', 'Deseja realmente sair da conta?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: () => {
+          // Limpe aqui qualquer token/estado de sessão salvo (AsyncStorage, contexto, etc.)
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }]
+          });
+        }
+      }
+    ]);
+  };
+
+  // ----- Checklist -----
   const handleMarkAsDone = (item) => {
     setSelectedItem(item);
     setModalVisible(true);
@@ -170,9 +280,21 @@ const ChecklistScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <Header
-        onLeftIconPress={() => navigation.navigate('Notifications', { user: loggedUser })}
-        onRightIconPress={() => navigation.navigate('Profile', { user: loggedUser })}
-        avatarUri={loggedUser?.avatar_url}
+        avatarUri={avatarUri}
+        notifications={notifications}
+        notificationCount={notificationCount}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        profileForm={profileForm}
+        onChangeField={handleChangeField}
+        onChangePhoto={handleChangePhoto}
+        onSaveProfile={handleSaveProfile}
+        savingProfile={savingProfile}
+        onLogout={handleLogout}
+        isPremium={isPremium}
+        planType={planType}
+        vehicleCount={vehicleCount}
+        vehicles={vehicles}
+        onAddVehicle={handleAddVehicle}
       />
 
       <ScrollView
