@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 const getBaseUrl = () => {
   // Backend em produção (Render)
   return 'https://amp-project-back.onrender.com';
