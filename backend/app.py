@@ -417,6 +417,13 @@ def create_tables():
 # Initial table creation
 create_tables()
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        'message': 'AMP Backend API is running',
+        'status': 'ok'
+    }), 200
+
 @app.route('/vehicle/brands', methods=['GET'])
 def get_brands():
     return jsonify(list(SUPPORTED_BRANDS.keys())), 200

@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from app.config.config import Config
@@ -13,6 +13,14 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     CORS(app, resources={r"/*": {"origins": "*"}})
+
+    # Root route
+    @app.route('/', methods=['GET'])
+    def index():
+        return jsonify({
+            'message': 'AMP Backend API is running',
+            'status': 'ok'
+        }), 200
 
     from app.routes.vehicle_routes import vehicle_bp
     from app.routes.user_routes import user_bp

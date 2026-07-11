@@ -1,31 +1,31 @@
-
-from app import app, db, User
 import requests
 
-with app.app_context():
-    # Teste 1: Criar usuário diretamente pelo banco
-    print("=== Teste 1: Criar usuário diretamente ===")
-    new_user = User(full_name="Teste User", email="teste@teste.com", password="123456")
-    db.session.add(new_user)
-    db.session.commit()
-    print("Usuário criado diretamente!")
-    
-    # Verificar
-    users = User.query.all()
-    print(f"Usuários no banco: {len(users)}")
-    for u in users:
-        print(f"  - {u.email}")
-    
-    # Teste 2: Usar o endpoint diretamente
-    print("\n=== Teste 2: Usar o endpoint /register ===")
-    try:
-        response = requests.post('http://localhost:5000/register', json={
-            'full_name': 'Teste User 2',
-            'email': 'teste2@teste.com',
-            'password': '123456'
-        })
-        print(f"Status: {response.status_code}")
-        print(f"Resposta: {response.json()}")
-    except Exception as e:
-        print(f"Erro: {e}")
+# Cloud backend URL
+CLOUD_API_URL = 'https://amp-project-back.onrender.com'
 
+print("=== Testes usando backend na nuvem ===")
+print(f"Backend: {CLOUD_API_URL}")
+
+# Teste 0: Root endpoint
+print("\n=== Teste 0: Endpoint raiz / ===")
+try:
+    response = requests.get(f'{CLOUD_API_URL}/')
+    print(f"Status: {response.status_code}")
+    print(f"Resposta: {response.json()}")
+except Exception as e:
+    print(f"Erro: {e}")
+
+# Teste 1: Usar o endpoint /register
+print("\n=== Teste 1: Usar o endpoint /register ===")
+try:
+    response = requests.post(f'{CLOUD_API_URL}/register', json={
+        'full_name': 'Teste User Cloud',
+        'email': 'testecloud@teste.com',
+        'password': '123456'
+    })
+    print(f"Status: {response.status_code}")
+    print(f"Resposta: {response.json()}")
+except Exception as e:
+    print(f"Erro: {e}")
+
+print("\n=== Testes finalizados ===")

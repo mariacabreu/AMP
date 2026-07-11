@@ -17,6 +17,78 @@ def get_vehicle_limit(plan_type):
     return PLAN_VEHICLE_LIMITS.get(plan_type, 1)
 
 
+@user_bp.route('/register', methods=['POST'])
+def register():
+    print("\n=== NOVO PEDIDO DE REGISTRO ===")
+    try:
+        data = request.get_json()
+        print(f"Dados recebidos: {data}")
+    except Exception as e:
+        print(f"Erro ao ler JSON: {e}")
+        return jsonify({'error': 'Erro ao processar dados JSON'}), 400
+        
+    if not data:
+        print("Erro: Nenhum dado recebido")
+        return jsonify({'error': 'Nenhum dado recebido'}), 400
+        
+    full_name = data.get('full_name')
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not all([full_name, email, password]):
+        missing = [k for k in ['full_name', 'email', 'password'] if not data.get(k)]
+        print(f"Erro: Campos ausentes: {missing}")
+        return jsonify({'error': f'Campos obrigatórios ausentes: {", ".join(missing)}'}), 400
+    
+    try:
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            if existing_user.password == password:
+                print(f"Usuário já existe (Login automático): {email}")
+                return jsonify({
+                    'message': 'Usuário já cadastrado, realizando login automático', 
+                    'user': existing_user.to_dict()
+                }), 200
+            else:
+                print(f"Erro: Email já cadastrado com outra senha: {email}")
+                return jsonify({'error': 'Este email já está cadastrado com outra senha'}), 400
+        
+        new_user = User(
+            full_name=full_name,
+            email=email,
+            password=password
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        print(f"Usuário criado com sucesso: {email}")
+        return jsonify({'message': 'Usuário registrado com sucesso', 'user': new_user.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro de banco de dados: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@user_bp.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({'error': 'Credenciais ausentes'}), 400
+    
+    user = User.query.filter_by(email=data['email'], password=data['password']).first()
+    
+    if user:
+        return jsonify({'message': 'Login realizado com sucesso', 'user': user.to_dict()}), 200
+    else:
+        return jsonify({'error': 'Email ou senha inválidos'}), 401
+
+
+@user_bp.route('/logout', methods=['POST'])
+def logout():
+    return jsonify({'message': 'Logout realizado com sucesso'}), 200
+
+
 @user_bp.route('/user/report/<int:user_id>', methods=['GET'])
 def get_user_report(user_id):
     user = User.query.get(user_id)
@@ -51,7 +123,7 @@ def get_user_status(user_id):
     status = {
         'user': user.to_dict(),
         'vehicle': vehicle.to_dict() if vehicle else None,
-        'recommendation': "Nenhuma recomendação no momento."
+        'recommendation': 'Nenhuma recomendação no momento.'
     }
 
     if vehicle:
@@ -124,4 +196,3 @@ def set_user_plan(user_id):
         'message': 'Plano atualizado com sucesso',
         'user': user.to_dict()
     }), 200
-
