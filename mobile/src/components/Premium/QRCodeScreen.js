@@ -7,6 +7,7 @@ import Header from '../Header/Header';
 
 const QRCodeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
+  const planType = route.params?.planType || 'mensal';
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const handleCopyCode = () => {
@@ -16,14 +17,14 @@ const QRCodeScreen = ({ navigation, route }) => {
   const handlePaymentConfirm = async () => {
     setShowPaymentModal(false);
     try {
-      const response = await axios.post(`${API_BASE_URL}/user/activate-premium/${loggedUser.id}`);
-      Alert.alert('Sucesso!', 'Premium ativado com sucesso!');
+      const response = await axios.post(`${API_BASE_URL}/user/set-plan/${loggedUser.id}`, { plan_type: planType });
+      Alert.alert('Sucesso!', `Plano ${planType} ativado com sucesso!`);
       navigation.navigate('Home', { 
         user: response.data.user 
       });
     } catch (error) {
-      console.error('Erro ao ativar premium:', error);
-      Alert.alert('Erro', 'Não foi possível ativar o premium. Tente novamente.');
+      console.error('Erro ao ativar plano:', error);
+      Alert.alert('Erro', 'Não foi possível ativar o plano. Tente novamente.');
     }
   };
 

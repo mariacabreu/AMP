@@ -16,15 +16,16 @@ import axios from 'axios';
 import API_BASE_URL from '../../api';
 import CustomDropdown from '../Vehicle/CustomDropDown';
 
-// Limites de veículos por plano (apenas planos premium podem adicionar mais de 1)
+// Limites de veículos por plano (igual ao backend)
 const PLAN_VEHICLE_LIMITS = {
+  free: 1,
+  mensal: 1,
   trimestral: 3,
   anual: 5
 };
 
 const getVehicleLimit = (planType) => {
-  if (!planType) return 0;
-  return PLAN_VEHICLE_LIMITS[planType.toLowerCase()] || 0;
+  return PLAN_VEHICLE_LIMITS[(planType || 'free').toLowerCase()] || 1;
 };
 
 const VehicleEditScreen = ({ navigation, route }) => {
@@ -78,8 +79,8 @@ const VehicleEditScreen = ({ navigation, route }) => {
   ];
 
   const vehicleLimit = getVehicleLimit(planType);
-  const canAddVehicle = isPremium && vehicleLimit > 0 && vehicles.length < vehicleLimit;
-  const isLockedPlan = !isPremium || (planType || '').toLowerCase() === 'mensal';
+  const canAddVehicle = vehicles.length < vehicleLimit;
+  const isLockedPlan = !isPremium || vehicleLimit <= 1;
 
   useEffect(() => {
     fetchUserPlan();

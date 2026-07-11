@@ -68,6 +68,7 @@ const getCardColors = (brand) => {
  */
 const CardPaymentScreen = ({ navigation, route, title }) => {
   const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
+  const planType = route.params?.planType || 'mensal';
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
@@ -91,12 +92,13 @@ const CardPaymentScreen = ({ navigation, route, title }) => {
 
   const handlePaymentConfirm = async () => {
     try {
-      // Call backend to activate premium
-      const response = await axios.post(`${API_BASE_URL}/user/activate-premium/${loggedUser.id}`);
+      // Call backend to set user's plan
+      const response = await axios.post(`${API_BASE_URL}/user/set-plan/${loggedUser.id}`, { plan_type: planType });
       // Navigate back to Home with updated user data
+      Alert.alert('Sucesso!', `Plano ${planType} ativado com sucesso!`);
       navigation.navigate('Home', { user: response.data.user });
     } catch (error) {
-      console.error('Error activating premium:', error);
+      console.error('Error activating plan:', error);
       Alert.alert('Erro', 'Ocorreu um erro ao confirmar o pagamento.');
     }
   };

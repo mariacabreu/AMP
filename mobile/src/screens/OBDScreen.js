@@ -209,9 +209,8 @@ const OBDScreen = ({ navigation, route }) => {
 
     setIsReading(true);
     try {
-      if (!connectionRef.current || Platform.OS !== 'android') {
-        useSimulatedData();
-        return;
+      if (!connectionRef.current) {
+        throw new Error('Não conectado a um dispositivo OBD');
       }
 
       let gotRealData = false;
@@ -247,12 +246,9 @@ const OBDScreen = ({ navigation, route }) => {
 
       if (gotRealData) {
         setLiveData(newData);
-      } else {
-        useSimulatedData();
       }
     } catch (err) {
       console.error('Erro ao ler dados OBD:', err);
-      useSimulatedData();
     } finally {
       setIsReading(false);
     }
@@ -261,33 +257,22 @@ const OBDScreen = ({ navigation, route }) => {
   const readDTCFromOBD = async () => {
     setIsLoadingDTC(true);
     try {
-      if (!connectionRef.current || Platform.OS !== 'android') {
-        setTimeout(() => {
-          const fallbackCodes = [
-            { code: 'P0300', description: 'Mau funcionamento do sistema de ignição aleatório/múltiplo', severity: 'high' },
-            { code: 'P0420', description: 'Eficiência do sistema de catalisador abaixo do limiar', severity: 'medium' }
-          ];
-          setDtcCodes(fallbackCodes);
-          saveOBDScanRecord(fallbackCodes);
-          setIsLoadingDTC(false);
-        }, 1500);
+      if (!connectionRef.current) {
+        Alert.alert('Erro', 'Não conectado a um dispositivo OBD');
         return;
       }
 
       const resp = await sendOBDCommand('03');
       let codes = [];
 
-      if (resp && !resp.includes('NO DATA')) {
-        codes = [
-          { code: 'P0300', description: 'Mau funcionamento do sistema de ignição aleatório/múltiplo', severity: 'high' }
-        ];
-      }
-
+      // TODO: Actually parse DTC codes from response
+      // For now, just show empty if no data
       setDtcCodes(codes);
       await saveOBDScanRecord(codes);
     } catch (err) {
       console.error('Erro ao ler DTCs:', err);
       setDtcCodes([]);
+      Alert.alert('Erro', 'Falha ao ler códigos de erro');
     } finally {
       setIsLoadingDTC(false);
     }
@@ -308,11 +293,8 @@ const OBDScreen = ({ navigation, route }) => {
   };
 
   const handleScanDevices = async () => {
-    if (Platform.OS === 'web' || Platform.OS === 'ios') {
-      setDeviceList([
-        { id: '1', name: 'OBDII ELM327 (Simulado)', address: '00:11:22:33:44:55' }
-      ]);
-      setIsScanning(false);
+    if (Platform.OS !== 'android') {
+      Alert.alert('Plataforma Não Suportada', 'A conexão com scanner OBD2 é suportada apenas em dispositivos Android.');
       return;
     }
 
@@ -330,11 +312,15 @@ const OBDScreen = ({ navigation, route }) => {
       if (BluetoothClassic) {
         const devices = await BluetoothClassic.getBondedDevices();
         console.log('Dispositivos pareados:', devices);
-        setDeviceList(devices.map(d => ({ id: d.address, name: d.name, address: d.address })));
+        // Filter only devices that look like OBD2/ELM327
+        const obdDevices = devices.filter(d => 
+          d.name && d.name.toLowerCase().includes('obd') || 
+          d.name && d.name.toLowerCase().includes('elm') ||
+          d.name && d.name.toLowerCase().includes('scan')
+        );
+        setDeviceList(obdDevices.map(d => ({ id: d.address, name: d.name, address: d.address })));
       } else {
-        setDeviceList([
-          { id: '1', name: 'OBDII ELM327 (Simulado)', address: '00:11:22:33:44:55' }
-        ]);
+        Alert.alert('Erro', 'Biblioteca de Bluetooth não disponível.');
       }
     } catch (err) {
       console.error('Erro ao buscar dispositivos:', err);
@@ -348,53 +334,20 @@ const OBDScreen = ({ navigation, route }) => {
     Alert.alert('Conectando', `Conectando a ${device.name}...`);
 
     try {
-      if (Platform.OS === 'android' && BluetoothClassic) {
-        const connection = await BluetoothClassic.connect(device.address);
-        connectionRef.current = connection;
+      const connection = await BluetoothClassic.connect(device.address);
+      connectionRef.current = connection;
 
-        await initializeOBDDevice();
+      await initializeOBDDevice();
 
-        setIsConnected(true);
-        setConnectedDevice(device);
-        setShowDashboard(true);
+      setIsConnected(true);
+      setConnectedDevice(device);
+      setShowDashboard(true);
 
-        intervalRef.current = setInterval(() => {
-          readLiveDataFromOBD();
-        }, 2000);
+      intervalRef.current = setInterval(() => {
+        readLiveDataFromOBD();
+      }, 2000);
 
-        Alert.alert('Conectado!', `Conectado com sucesso a ${device.name}`);
-      } else {
-        setIsConnected(true);
-        setConnectedDevice(device);
-        setShowDashboard(true);
-        Alert.alert('Conectado!', `Conectado com sucesso a ${device.name} (Modo Simulado)`);
-
-        intervalRef.current = setInterval(() => {
-          setLiveData({
-            rpm: Math.floor(700 + Math.random() * 2000),
-            speed: Math.floor(Math.random() * 120),
-            coolantTemp: Math.floor(80 + Math.random() * 20),
-            fuelLevel: Math.floor(30 + Math.random() * 70),
-            batteryVoltage: parseFloat((12 + Math.random() * 2.5).toFixed(1)),
-            engineLoad: Math.floor(Math.random() * 100),
-            airIntakeTemp: Math.floor(20 + Math.random() * 30),
-            throttlePosition: Math.floor(Math.random() * 100),
-            fuelPressure: parseFloat((6 + Math.random() * 4).toFixed(1)),
-            intakeManifoldPressure: Math.floor(30 + Math.random() * 100),
-            oilTemp: Math.floor(80 + Math.random() * 40),
-            oilPressure: parseFloat((2 + Math.random() * 4).toFixed(1)),
-            lambda: parseFloat((0.9 + Math.random() * 0.2).toFixed(2)),
-            maf: parseFloat((1 + Math.random() * 5).toFixed(1)),
-            timingAdvance: Math.floor(-10 + Math.random() * 40),
-            egr: Math.floor(Math.random() * 50),
-            evapSystemVaporPressure: Math.floor(Math.random() * 100),
-            fuelTrimShort: parseFloat((-10 + Math.random() * 20).toFixed(1)),
-            fuelTrimLong: parseFloat((-10 + Math.random() * 20).toFixed(1)),
-            catalystTemp: Math.floor(300 + Math.random() * 400),
-            ambientTemp: Math.floor(15 + Math.random() * 30)
-          });
-        }, 2000);
-      }
+      Alert.alert('Conectado!', `Conectado com sucesso a ${device.name}`);
     } catch (err) {
       console.error('Erro ao conectar:', err);
       Alert.alert(

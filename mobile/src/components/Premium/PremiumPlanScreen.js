@@ -117,6 +117,7 @@ const PremiumPlanScreen = ({ navigation, route }) => {
       id: 1,
       title: 'Plano Mensal',
       price: '19,99',
+      planType: 'mensal',
       benefits: [
         { text: 'Sem anúncios', icon: 'advertisements-off' },
         { text: 'Planejamento de viagens', icon: 'map-marker-path' },
@@ -132,6 +133,7 @@ const PremiumPlanScreen = ({ navigation, route }) => {
       id: 2,
       title: 'Plano Trimestral',
       price: '56,99',
+      planType: 'trimestral',
       benefits: [
         { text: 'Sem anúncios', icon: 'advertisements-off' },
         { text: 'Planejamento de viagens', icon: 'map-marker-path' },
@@ -147,6 +149,7 @@ const PremiumPlanScreen = ({ navigation, route }) => {
       id: 3,
       title: 'Plano Anual',
       price: '215,99',
+      planType: 'anual',
       benefits: [
         { text: 'Tudo dos outros planos', icon: 'all-inclusive' },
         { text: 'Cadastro de até 5 veículos', icon: 'car-multiple' },
@@ -227,7 +230,7 @@ const PremiumPlanScreen = ({ navigation, route }) => {
 
               <TouchableOpacity 
                 style={styles.subscribeButton}
-                onPress={() => navigation.navigate('PaymentMethods', { user: loggedUser })}
+                onPress={() => navigation.navigate('PaymentMethods', { user: loggedUser, planType: plan.planType })}
               >
                 <Text style={styles.subscribeButtonText}>{plan.buttonText}</Text>
               </TouchableOpacity>

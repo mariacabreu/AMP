@@ -41,8 +41,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "6795f3dc-6aa8-4702-8fc9-21450040abdb"
+        "projectId": "d27b1585-50a7-46d4-898e-2f2451ce99a9"
       }
-    }
+    },
+    "owner": "ampproject"
   }
 }
