@@ -17,16 +17,47 @@ import axios from 'axios';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
 
+const OBD_CONNECTION_OPTIONS = {
+  connectorType: 'rfcomm',
+  connectionType: 'delimited',
+  delimiter: '>',
+  charset: 'utf-8',
+  readSize: 2048,
+  secureSocket: false,
+};
+
+const DTC_SYSTEM_MAP = ['P', 'C', 'B', 'U'];
+const DTC_DESCRIPTION_MAP = {
+  P0100: 'Falha no circuito do sensor MAF',
+  P0101: 'Faixa/desempenho incorreto no sensor MAF',
+  P0102: 'Sinal baixo no sensor MAF',
+  P0103: 'Sinal alto no sensor MAF',
+  P0104: 'Falha intermitente no sensor de fluxo de ar (MAF)',
+  P0110: 'Falha no circuito do sensor de temperatura do ar de admissão',
+  P0113: 'Sinal alto no sensor de temperatura do ar de admissão',
+  P0120: 'Falha no circuito do sensor de posição da borboleta',
+  P0130: 'Falha no circuito da sonda lambda (banco 1, sensor 1)',
+  P0171: 'Mistura pobre detectada no banco 1',
+  P0300: 'Falhas de ignição aleatórias detectadas',
+  P0301: 'Falha de ignição detectada no cilindro 1',
+  P0302: 'Falha de ignição detectada no cilindro 2',
+  P0303: 'Falha de ignição detectada no cilindro 3',
+  P0304: 'Falha de ignição detectada no cilindro 4',
+  P0420: 'Eficiência do catalisador abaixo do limite',
+};
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Bluetooth is only available on Android, skip on web/iOS
 const BluetoothClassic = (() => {
   if (Platform.OS !== 'android') {
     return null;
   }
   try {
-    const module = require('expo-bluetooth-classic');
+    const module = require('react-native-bluetooth-classic');
     return module.default || module;
   } catch (e) {
-    console.log('expo-bluetooth-classic not available:', e.message);
+    console.log('react-native-bluetooth-classic not available:', e.message);
     return null;
   }
 })();
@@ -43,6 +74,7 @@ const OBDScreen = ({ navigation, route }) => {
   const [isReading, setIsReading] = useState(false);
   const intervalRef = useRef(null);
   const connectionRef = useRef(null);
+  const commandQueueRef = useRef(Promise.resolve());
 
   const [liveData, setLiveData] = useState({
     rpm: 0,
@@ -74,6 +106,14 @@ const OBDScreen = ({ navigation, route }) => {
     fetchVehicleData();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
   const fetchVehicleData = async () => {
     try {
       const userId = loggedUser?.id || 1;
@@ -89,11 +129,14 @@ const OBDScreen = ({ navigation, route }) => {
   const requestBluetoothPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        ]);
+        const permissions = Platform.Version >= 31
+          ? [
+              PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+              PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+            ]
+          : [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
+
+        const granted = await PermissionsAndroid.requestMultiple(permissions);
 
         const allGranted = Object.values(granted).every(
           (status) => status === PermissionsAndroid.RESULTS.GRANTED
@@ -108,73 +151,214 @@ const OBDScreen = ({ navigation, route }) => {
     return true;
   };
 
-  const sendOBDCommand = async (command) => {
+  const normalizeElmResponse = (response, command = '') => {
+    const commandUpper = command.toUpperCase().replace(/\s+/g, '');
+
+    return String(response || '')
+      .replace(/\0/g, '')
+      .replace(/\r/g, '\n')
+      .replace(/>/g, '\n')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => line.toUpperCase().replace(/\s+/g, '') !== commandUpper)
+      .join(' ')
+      .trim();
+  };
+
+  const extractResponseBytes = (response, expectedMode) => {
+    const normalized = normalizeElmResponse(response).toUpperCase();
+    const compactHex = normalized.replace(/[^0-9A-F]/g, '');
+
+    if (compactHex.length < 2) {
+      return null;
+    }
+
+    const bytes = [];
+    for (let index = 0; index < compactHex.length - 1; index += 2) {
+      bytes.push(parseInt(compactHex.slice(index, index + 2), 16));
+    }
+
+    if (bytes.length === 0) {
+      return null;
+    }
+
+    const responseStartIndex = bytes.findIndex((byte) => byte === expectedMode);
+    if (responseStartIndex === -1) {
+      return null;
+    }
+
+    return bytes.slice(responseStartIndex);
+  };
+
+  const getGenericDTCDescription = (code) => {
+    if (code.startsWith('P')) {
+      return 'Falha detectada no conjunto motor/cambio.';
+    }
+    if (code.startsWith('C')) {
+      return 'Falha detectada no sistema de chassis.';
+    }
+    if (code.startsWith('B')) {
+      return 'Falha detectada no sistema de carroceria.';
+    }
+    if (code.startsWith('U')) {
+      return 'Falha detectada na rede de comunicacao do veiculo.';
+    }
+
+    return 'Falha OBD-II detectada.';
+  };
+
+  const getDTCSeverity = (code) => {
+    if (/^P0(3|2|1)/.test(code) || code === 'P0420') {
+      return 'high';
+    }
+
+    return 'medium';
+  };
+
+  const decodeDTCBytes = (firstByte, secondByte) => {
+    if (firstByte === 0 && secondByte === 0) {
+      return null;
+    }
+
+    const system = DTC_SYSTEM_MAP[(firstByte & 0xC0) >> 6] || 'P';
+    const code = [
+      system,
+      ((firstByte & 0x30) >> 4).toString(),
+      (firstByte & 0x0F).toString(16).toUpperCase(),
+      ((secondByte & 0xF0) >> 4).toString(16).toUpperCase(),
+      (secondByte & 0x0F).toString(16).toUpperCase(),
+    ].join('');
+
+    return {
+      code,
+      description: DTC_DESCRIPTION_MAP[code] || getGenericDTCDescription(code),
+      severity: getDTCSeverity(code),
+    };
+  };
+
+  const parseDTCResponse = (response) => {
+    const bytes = extractResponseBytes(response, 0x43);
+    if (!bytes || bytes.length < 2) {
+      return [];
+    }
+
+    const dtcPayload = bytes.slice(1);
+    if (dtcPayload.length === 0 || dtcPayload.every((byte) => byte === 0)) {
+      return [];
+    }
+
+    const dtcList = [];
+
+    for (let index = 0; index < dtcPayload.length; index += 2) {
+      const firstByte = dtcPayload[index];
+      const secondByte = dtcPayload[index + 1] ?? 0;
+      const decoded = decodeDTCBytes(firstByte, secondByte);
+
+      if (decoded) {
+        dtcList.push(decoded);
+      }
+    }
+
+    return dtcList;
+  };
+
+  const sendOBDCommand = async (command, options = {}) => {
     if (!connectionRef.current || !BluetoothClassic) {
       throw new Error('Não conectado a nenhum dispositivo');
     }
 
-    try {
-      await connectionRef.current.write(command + '\r\n');
-      await new Promise(r => setTimeout(r, 400));
+    const {
+      clearBuffer = true,
+      waitAfterWriteMs = 250,
+      readAttempts = 3,
+    } = options;
 
-      let response = '';
+    const normalizedCommand = command.replace(/\s+/g, '').toUpperCase();
+
+    const runCommand = async () => {
       try {
-        response = await connectionRef.current.read();
-      } catch (readErr) {
-        console.error('Erro ao ler resposta:', readErr);
-        return '';
-      }
+        if (clearBuffer) {
+          await connectionRef.current.clear().catch(() => false);
+        }
 
-      console.log(`Comando ${command} resposta:`, response);
-      return response.trim();
-    } catch (err) {
-      console.error(`Erro no comando ${command}:`, err);
-      throw err;
-    }
+        await connectionRef.current.write(`${normalizedCommand}\r`, 'utf-8');
+        await delay(waitAfterWriteMs);
+
+        let response = '';
+        for (let attempt = 0; attempt < readAttempts; attempt += 1) {
+          const chunk = await connectionRef.current.read().catch(() => '');
+          if (chunk) {
+            response = `${response}\n${chunk}`.trim();
+          }
+
+          const remainingMessages = await connectionRef.current.available().catch(() => 0);
+          if (remainingMessages <= 0) {
+            break;
+          }
+
+          await delay(120);
+        }
+
+        const cleanedResponse = normalizeElmResponse(response, normalizedCommand);
+        console.log(`Comando ${normalizedCommand} resposta:`, cleanedResponse || response);
+        return cleanedResponse;
+      } catch (err) {
+        console.error(`Erro no comando ${normalizedCommand}:`, err);
+        throw err;
+      }
+    };
+
+    const queuedCommand = commandQueueRef.current
+      .catch(() => undefined)
+      .then(runCommand);
+
+    commandQueueRef.current = queuedCommand.catch(() => undefined);
+
+    return queuedCommand;
   };
 
-  const parseOBDResponse = (response) => {
+  const parseOBDResponse = (response, expectedMode = 0x41) => {
     if (!response || response.includes('NO DATA') || response.includes('?')) {
       return null;
     }
 
-    const hexData = response.replace(/[^0-9A-Fa-f]/g, '');
-    if (hexData.length < 4) return null;
-
-    const bytes = [];
-    for (let i = 0; i < hexData.length; i += 2) {
-      bytes.push(parseInt(hexData.substr(i, 2), 16));
-    }
-
-    return bytes;
+    return extractResponseBytes(response, expectedMode);
   };
 
   const initializeOBDDevice = async () => {
     try {
       console.log('Inicializando ELM327...');
-      
+
       const initCommands = [
         'ATZ',
         'ATE0',
         'ATL0',
-        'ATS1',
+        'ATS0',
+        'ATH0',
         'ATSP0',
         'ATST32',
-        'ATAT1'
+        'ATAT1',
       ];
 
       for (const cmd of initCommands) {
         try {
-          await sendOBDCommand(cmd);
-          await new Promise(r => setTimeout(r, cmd === 'ATZ' ? 2500 : 400));
+          await sendOBDCommand(cmd, {
+            waitAfterWriteMs: cmd === 'ATZ' ? 1800 : 300,
+            readAttempts: cmd === 'ATZ' ? 5 : 3,
+          });
+          await delay(cmd === 'ATZ' ? 1200 : 200);
         } catch (err) {
           console.log(`Comando ${cmd} falhou, continuando...`);
         }
       }
 
       try {
-        await sendOBDCommand('0100');
-        await new Promise(r => setTimeout(r, 1000));
+        await sendOBDCommand('0100', {
+          waitAfterWriteMs: 450,
+          readAttempts: 4,
+        });
+        await delay(300);
       } catch (err) {
         console.log('0100 falhou, mas continuando');
       }
@@ -218,17 +402,20 @@ const OBDScreen = ({ navigation, route }) => {
 
       const readPid = async (cmd, parser) => {
         try {
-          const resp = await sendOBDCommand(cmd);
+          const resp = await sendOBDCommand(cmd, {
+            waitAfterWriteMs: 300,
+            readAttempts: 3,
+          });
           const bytes = parseOBDResponse(resp);
-          if (bytes) {
-            const val = parser(bytes);
-            if (val !== null && val !== undefined) {
-              newData[Object.keys(parser)[0]] = val;
+          if (bytes && bytes.length >= 3) {
+            const parsedValues = parser(bytes);
+            if (parsedValues && typeof parsedValues === 'object') {
+              Object.assign(newData, parsedValues);
               gotRealData = true;
             }
           }
         } catch (err) {
-          console.log(`Erro ao ler PID ${cmd}`);
+          console.log(`Erro ao ler PID ${cmd}:`, err?.message || err);
         }
       };
 
@@ -262,11 +449,12 @@ const OBDScreen = ({ navigation, route }) => {
         return;
       }
 
-      const resp = await sendOBDCommand('03');
-      let codes = [];
+      const resp = await sendOBDCommand('03', {
+        waitAfterWriteMs: 500,
+        readAttempts: 4,
+      });
+      const codes = parseDTCResponse(resp);
 
-      // TODO: Actually parse DTC codes from response
-      // For now, just show empty if no data
       setDtcCodes(codes);
       await saveOBDScanRecord(codes);
     } catch (err) {
@@ -307,6 +495,15 @@ const OBDScreen = ({ navigation, route }) => {
       return;
     }
 
+    try {
+      const bluetoothEnabled = await BluetoothClassic?.isBluetoothEnabled?.();
+      if (!bluetoothEnabled) {
+        await BluetoothClassic?.requestBluetoothEnabled?.();
+      }
+    } catch (err) {
+      console.log('Não foi possível solicitar ativação do Bluetooth:', err?.message || err);
+    }
+
     setIsScanning(true);
     setDeviceList([]);
 
@@ -314,13 +511,27 @@ const OBDScreen = ({ navigation, route }) => {
       if (BluetoothClassic) {
         const devices = await BluetoothClassic.getBondedDevices();
         console.log('Dispositivos encontrados:', devices);
-        // Filter only devices that look like OBD2/ELM327
-        const obdDevices = devices.filter(d => 
-          d.name && d.name.toLowerCase().includes('obd') || 
-          d.name && d.name.toLowerCase().includes('elm') ||
-          d.name && d.name.toLowerCase().includes('scan')
+        const looksLikeOBD = (name = '') => {
+          const normalizedName = name.toLowerCase();
+          return normalizedName.includes('obd')
+            || normalizedName.includes('elm')
+            || normalizedName.includes('scan')
+            || normalizedName.includes('v-link')
+            || normalizedName.includes('vlink');
+        };
+
+        const prioritizedDevices = [
+          ...devices.filter((device) => looksLikeOBD(device.name)),
+          ...devices.filter((device) => !looksLikeOBD(device.name)),
+        ];
+
+        setDeviceList(
+          prioritizedDevices.map((device) => ({
+            id: device.address,
+            name: device.name || 'Dispositivo sem nome',
+            address: device.address,
+          }))
         );
-        setDeviceList(obdDevices.map(d => ({ id: d.address, name: d.name, address: d.address })));
       } else {
         Alert.alert('Erro', 'Biblioteca de Bluetooth não disponível.');
       }
@@ -336,14 +547,21 @@ const OBDScreen = ({ navigation, route }) => {
     Alert.alert('Conectando', `Conectando a ${device.name}...`);
 
     try {
-      const connection = await BluetoothClassic.connect(device.address);
+      const connection = await BluetoothClassic.connectToDevice(device.address, OBD_CONNECTION_OPTIONS);
       connectionRef.current = connection;
 
-      await initializeOBDDevice();
+      const initialized = await initializeOBDDevice();
+      if (!initialized) {
+        throw new Error('Falha ao inicializar o ELM327');
+      }
 
       setIsConnected(true);
       setConnectedDevice(device);
       setShowDashboard(true);
+
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
 
       intervalRef.current = setInterval(() => {
         readLiveDataFromOBD();
