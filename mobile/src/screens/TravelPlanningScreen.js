@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import BottomNav from '../components/NavBar/BottomNav';
 
 export default function TravelPlanningScreen(props) {
@@ -22,6 +23,7 @@ export default function TravelPlanningScreen(props) {
   const [duration, setDuration] = useState('');
   const [mapPreviewUrl, setMapPreviewUrl] = useState('');
   const [mapEmbedHtml, setMapEmbedHtml] = useState('');
+  const [routeCoordinates, setRouteCoordinates] = useState([]); // NEW: store route coordinates for native map
   const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
   const [loading, setLoading] = useState(true);
 
@@ -527,17 +529,22 @@ export default function TravelPlanningScreen(props) {
         throw new Error('Rota não encontrada');
       }
 
+      // Store route coordinates for native map!
+      const geoJsonCoords = routeData.geometry?.coordinates || [];
+      const nativeCoords = geoJsonCoords.map(([lon, lat]) => ({ latitude: lat, longitude: lon }));
+      setRouteCoordinates(nativeCoords);
+
       setDistance(formatDistance(routeData.distance));
       setDuration(formatDuration(routeData.duration));
       setMapPreviewUrl(buildStaticMapUrl(
         origin,
         selectedDestination,
-        routeData.geometry?.coordinates || []
+        geoJsonCoords
       ));
       setMapEmbedHtml(buildMapEmbedHtml(
         origin,
         selectedDestination,
-        routeData.geometry?.coordinates || []
+        geoJsonCoords
       ));
       setRouteStatus('Rota calculada com sucesso');
     } catch (error) {
@@ -546,6 +553,7 @@ export default function TravelPlanningScreen(props) {
       setDuration('');
       setMapPreviewUrl('');
       setMapEmbedHtml('');
+      setRouteCoordinates([]);
       setRouteStatus('Não foi possível obter a rota pela API no momento');
       Alert.alert('Erro', 'Não foi possível calcular a rota e a distância');
     } finally {
@@ -655,46 +663,106 @@ export default function TravelPlanningScreen(props) {
         <Text style={styles.subtitle}>Planeje a sua viagem com segurança.</Text>
 
         <View style={styles.mapContainer}>
-            {(Platform.OS === 'web' ? mapEmbedHtml : mapPreviewUrl) ? (
-              <View style={styles.mapPreviewWrapper}>
-                {Platform.OS === 'web' ? (
-                  <iframe
-                    title="Mapa da rota"
-                    srcDoc={mapEmbedHtml}
-                    style={styles.mapIframe}
-                  />
+            {(() => {
+              const origin = selectedStartLocation || currentLocation;
+              const hasRouteData = origin && selectedDestination;
+              
+              if (Platform.OS === 'web') {
+                return mapEmbedHtml ? (
+                  <View style={styles.mapPreviewWrapper}>
+                    <iframe
+                      title="Mapa da rota"
+                      srcDoc={mapEmbedHtml}
+                      style={styles.mapIframe}
+                    />
+                    <View style={styles.mapOverlay}>
+                      <View style={styles.routeBadge}>
+                        <Text style={styles.routeBadgeText}>{distance}</Text>
+                        {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
+                      </View>
+                      <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
+                        <MaterialIcons name="open-in-new" size={18} color="#FFF" />
+                        <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 ) : (
-                  <Image
-                    source={{ uri: mapPreviewUrl }}
-                    style={styles.mapImage}
-                    resizeMode="cover"
-                  />
-                )}
-                <View style={styles.mapOverlay}>
-                  <View style={styles.routeBadge}>
-                    <Text style={styles.routeBadgeText}>{distance}</Text>
-                    {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
+                  <View style={styles.mapPlaceholder}>
+                    <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
+                    <Text style={styles.mapText}>{routeStatus}</Text>
+                    {currentLocation && (
+                      <View style={styles.locationInfoContainer}>
+                        <MaterialIcons name="my-location" size={20} color="#4CAF50" />
+                        <Text style={styles.locationInfo}>
+                          {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
-                    <MaterialIcons name="open-in-new" size={18} color="#FFF" />
-                    <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.mapPlaceholder}>
-                <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
-                <Text style={styles.mapText}>{routeStatus}</Text>
-                {currentLocation && (
-                  <View style={styles.locationInfoContainer}>
-                    <MaterialIcons name="my-location" size={20} color="#4CAF50" />
-                    <Text style={styles.locationInfo}>
-                      {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
+                );
+              } else {
+                // For native (Android/iOS): use react-native-maps
+                if (hasRouteData) {
+                  // Get coordinates for region
+                  const coords = origin;
+                  const dest = selectedDestination;
+                  const midLat = (coords.latitude + dest.latitude) / 2;
+                  const midLon = (coords.longitude + dest.longitude) / 2;
+                  const latDelta = Math.abs(coords.latitude - dest.latitude) * 1.5 + 0.01;
+                  const lonDelta = Math.abs(coords.longitude - dest.longitude) * 1.5 + 0.01;
+                  
+                  return (
+                    <View style={styles.mapPreviewWrapper}>
+                      <MapView
+                        style={styles.mapImage}
+                        initialRegion={{
+                          latitude: midLat,
+                          longitude: midLon,
+                          latitudeDelta: latDelta,
+                          longitudeDelta: lonDelta,
+                        }}
+                      >
+                        <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
+                        <Marker coordinate={dest} title="Destino" pinColor="#FF5722" />
+                        {routeCoordinates.length > 0 && (
+                          <Polyline
+                            coordinates={routeCoordinates}
+                            strokeColor="#1f6feb"
+                            strokeWidth={5}
+                          />
+                        )}
+                      </MapView>
+                      <View style={styles.mapOverlay}>
+                        <View style={styles.routeBadge}>
+                          <Text style={styles.routeBadgeText}>{distance}</Text>
+                          {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
+                        </View>
+                        <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
+                          <MaterialIcons name="open-in-new" size={18} color="#FFF" />
+                          <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                } else {
+                  // Placeholder
+                  return (
+                    <View style={styles.mapPlaceholder}>
+                      <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
+                      <Text style={styles.mapText}>{routeStatus}</Text>
+                      {currentLocation && (
+                        <View style={styles.locationInfoContainer}>
+                          <MaterialIcons name="my-location" size={20} color="#4CAF50" />
+                          <Text style={styles.locationInfo}>
+                            {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                }
+              }
+            })()}
           </View>
 
         <View style={styles.formContainer}>

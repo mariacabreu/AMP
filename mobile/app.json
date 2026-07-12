@@ -47,7 +47,9 @@
     "owner": "ampproject",
     "plugins": [
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-bluetooth-classic",
+      "react-native-maps"
     ]
   }
 }
