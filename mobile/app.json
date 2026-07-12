@@ -34,7 +34,7 @@
         "projectId": "d27b1585-50a7-46d4-898e-2f2451ce99a9"
       }
     },
-    "owner": "ampproject",
+    "owner": "ampp",
     "plugins": [
       "expo-font",
       "@react-native-community/datetimepicker",
