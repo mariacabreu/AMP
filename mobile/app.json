@@ -18,21 +18,17 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "BLUETOOTH",
-        "BLUETOOTH_ADMIN",
-        "BLUETOOTH_SCAN",
-        "BLUETOOTH_CONNECT",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "READ_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.anonymous.ampmobile"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "d27b1585-50a7-46d4-898e-2f2451ce99a9"
-      }
     },
     "owner": "ampp",
     "plugins": [
@@ -50,6 +46,11 @@
           "googleMapsApiKey": "AIzaSyC5Y2D1lq5Z0e4p9r2X7v4Y9w3Q1a2Z0x"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "47f42b23-b393-40fa-9398-f3978edcc045"
+      }
+    }
   }
 }
