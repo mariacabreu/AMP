@@ -34,6 +34,14 @@ def migrate():
         print("phone column added successfully!")
     else:
         print("phone column already exists.")
+
+    if 'avatar' not in user_columns:
+        print("Adding avatar column to user table...")
+        cursor.execute("ALTER TABLE user ADD COLUMN avatar TEXT")
+        conn.commit()
+        print("avatar column added successfully!")
+    else:
+        print("avatar column already exists.")
     
     # Check if obd_scan table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='obd_scan'")
