@@ -21,6 +21,11 @@ export default function TravelPlanningScreen(props) {
   const [distance, setDistance] = useState('0.0 KM');
   const [duration, setDuration] = useState('');
   const [mapEmbedHtml, setMapEmbedHtml] = useState('');
+<<<<<<< HEAD:mobile/src/screens/TravelPlanningScreen.web.js
+=======
+  const [routeCoordinates, setRouteCoordinates] = useState([]); // Para mapa nativo: array de {latitude, longitude}
+  const [mapRegion, setMapRegion] = useState(null); // Região inicial do mapa
+>>>>>>> 3ee329dc020709c378f195bda3516d107a842e9e:mobile/src/screens/TravelPlanningScreen.js
   const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
   const [loading, setLoading] = useState(true);
 
@@ -39,6 +44,7 @@ export default function TravelPlanningScreen(props) {
     return `${minutes} min`;
   };
 
+<<<<<<< HEAD:mobile/src/screens/TravelPlanningScreen.web.js
   const buildMapEmbedHtml = (origin, destination, geoJsonCoords = []) => {
     const leafletCoords = (geoJsonCoords || []).map(([lon, lat]) => [lat, lon]);
     const safeRouteCoordinates = leafletCoords.length > 1
@@ -47,55 +53,113 @@ export default function TravelPlanningScreen(props) {
           [origin.latitude, origin.longitude],
           [destination.latitude, destination.longitude],
         ];
+=======
+  const simplifyRouteCoordinates = (coordinates, maxPoints = 24) => {
+    try {
+      console.log('simplifyRouteCoordinates called with:', coordinates?.length);
+      if (!Array.isArray(coordinates) || coordinates.length <= maxPoints) {
+        return coordinates || [];
+      }
 
-    return `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <link
-            rel="stylesheet"
-            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-            crossorigin=""
-          />
-          <style>
-            html, body, #map {
-              margin: 0;
-              padding: 0;
-              width: 100%;
-              height: 100%;
-              font-family: Arial, sans-serif;
-            }
-          </style>
-        </head>
-        <body>
-          <div id="map"></div>
-          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
-          <script>
-            const map = L.map('map', { zoomControl: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              maxZoom: 19,
-              attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
+      const step = Math.max(1, Math.ceil(coordinates.length / maxPoints));
+      const simplified = coordinates.filter((_, index) => index % step === 0);
+      const lastCoordinate = coordinates[coordinates.length - 1];
 
-            const routeCoordinates = ${JSON.stringify(safeRouteCoordinates)};
-            const routeLine = L.polyline(routeCoordinates, {
-              color: '#1f6feb',
-              weight: 5,
-              opacity: 0.85
-            }).addTo(map);
+      if (simplified[simplified.length - 1] !== lastCoordinate) {
+        simplified.push(lastCoordinate);
+      }
 
-            L.marker([${origin.latitude}, ${origin.longitude}]).addTo(map).bindPopup('Origem');
-            L.marker([${destination.latitude}, ${destination.longitude}]).addTo(map).bindPopup('Destino');
-            map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
-          </script>
-        </body>
-      </html>
-    `;
+      console.log('simplifyRouteCoordinates returning:', simplified.length);
+      return simplified;
+    } catch (err) {
+      console.error('Error in simplifyRouteCoordinates:', err);
+      return [];
+    }
+  };
+
+  const buildStaticMapUrl = (origin, destination, routeCoordinates = []) => {
+    try {
+      console.log('buildStaticMapUrl called with:', { origin, destination, routeCoordinatesLength: routeCoordinates.length });
+      const simplifiedCoordinates = simplifyRouteCoordinates(routeCoordinates);
+      const pathSegments = simplifiedCoordinates.length > 1
+        ? simplifiedCoordinates.map(([longitude, latitude]) => `${latitude},${longitude}`).join('|')
+        : `${origin.latitude},${origin.longitude}|${destination.latitude},${destination.longitude}`;
+
+      const url = `https://staticmap.openstreetmap.de/staticmap.php?size=800x420&markers=${origin.latitude},${origin.longitude},lightblue1|${destination.latitude},${destination.longitude},red-pushpin&path=${encodeURIComponent(`weight:4|color:0x1f6febff|${pathSegments}`)}`;
+      console.log('buildStaticMapUrl returning:', url);
+      return url;
+    } catch (err) {
+      console.error('Error in buildStaticMapUrl:', err);
+      return '';
+    }
+  };
+
+  const buildMapEmbedHtml = (origin, destination, routeCoordinates = []) => {
+    try {
+      console.log('buildMapEmbedHtml called');
+      const leafletCoordinates = (routeCoordinates || []).map(([longitude, latitude]) => [latitude, longitude]);
+      const safeRouteCoordinates = leafletCoordinates.length > 1
+        ? leafletCoordinates
+        : [
+            [origin.latitude, origin.longitude],
+            [destination.latitude, destination.longitude],
+          ];
+>>>>>>> 3ee329dc020709c378f195bda3516d107a842e9e:mobile/src/screens/TravelPlanningScreen.js
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <link
+              rel="stylesheet"
+              href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+              crossorigin=""
+            />
+            <style>
+              html, body, #map {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                font-family: Arial, sans-serif;
+              }
+            </style>
+          </head>
+          <body>
+            <div id="map"></div>
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+              integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+              crossorigin=""></script>
+            <script>
+              const map = L.map('map', { zoomControl: false });
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+              }).addTo(map);
+
+              const routeCoordinates = ${JSON.stringify(safeRouteCoordinates)};
+              const routeLine = L.polyline(routeCoordinates, {
+                color: '#1f6feb',
+                weight: 5,
+                opacity: 0.85
+              }).addTo(map);
+
+              L.marker([${origin.latitude}, ${origin.longitude}]).addTo(map).bindPopup('Origem');
+              L.marker([${destination.latitude}, ${destination.longitude}]).addTo(map).bindPopup('Destino');
+              map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+            </script>
+          </body>
+        </html>
+      `;
+      console.log('buildMapEmbedHtml returning html');
+      return html;
+    } catch (err) {
+      console.error('Error in buildMapEmbedHtml:', err);
+      return '';
+    }
   };
 
   const openRouteInMap = async () => {
@@ -335,6 +399,14 @@ export default function TravelPlanningScreen(props) {
       };
 
       setCurrentLocation(coords);
+      // Define a região inicial do mapa centrada na localização atual
+      setMapRegion({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+      
       const label = await fetchLocationLabel(coords);
       console.log('✅ Setting startLocation to:', label);
       setStartLocation(label);
@@ -351,6 +423,14 @@ export default function TravelPlanningScreen(props) {
       longitude: -46.6333,
     };
     setCurrentLocation(fallbackCoords);
+    // Define a região inicial do mapa com a localização padrão
+    setMapRegion({
+      latitude: fallbackCoords.latitude,
+      longitude: fallbackCoords.longitude,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+    
     let label = 'São Paulo, SP (localização padrão)';
     try {
       const fallbackLabel = await fetchLocationLabel(fallbackCoords);
@@ -448,7 +528,9 @@ export default function TravelPlanningScreen(props) {
   };
 
   const handleCalculateDistance = async () => {
+    console.log('handleCalculateDistance starting...');
     const origin = selectedStartLocation || currentLocation;
+    console.log('Origin:', origin);
 
     if (!origin) {
       Alert.alert('Aviso', 'Aguardando localização de partida...');
@@ -466,10 +548,13 @@ export default function TravelPlanningScreen(props) {
     }
 
     try {
+      console.log('Setting loading to true...');
       setLoading(true);
       setRouteStatus('Calculando rota...');
+      console.log('Selected destination:', selectedDestination);
 
       const routeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${selectedDestination.longitude},${selectedDestination.latitude}?overview=full&geometries=geojson&steps=false`;
+      console.log('Fetching from URL:', routeUrl);
       const response = await fetch(routeUrl, {
         headers: {
           Accept: 'application/json',
@@ -477,31 +562,81 @@ export default function TravelPlanningScreen(props) {
         },
       });
 
+      console.log('Response status:', response.status);
       if (!response.ok) {
         throw new Error(`Falha ao calcular rota: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('OSRM response data:', JSON.stringify(data, null, 2));
       const routeData = data.routes?.[0];
 
       if (!routeData) {
         throw new Error('Rota não encontrada');
       }
+      console.log('Route data found:', routeData);
 
+<<<<<<< HEAD:mobile/src/screens/TravelPlanningScreen.web.js
       const geoJsonCoords = routeData.geometry?.coordinates || [];
       setMapEmbedHtml(buildMapEmbedHtml(origin, selectedDestination, geoJsonCoords));
+=======
+      // Convert GeoJSON ([lon, lat]) to native map coordinates ({latitude, longitude})
+      const geoJsonCoords = routeData.geometry?.coordinates || [];
+      const nativeCoords = geoJsonCoords.map(([lon, lat]) => ({ latitude: lat, longitude: lon }));
+      setRouteCoordinates(nativeCoords);
+      console.log('Native map coordinates length:', nativeCoords.length);
+>>>>>>> 3ee329dc020709c378f195bda3516d107a842e9e:mobile/src/screens/TravelPlanningScreen.js
 
+      // Calculate map region that fits both origin and destination
+      const minLat = Math.min(origin.latitude, selectedDestination.latitude);
+      const maxLat = Math.max(origin.latitude, selectedDestination.latitude);
+      const minLon = Math.min(origin.longitude, selectedDestination.longitude);
+      const maxLon = Math.max(origin.longitude, selectedDestination.longitude);
+
+      const midLat = (minLat + maxLat) / 2;
+      const midLon = (minLon + maxLon) / 2;
+      const latDelta = (maxLat - minLat) * 1.5 + 0.01;
+      const lonDelta = (maxLon - minLon) * 1.5 + 0.01;
+
+      setMapRegion({
+        latitude: midLat,
+        longitude: midLon,
+        latitudeDelta: latDelta,
+        longitudeDelta: lonDelta,
+      });
+      console.log('Map region set:', { midLat, midLon, latDelta, lonDelta });
+      
+      console.log('Building static map URL...');
+      const staticMapUrl = buildStaticMapUrl(origin, selectedDestination, geoJsonCoords);
+      console.log('Static map URL:', staticMapUrl);
+      setMapPreviewUrl(staticMapUrl);
+      
+      console.log('Building map embed HTML...');
+      setMapEmbedHtml(buildMapEmbedHtml(origin, selectedDestination, geoJsonCoords));
+      
       setDistance(formatDistance(routeData.distance));
       setDuration(formatDuration(routeData.duration));
+<<<<<<< HEAD:mobile/src/screens/TravelPlanningScreen.web.js
+=======
+      
+>>>>>>> 3ee329dc020709c378f195bda3516d107a842e9e:mobile/src/screens/TravelPlanningScreen.js
       setRouteStatus('Rota calculada com sucesso');
+      console.log('All state updated!');
     } catch (error) {
-      console.error('Error calculating distance:', error);
+      console.error('=== CRASH/ERROR IN handleCalculateDistance ===', error);
+      console.error('Stack:', error.stack);
       setDistance('0.0 KM');
       setDuration('');
       setMapEmbedHtml('');
+<<<<<<< HEAD:mobile/src/screens/TravelPlanningScreen.web.js
+=======
+      setRouteCoordinates([]);
+      setMapRegion(null);
+>>>>>>> 3ee329dc020709c378f195bda3516d107a842e9e:mobile/src/screens/TravelPlanningScreen.js
       setRouteStatus('Não foi possível obter a rota pela API no momento');
       Alert.alert('Erro', 'Não foi possível calcular a rota e a distância');
     } finally {
+      console.log('Finally block, setting loading to false');
       setLoading(false);
     }
   };
@@ -604,17 +739,24 @@ export default function TravelPlanningScreen(props) {
         <Text style={styles.subtitle}>Planeje a sua viagem com segurança.</Text>
 
         <View style={styles.mapContainer}>
+<<<<<<< HEAD:mobile/src/screens/TravelPlanningScreen.web.js
           {(() => {
             const origin = selectedStartLocation || currentLocation;
             
             if (mapEmbedHtml) {
               return (
                 <View style={styles.mapPreviewWrapper}>
+=======
+            {(Platform.OS === 'web' ? mapEmbedHtml : (mapRegion && selectedDestination)) ? (
+              <View style={styles.mapPreviewWrapper}>
+                {Platform.OS === 'web' ? (
+>>>>>>> 3ee329dc020709c378f195bda3516d107a842e9e:mobile/src/screens/TravelPlanningScreen.js
                   <iframe
                     title="Mapa da rota"
                     srcDoc={mapEmbedHtml}
                     style={styles.mapIframe}
                   />
+<<<<<<< HEAD:mobile/src/screens/TravelPlanningScreen.web.js
                   <View style={styles.mapOverlay}>
                     <View style={styles.routeBadge}>
                       <Text style={styles.routeBadgeText}>{distance}</Text>
@@ -645,6 +787,62 @@ export default function TravelPlanningScreen(props) {
             }
           })()}
         </View>
+=======
+                ) : (
+                  <MapView
+                    style={styles.mapImage}
+                    region={mapRegion}
+                    onRegionChangeComplete={(newRegion) => setMapRegion(newRegion)}
+                  >
+                    {/* Origin marker */}
+                    <Marker
+                      coordinate={selectedStartLocation || currentLocation}
+                      title="Origem"
+                      pinColor="#4CAF50"
+                    />
+                    {/* Destination marker */}
+                    <Marker
+                      coordinate={selectedDestination}
+                      title="Destino"
+                      pinColor="#FF5722"
+                    />
+                    {/* Route line */}
+                    {routeCoordinates.length > 1 && (
+                      <Polyline
+                        coordinates={routeCoordinates}
+                        strokeColor="#1f6feb"
+                        strokeWidth={5}
+                      />
+                    )}
+                  </MapView>
+                )}
+                <View style={styles.mapOverlay}>
+                  <View style={styles.routeBadge}>
+                    <Text style={styles.routeBadgeText}>{distance}</Text>
+                    {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
+                  </View>
+                  <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
+                    <MaterialIcons name="open-in-new" size={18} color="#FFF" />
+                    <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.mapPlaceholder}>
+                <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
+                <Text style={styles.mapText}>{routeStatus}</Text>
+                {currentLocation && (
+                  <View style={styles.locationInfoContainer}>
+                    <MaterialIcons name="my-location" size={20} color="#4CAF50" />
+                    <Text style={styles.locationInfo}>
+                      {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+>>>>>>> 3ee329dc020709c378f195bda3516d107a842e9e:mobile/src/screens/TravelPlanningScreen.js
 
         <View style={styles.formContainer}>
           <View style={styles.inputGroup}>
