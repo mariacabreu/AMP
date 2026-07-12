@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator, Image, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
-import MapView, { Polyline, Marker } from 'react-native-maps';
 import BottomNav from '../components/NavBar/BottomNav';
 
 export default function TravelPlanningScreen(props) {
@@ -21,9 +20,7 @@ export default function TravelPlanningScreen(props) {
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [distance, setDistance] = useState('0.0 KM');
   const [duration, setDuration] = useState('');
-  const [mapPreviewUrl, setMapPreviewUrl] = useState('');
   const [mapEmbedHtml, setMapEmbedHtml] = useState('');
-  const [routeCoordinates, setRouteCoordinates] = useState([]); // NEW: store route coordinates for native map
   const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
   const [loading, setLoading] = useState(true);
 
@@ -42,35 +39,10 @@ export default function TravelPlanningScreen(props) {
     return `${minutes} min`;
   };
 
-  const simplifyRouteCoordinates = (coordinates, maxPoints = 24) => {
-    if (!Array.isArray(coordinates) || coordinates.length <= maxPoints) {
-      return coordinates || [];
-    }
-
-    const step = Math.max(1, Math.ceil(coordinates.length / maxPoints));
-    const simplified = coordinates.filter((_, index) => index % step === 0);
-    const lastCoordinate = coordinates[coordinates.length - 1];
-
-    if (simplified[simplified.length - 1] !== lastCoordinate) {
-      simplified.push(lastCoordinate);
-    }
-
-    return simplified;
-  };
-
-  const buildStaticMapUrl = (origin, destination, routeCoordinates = []) => {
-    const simplifiedCoordinates = simplifyRouteCoordinates(routeCoordinates);
-    const pathSegments = simplifiedCoordinates.length > 1
-      ? simplifiedCoordinates.map(([longitude, latitude]) => `${latitude},${longitude}`).join('|')
-      : `${origin.latitude},${origin.longitude}|${destination.latitude},${destination.longitude}`;
-
-    return `https://staticmap.openstreetmap.de/staticmap.php?size=800x420&markers=${origin.latitude},${origin.longitude},lightblue1|${destination.latitude},${destination.longitude},red-pushpin&path=${encodeURIComponent(`weight:4|color:0x1f6febff|${pathSegments}`)}`;
-  };
-
-  const buildMapEmbedHtml = (origin, destination, routeCoordinates = []) => {
-    const leafletCoordinates = (routeCoordinates || []).map(([longitude, latitude]) => [latitude, longitude]);
-    const safeRouteCoordinates = leafletCoordinates.length > 1
-      ? leafletCoordinates
+  const buildMapEmbedHtml = (origin, destination, geoJsonCoords = []) => {
+    const leafletCoords = (geoJsonCoords || []).map(([lon, lat]) => [lat, lon]);
+    const safeRouteCoordinates = leafletCoords.length > 1
+      ? leafletCoords
       : [
           [origin.latitude, origin.longitude],
           [destination.latitude, destination.longitude],
@@ -157,7 +129,6 @@ export default function TravelPlanningScreen(props) {
       console.log('Reverse geocode response:', data);
       const address = data.address || {};
       
-      // Sempre começar com rua e número (se houver)
       const streetParts = [
         address.road,
         address.house_number,
@@ -168,19 +139,16 @@ export default function TravelPlanningScreen(props) {
       if (streetParts.length > 0) {
         label = streetParts.join(', ');
         
-        // Adicionar bairro
         const neighbourhood = address.neighbourhood || address.suburb || address.city_district;
         if (neighbourhood) {
           label += `, ${neighbourhood}`;
         }
         
-        // Adicionar cidade
         const city = address.city || address.town || address.village || address.municipality;
         if (city) {
           label += `, ${city}`;
         }
         
-        // Se temos nome de estabelecimento, adicionar no final em parênteses
         const possibleNames = [
           data.name,
           address.shop,
@@ -198,7 +166,6 @@ export default function TravelPlanningScreen(props) {
           label += ` (${possibleNames[0]})`;
         }
       } else {
-        // Se não temos rua, tentar usar o display_name da API
         label = data.display_name || 'Localização atual';
       }
 
@@ -279,7 +246,6 @@ export default function TravelPlanningScreen(props) {
     setSelectedStartLocation(null);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
     setMapEmbedHtml('');
     setRouteStatus('Selecione um local de partida sugerido para calcular a rota');
     setShowStartSuggestions(true);
@@ -292,7 +258,6 @@ export default function TravelPlanningScreen(props) {
     setShowStartSuggestions(false);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
     setMapEmbedHtml('');
     setRouteStatus('Partida selecionada. Selecione um destino para traçar a rota');
   };
@@ -305,9 +270,7 @@ export default function TravelPlanningScreen(props) {
     setShowStartSuggestions(false);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
     setMapEmbedHtml('');
-    // Chama getCurrentLocation novamente para pegar a localização mais recente
     await getCurrentLocation();
   };
 
@@ -354,7 +317,6 @@ export default function TravelPlanningScreen(props) {
   const getCurrentLocation = async () => {
     console.log('=== getCurrentLocation STARTING ===');
     try {
-      // Usar expo-location para TODAS as plataformas, incluindo web!
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         console.log('❌ Permissão negada');
@@ -380,10 +342,9 @@ export default function TravelPlanningScreen(props) {
       setLoading(false);
       return;
     } catch (error) {
-      console.log('❌ Error in getCurrentLocation, using fallback:', error);
+      console.error('❌ Error in getCurrentLocation, using fallback:', error);
     }
     
-    // Fallback para localização padrão
     console.log('⚠️ Using fallback location');
     const fallbackCoords = {
       latitude: -23.5505,
@@ -470,7 +431,6 @@ export default function TravelPlanningScreen(props) {
     setSelectedDestination(null);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
     setMapEmbedHtml('');
     setRouteStatus('Selecione um destino sugerido para calcular a rota');
     setShowDestinationSuggestions(true);
@@ -483,7 +443,6 @@ export default function TravelPlanningScreen(props) {
     setShowDestinationSuggestions(false);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
     setMapEmbedHtml('');
     setRouteStatus('Destino selecionado. Toque em "Calcular Km" para buscar a rota');
   };
@@ -529,31 +488,17 @@ export default function TravelPlanningScreen(props) {
         throw new Error('Rota não encontrada');
       }
 
-      // Store route coordinates for native map!
       const geoJsonCoords = routeData.geometry?.coordinates || [];
-      const nativeCoords = geoJsonCoords.map(([lon, lat]) => ({ latitude: lat, longitude: lon }));
-      setRouteCoordinates(nativeCoords);
+      setMapEmbedHtml(buildMapEmbedHtml(origin, selectedDestination, geoJsonCoords));
 
       setDistance(formatDistance(routeData.distance));
       setDuration(formatDuration(routeData.duration));
-      setMapPreviewUrl(buildStaticMapUrl(
-        origin,
-        selectedDestination,
-        geoJsonCoords
-      ));
-      setMapEmbedHtml(buildMapEmbedHtml(
-        origin,
-        selectedDestination,
-        geoJsonCoords
-      ));
       setRouteStatus('Rota calculada com sucesso');
     } catch (error) {
       console.error('Error calculating distance:', error);
       setDistance('0.0 KM');
       setDuration('');
-      setMapPreviewUrl('');
       setMapEmbedHtml('');
-      setRouteCoordinates([]);
       setRouteStatus('Não foi possível obter a rota pela API no momento');
       Alert.alert('Erro', 'Não foi possível calcular a rota e a distância');
     } finally {
@@ -610,10 +555,8 @@ export default function TravelPlanningScreen(props) {
       Alert.alert('Aviso', 'Calcule a distância primeiro');
       return;
     }
-    // Extrair o valor numérico da distância (remover " KM")
     const numericDistance = parseFloat(distance.replace(' KM', '').replace(',', '.'));
     
-    // Criar nova viagem para adicionar ao histórico
     const newTrip = {
       id: Date.now().toString(),
       date: new Date().toLocaleDateString('pt-BR'),
@@ -625,7 +568,6 @@ export default function TravelPlanningScreen(props) {
       maintenanceItems: getMaintenanceRecommendations(numericDistance)
     };
 
-    // Navegar para a tela de histórico de viagens e passar a nova viagem
     navigation.navigate('TripHistory', { user: loggedUser, newTrip: newTrip });
   };
 
@@ -640,7 +582,6 @@ export default function TravelPlanningScreen(props) {
 
   return (
     <View style={styles.container}>
-      {/* Header Fixo */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
@@ -663,107 +604,47 @@ export default function TravelPlanningScreen(props) {
         <Text style={styles.subtitle}>Planeje a sua viagem com segurança.</Text>
 
         <View style={styles.mapContainer}>
-            {(() => {
-              const origin = selectedStartLocation || currentLocation;
-              const hasRouteData = origin && selectedDestination;
-              
-              if (Platform.OS === 'web') {
-                return mapEmbedHtml ? (
-                  <View style={styles.mapPreviewWrapper}>
-                    <iframe
-                      title="Mapa da rota"
-                      srcDoc={mapEmbedHtml}
-                      style={styles.mapIframe}
-                    />
-                    <View style={styles.mapOverlay}>
-                      <View style={styles.routeBadge}>
-                        <Text style={styles.routeBadgeText}>{distance}</Text>
-                        {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
-                      </View>
-                      <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
-                        <MaterialIcons name="open-in-new" size={18} color="#FFF" />
-                        <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
-                      </TouchableOpacity>
+          {(() => {
+            const origin = selectedStartLocation || currentLocation;
+            
+            if (mapEmbedHtml) {
+              return (
+                <View style={styles.mapPreviewWrapper}>
+                  <iframe
+                    title="Mapa da rota"
+                    srcDoc={mapEmbedHtml}
+                    style={styles.mapIframe}
+                  />
+                  <View style={styles.mapOverlay}>
+                    <View style={styles.routeBadge}>
+                      <Text style={styles.routeBadgeText}>{distance}</Text>
+                      {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
                     </View>
+                    <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
+                      <MaterialIcons name="open-in-new" size={18} color="#FFF" />
+                      <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
+                    </TouchableOpacity>
                   </View>
-                ) : (
-                  <View style={styles.mapPlaceholder}>
-                    <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
-                    <Text style={styles.mapText}>{routeStatus}</Text>
-                    {currentLocation && (
-                      <View style={styles.locationInfoContainer}>
-                        <MaterialIcons name="my-location" size={20} color="#4CAF50" />
-                        <Text style={styles.locationInfo}>
-                          {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              } else {
-                // For native (Android/iOS): use react-native-maps
-                if (hasRouteData) {
-                  // Get coordinates for region
-                  const coords = origin;
-                  const dest = selectedDestination;
-                  const midLat = (coords.latitude + dest.latitude) / 2;
-                  const midLon = (coords.longitude + dest.longitude) / 2;
-                  const latDelta = Math.abs(coords.latitude - dest.latitude) * 1.5 + 0.01;
-                  const lonDelta = Math.abs(coords.longitude - dest.longitude) * 1.5 + 0.01;
-                  
-                  return (
-                    <View style={styles.mapPreviewWrapper}>
-                      <MapView
-                        style={styles.mapImage}
-                        initialRegion={{
-                          latitude: midLat,
-                          longitude: midLon,
-                          latitudeDelta: latDelta,
-                          longitudeDelta: lonDelta,
-                        }}
-                      >
-                        <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
-                        <Marker coordinate={dest} title="Destino" pinColor="#FF5722" />
-                        {routeCoordinates.length > 0 && (
-                          <Polyline
-                            coordinates={routeCoordinates}
-                            strokeColor="#1f6feb"
-                            strokeWidth={5}
-                          />
-                        )}
-                      </MapView>
-                      <View style={styles.mapOverlay}>
-                        <View style={styles.routeBadge}>
-                          <Text style={styles.routeBadgeText}>{distance}</Text>
-                          {!!duration && <Text style={styles.routeBadgeSubtext}>Tempo estimado: {duration}</Text>}
-                        </View>
-                        <TouchableOpacity style={styles.mapLinkButton} onPress={openRouteInMap}>
-                          <MaterialIcons name="open-in-new" size={18} color="#FFF" />
-                          <Text style={styles.mapLinkButtonText}>Abrir rota</Text>
-                        </TouchableOpacity>
-                      </View>
+                </View>
+              );
+            } else {
+              return (
+                <View style={styles.mapPlaceholder}>
+                  <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
+                  <Text style={styles.mapText}>{routeStatus}</Text>
+                  {currentLocation && (
+                    <View style={styles.locationInfoContainer}>
+                      <MaterialIcons name="my-location" size={20} color="#4CAF50" />
+                      <Text style={styles.locationInfo}>
+                        {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                      </Text>
                     </View>
-                  );
-                } else {
-                  // Placeholder
-                  return (
-                    <View style={styles.mapPlaceholder}>
-                      <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
-                      <Text style={styles.mapText}>{routeStatus}</Text>
-                      {currentLocation && (
-                        <View style={styles.locationInfoContainer}>
-                          <MaterialIcons name="my-location" size={20} color="#4CAF50" />
-                          <Text style={styles.locationInfo}>
-                            {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                }
-              }
-            })()}
-          </View>
+                  )}
+                </View>
+              );
+            }
+          })()}
+        </View>
 
         <View style={styles.formContainer}>
           <View style={styles.inputGroup}>
@@ -889,22 +770,15 @@ export default function TravelPlanningScreen(props) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#ffffff',
-    ...Platform.select({
-      web: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      },
-      default: {
-        flex: 1
-      }
-    })
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
   },
   header: {
     position: 'relative',
@@ -942,11 +816,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    ...Platform.select({
-      web: {
-        overflowY: 'scroll'
-      }
-    })
+    overflowY: 'scroll'
   },
   content: {
     flexGrow: 1,
@@ -991,10 +861,6 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
-  mapImage: {
-    width: '100%',
-    height: '100%',
-  },
   mapIframe: {
     width: '100%',
     height: '100%',
@@ -1027,7 +893,7 @@ const styles = StyleSheet.create({
     color: '#444444',
   },
   mapLinkButton: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: '#2E2E2E',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1167,7 +1033,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 4,
     top: 4,
-    backgroundColor: '#2C2C2C',
+    backgroundColor: '#2E2E2E',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -1180,7 +1046,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   generateButton: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: '#2E2E2E',
     borderRadius: 8,
     paddingVertical: 14,
     flexDirection: 'row',

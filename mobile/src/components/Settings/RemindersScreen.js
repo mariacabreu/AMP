@@ -133,7 +133,6 @@ const RemindersScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <Header
-        showIcons={false}
         navigation={navigation}
         loggedUser={loggedUser}
       />
