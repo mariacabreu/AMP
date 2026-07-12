@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert }
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../NavBar/BottomNav';
 import { useLanguage } from '../../contexts/LanguageContext';
-import Header from '../Header/Header';
+import BackHeader from '../Common/BackHeader';
 
 const LanguageSelectionScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -29,10 +29,9 @@ const LanguageSelectionScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header
-        showIcons={false}
-        navigation={navigation}
-        loggedUser={loggedUser}
+      <BackHeader
+        title="Idioma"
+        onBack={() => navigation.goBack()}
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>

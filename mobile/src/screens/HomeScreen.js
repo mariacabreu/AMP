@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
 import Header from '../components/Header/Header';
 import WelcomeBanner from '../components/Home/WelcomeBanner';
 import DashboardGrid from '../components/Home/DashboardGrid';
+import AMPAlertModal from '../components/Common/AMPAlertModal';
 
 const HomeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -20,18 +22,25 @@ const HomeScreen = ({ navigation, route }) => {
   const [profileForm, setProfileForm] = useState({
     full_name: loggedUser?.full_name || '',
     email: loggedUser?.email || '',
-    phone: loggedUser?.phone || ''
+    phone: loggedUser?.phone || '',
   });
   const [avatarUri, setAvatarUri] = useState(loggedUser?.avatar_url || null);
   const [savingProfile, setSavingProfile] = useState(false);
+  
+  // Modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalData, setModalData] = useState({
+    type: 'info',
+    title: '',
+    message: '',
+  });
 
   // ----- Estado do Header (notificações + plano/veículos) -----
   const [notifications, setNotifications] = useState([]);
   const [planType, setPlanType] = useState(loggedUser?.plan_type || null);
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicle, setVehicle] = useState(null); // Single vehicle
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const vehicleCount = vehicles.length;
 
   useEffect(() => {
   console.log('loggedUser mudou:', loggedUser);
@@ -56,12 +65,10 @@ const HomeScreen = ({ navigation, route }) => {
         console.error('Error fetching user details:', err);
       }
 
-      const vehiclesData = Array.isArray(response.data?.vehicles)
-        ? response.data.vehicles
-        : response.data?.vehicle
-        ? [response.data.vehicle]
-        : [];
-      setVehicles(vehiclesData);
+      const vehicleData = Array.isArray(response.data?.vehicles)
+        ? response.data.vehicles[0]
+        : response.data?.vehicle || null;
+      setVehicle(vehicleData);
 
       setStatus((prev) => ({
         ...prev,
@@ -101,24 +108,68 @@ const HomeScreen = ({ navigation, route }) => {
     setProfileForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleChangePhoto = () => {
-    // Requer a lib "expo-image-picker" instalada no projeto.
-    Alert.alert('Alterar foto', 'Conecte o expo-image-picker aqui para trocar a foto do perfil.');
+  const handleChangePhoto = async () => {
+    try {
+      // Request permission first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão negada', 'Precisamos de acesso à galeria para trocar a foto.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 4],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled) {
+        const selectedImage = result.assets[0];
+        // Set as data URI (base64)
+        const base64Uri = `data:image/jpeg;base64,${selectedImage.base64}`;
+        setAvatarUri(base64Uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a foto.');
+    }
   };
 
   const handleSaveProfile = async () => {
     try {
       setSavingProfile(true);
       const userId = loggedUser?.id || 1;
-      await axios.put(`${API_BASE_URL}/user/${userId}`, {
+      const updateData = {
         full_name: profileForm.full_name,
         email: profileForm.email,
-        phone: profileForm.phone
-      });
+        phone: profileForm.phone,
+      };
+      
+      // Include avatar if it's been changed
+      if (avatarUri) {
+        updateData.avatar = avatarUri;
+      }
+
+      await axios.put(`${API_BASE_URL}/user/${userId}`, updateData);
       setStatus((prev) => ({ ...prev, user_name: profileForm.full_name }));
+      
+      setModalData({
+        type: 'success',
+        title: 'Sucesso!',
+        message: 'Suas informações foram salvas com sucesso.',
+      });
+      setModalVisible(true);
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Erro', 'Não foi possível salvar suas informações agora.');
+      setModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível salvar suas informações agora.',
+      });
+      setModalVisible(true);
     } finally {
       setSavingProfile(false);
     }
@@ -164,9 +215,7 @@ const HomeScreen = ({ navigation, route }) => {
         onLogout={handleLogout}
         isPremium={status.is_premium}
         planType={planType}
-        vehicleCount={vehicleCount}
-        vehicles={vehicles}
-        onAddVehicle={handleAddVehicle}
+        vehicle={vehicle}
         navigation={navigation}
         loggedUser={loggedUser}
       />
@@ -207,6 +256,13 @@ const HomeScreen = ({ navigation, route }) => {
       </ScrollView>
 
       <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
+      <AMPAlertModal
+        visible={modalVisible}
+        type={modalData.type}
+        title={modalData.title}
+        message={modalData.message}
+        onClose={() => setModalVisible(false)}
+      />
     </View>
   );
 };

@@ -29,9 +29,7 @@ const Header = ({
   onLogout,
   isPremium = false,
   planType,
-  vehicleCount = 0,
-  vehicles = [],
-  onAddVehicle,
+  vehicle = null, // Single vehicle
   showIcons = true,
   style,
   navigation,
@@ -77,9 +75,7 @@ const Header = ({
         onLogout={onLogout}
         isPremium={isPremium}
         planType={planType}
-        vehicleCount={vehicleCount}
-        vehicles={vehicles}
-        onAddVehicle={onAddVehicle}
+        vehicle={vehicle}
         navigation={navigation}
         loggedUser={loggedUser}
       />

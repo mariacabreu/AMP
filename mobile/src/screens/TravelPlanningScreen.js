@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platfo
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import BottomNav from '../components/NavBar/BottomNav';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 
 export default function TravelPlanningScreen(props) {
   const { navigation, route } = props;
@@ -22,6 +23,8 @@ export default function TravelPlanningScreen(props) {
   const [duration, setDuration] = useState('');
   const [mapPreviewUrl, setMapPreviewUrl] = useState('');
   const [mapEmbedHtml, setMapEmbedHtml] = useState('');
+  const [mapRegion, setMapRegion] = useState(null);
+  const [processedRouteCoords, setProcessedRouteCoords] = useState([]);
   const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +66,30 @@ export default function TravelPlanningScreen(props) {
       : `${origin.latitude},${origin.longitude}|${destination.latitude},${destination.longitude}`;
 
     return `https://staticmap.openstreetmap.de/staticmap.php?size=800x420&markers=${origin.latitude},${origin.longitude},lightblue1|${destination.latitude},${destination.longitude},red-pushpin&path=${encodeURIComponent(`weight:4|color:0x1f6febff|${pathSegments}`)}`;
+  };
+
+  // Calculate map region for react-native-maps
+  const calculateMapRegion = (origin, destination) => {
+    const minLat = Math.min(origin.latitude, destination.latitude);
+    const maxLat = Math.max(origin.latitude, destination.latitude);
+    const minLng = Math.min(origin.longitude, destination.longitude);
+    const maxLng = Math.max(origin.longitude, destination.longitude);
+
+    const latDelta = (maxLat - minLat) * 1.5; // Add padding
+    const lngDelta = (maxLng - minLng) * 1.5; // Add padding
+
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: latDelta > 0.01 ? latDelta : 0.01,
+      longitudeDelta: lngDelta > 0.01 ? lngDelta : 0.01,
+    };
+  };
+
+  // Process route coordinates for react-native-maps (convert from [lng, lat] to [lat, lng])
+  const processRouteCoordinates = (coordinates) => {
+    if (!coordinates || coordinates.length === 0) return [];
+    return coordinates.map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
   };
 
   const buildMapEmbedHtml = (origin, destination, routeCoordinates = []) => {
@@ -539,6 +566,8 @@ export default function TravelPlanningScreen(props) {
         selectedDestination,
         routeData.geometry?.coordinates || []
       ));
+      setMapRegion(calculateMapRegion(origin, selectedDestination));
+      setProcessedRouteCoords(processRouteCoordinates(routeData.geometry?.coordinates));
       setRouteStatus('Rota calculada com sucesso');
     } catch (error) {
       console.error('Error calculating distance:', error);
@@ -655,7 +684,7 @@ export default function TravelPlanningScreen(props) {
         <Text style={styles.subtitle}>Planeje a sua viagem com segurança.</Text>
 
         <View style={styles.mapContainer}>
-            {(Platform.OS === 'web' ? mapEmbedHtml : mapPreviewUrl) ? (
+            {(Platform.OS === 'web' ? mapEmbedHtml : (mapRegion || mapPreviewUrl)) ? (
               <View style={styles.mapPreviewWrapper}>
                 {Platform.OS === 'web' ? (
                   <iframe
@@ -663,6 +692,43 @@ export default function TravelPlanningScreen(props) {
                     srcDoc={mapEmbedHtml}
                     style={styles.mapIframe}
                   />
+                ) : mapRegion ? (
+                  <MapView
+                    style={styles.mapImage}
+                    region={mapRegion}
+                    showsUserLocation={true}
+                    showsMyLocationButton={true}
+                    rotateEnabled={true}
+                    zoomEnabled={true}
+                    scrollEnabled={true}
+                  >
+                    {/* Origin Marker */}
+                    <Marker
+                      coordinate={{
+                        latitude: (selectedStartLocation || currentLocation).latitude,
+                        longitude: (selectedStartLocation || currentLocation).longitude,
+                      }}
+                      title="Origem"
+                      pinColor="#4CAF50"
+                    />
+                    {/* Destination Marker */}
+                    <Marker
+                      coordinate={{
+                        latitude: selectedDestination.latitude,
+                        longitude: selectedDestination.longitude,
+                      }}
+                      title="Destino"
+                      pinColor="#FF5722"
+                    />
+                    {/* Route Polyline */}
+                    {processedRouteCoords.length > 0 && (
+                      <Polyline
+                        coordinates={processedRouteCoords}
+                        strokeColor="#1f6feb"
+                        strokeWidth={5}
+                      />
+                    )}
+                  </MapView>
                 ) : (
                   <Image
                     source={{ uri: mapPreviewUrl }}

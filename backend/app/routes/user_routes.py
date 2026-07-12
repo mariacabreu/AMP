@@ -8,8 +8,8 @@ user_bp = Blueprint('user', __name__)
 PLAN_VEHICLE_LIMITS = {
     'free': 1,
     'mensal': 1,
-    'trimestral': 3,
-    'anual': 5
+    'trimestral': 1,
+    'anual': 1
 }
 
 
@@ -164,6 +164,8 @@ def get_or_update_user(user_id):
             user.phone = data['phone']
         if 'reminder_frequency' in data:
             user.reminder_frequency = data['reminder_frequency']
+        if 'avatar' in data:
+            user.avatar = data['avatar']
 
         db.session.commit()
         return jsonify({'message': 'Usuário atualizado com sucesso', 'user': user.to_dict()}), 200
@@ -175,6 +177,27 @@ def get_or_update_user(user_id):
 def get_all_users():
     users = User.query.all()
     return jsonify([user.to_dict() for user in users]), 200
+
+
+@user_bp.route('/user/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    print(f"=== Tentando excluir usuário com ID: {user_id} ===")
+    user = User.query.get(user_id)
+    if not user:
+        print(f"Erro: Usuário com ID {user_id} não encontrado")
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+
+    try:
+        print(f"Usuário encontrado: {user.email}")
+        print(f"Veículos associados: {len(user.vehicles)}")
+        db.session.delete(user)
+        db.session.commit()
+        print(f"Usuário {user.email} excluído com sucesso")
+        return jsonify({'message': 'Usuário e todos os dados associados excluídos com sucesso'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao excluir usuário: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 @user_bp.route('/user/set-plan/<int:user_id>', methods=['POST'])

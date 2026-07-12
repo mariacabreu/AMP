@@ -233,30 +233,6 @@ const styles = StyleSheet.create({
   footerSpace: {
     height: 20,
   },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#2C2C2C',
-    height: 70,
-    width: '100%',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navText: {
-    fontSize: 10,
-    color: '#D9D9D9',
-    marginTop: 4,
-    fontWeight: '700',
-  },
 });
 
 export default MaintenanceTipsScreen;

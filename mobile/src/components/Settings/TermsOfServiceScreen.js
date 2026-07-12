@@ -2,17 +2,16 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../NavBar/BottomNav';
-import Header from '../Header/Header';
+import BackHeader from '../Common/BackHeader';
 
 const TermsOfServiceScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
 
   return (
     <View style={styles.container}>
-      <Header
-        showIcons={false}
-        navigation={navigation}
-        loggedUser={loggedUser}
+      <BackHeader
+        title="Termos e Condições"
+        onBack={() => navigation.goBack()}
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>

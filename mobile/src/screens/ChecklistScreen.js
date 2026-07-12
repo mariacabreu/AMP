@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 import Header from '../components/Header/Header';
@@ -48,8 +49,7 @@ const ChecklistScreen = ({ navigation, route }) => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [isPremium, setIsPremium] = useState(!!loggedUser?.is_premium);
   const [planType, setPlanType] = useState(loggedUser?.plan_type || null);
-  const [vehicles, setVehicles] = useState([]);
-  const vehicleCount = vehicles.length;
+  const [vehicle, setVehicle] = useState(null);
 
   // Garantir que checklist sempre seja um array
   const safeChecklist = Array.isArray(checklist) ? checklist : [];
@@ -67,7 +67,7 @@ const ChecklistScreen = ({ navigation, route }) => {
       setLoading(true);
       const userId = loggedUser?.id || 1;
       const statusRes = await axios.get(`${API_BASE_URL}/user/status/${userId}`);
-      const vehicle = statusRes.data?.vehicle;
+      const vehicleData = statusRes.data?.vehicle;
       const vehiclesData = statusRes.data?.vehicles;
 
       // Atualiza dados de perfil vindos do backend, se existirem
@@ -83,13 +83,8 @@ const ChecklistScreen = ({ navigation, route }) => {
         setPlanType(u.plan_type || null);
       }
 
-      if (Array.isArray(vehiclesData)) {
-        setVehicles(vehiclesData);
-      } else if (vehicle) {
-        setVehicles([vehicle]);
-      } else {
-        setVehicles([]);
-      }
+      const selectedVehicle = Array.isArray(vehiclesData) ? vehiclesData[0] : vehicleData;
+      setVehicle(selectedVehicle);
 
       if (vehicle && vehicle.id) {
         setVehicleId(vehicle.id);
@@ -155,16 +150,45 @@ const ChecklistScreen = ({ navigation, route }) => {
   };
 
   const handleChangePhoto = async () => {
-    // Se já tiver expo-image-picker configurado no projeto, a lógica de
-    // selecionar imagem e chamar setAvatarUri(uri) entra aqui.
-    Alert.alert('Em breve', 'Seleção de foto ainda não implementada.');
+    try {
+      // Request permission first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão negada', 'Precisamos de acesso à galeria para trocar a foto.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 4],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled) {
+        const selectedImage = result.assets[0];
+        // Set as data URI (base64)
+        const base64Uri = `data:image/jpeg;base64,${selectedImage.base64}`;
+        setAvatarUri(base64Uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a foto.');
+    }
   };
 
   const handleSaveProfile = async () => {
     try {
       setSavingProfile(true);
       const userId = loggedUser?.id || 1;
-      await axios.patch(`${API_BASE_URL}/user/${userId}`, profileForm);
+      const updateData = { ...profileForm };
+      // Include avatar if it's been changed
+      if (avatarUri) {
+        updateData.avatar = avatarUri;
+      }
+      await axios.patch(`${API_BASE_URL}/user/${userId}`, updateData);
       Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
@@ -292,9 +316,7 @@ const ChecklistScreen = ({ navigation, route }) => {
         onLogout={handleLogout}
         isPremium={isPremium}
         planType={planType}
-        vehicleCount={vehicleCount}
-        vehicles={vehicles}
-        onAddVehicle={handleAddVehicle}
+        vehicle={vehicle}
         navigation={navigation}
         loggedUser={loggedUser}
       />

@@ -82,24 +82,34 @@ export default function useReportForm({ editItem, vehicleId, loggedUser, navigat
     const calculatedTotal = litersNum * priceNum;
 
     try {
-      // Priorizando o vehicleId que vem do parâmetro, senão usa 1 como fallback seguro
-      const vId = vehicleId || 1;
-      console.log('Enviando custo para veículo ID:', vId);
-
-      const response = await axios.post(`${API_BASE_URL}/vehicle/maintenance`, {
-        vehicle_id: vId,
-        history: [
-          {
-            item: `Gasolina tipo ${gasType}`,
-            last_km: 0,
-            last_date: date.toLocaleDateString('pt-BR'),
-            cost: calculatedTotal,
-            liters: litersNum,
-          },
-        ],
-      });
-
-      console.log('Resposta servidor:', response.data);
+      if (editItem) {
+        // Editar item existente
+        const response = await axios.put(`${API_BASE_URL}/vehicle/maintenance/${editItem.id}`, {
+          item: `Gasolina tipo ${gasType}`,
+          last_km: editItem.last_km || 0,
+          last_date: date.toLocaleDateString('pt-BR'),
+          cost: calculatedTotal,
+          liters: litersNum,
+        });
+        console.log('Resposta servidor (edição):', response.data);
+      } else {
+        // Adicionar novo item
+        const vId = vehicleId || 1;
+        console.log('Enviando custo para veículo ID:', vId);
+        const response = await axios.post(`${API_BASE_URL}/vehicle/maintenance`, {
+          vehicle_id: vId,
+          history: [
+            {
+              item: `Gasolina tipo ${gasType}`,
+              last_km: 0,
+              last_date: date.toLocaleDateString('pt-BR'),
+              cost: calculatedTotal,
+              liters: litersNum,
+            },
+          ],
+        });
+        console.log('Resposta servidor (novo):', response.data);
+      }
       navigation.navigate('Report', { user: loggedUser });
     } catch (error) {
       console.error('Erro detalhado:', error.response?.data || error.message);

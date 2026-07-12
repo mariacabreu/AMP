@@ -10,6 +10,7 @@ class User(db.Model):
     plan_type = db.Column(db.String(20), default='free')
     reminder_frequency = db.Column(db.String(50), default='biweekly')
     phone = db.Column(db.String(20), nullable=True)
+    avatar = db.Column(db.Text, nullable=True)  # Base64 encoded image or URL
     vehicles = db.relationship('Vehicle', backref='owner', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
@@ -20,7 +21,9 @@ class User(db.Model):
             'phone': self.phone,
             'is_premium': self.is_premium,
             'plan_type': self.plan_type,
-            'reminder_frequency': self.reminder_frequency
+            'reminder_frequency': self.reminder_frequency,
+            'avatar_url': self.avatar,
+            'avatar': self.avatar
         }
 
 

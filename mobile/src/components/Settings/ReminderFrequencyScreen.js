@@ -1,113 +1,143 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
 import BottomNav from '../NavBar/BottomNav';
-import Header from '../Header/Header';
+import BackHeader from '../Common/BackHeader';
 import SelectableOptionCard from '../Common/SelectableOptionCard';
 import PrimaryButton from '../Common/PrimaryButton';
+import AMPAlertModal from '../Common/AMPAlertModal';
 
 const FREQUENCIES = [
-  { id: 'daily', label: 'Diariamente', icon: 'calendar-today', description: 'Receba um lembrete todos os dias' },
-  { id: 'weekly', label: 'Semanalmente', icon: 'calendar-week', description: 'Receba um lembrete uma vez por semana' },
-  { id: 'biweekly', label: 'A cada 15 dias', icon: 'calendar-range', description: 'Receba um lembrete a cada 15 dias' },
-  { id: 'monthly', label: 'Mensalmente', icon: 'calendar-month', description: 'Receba um lembrete uma vez por mês' },
+    { id: 'daily', label: 'Diariamente', icon: 'calendar-today', description: 'Receba um lembrete todos os dias' },
+    { id: 'weekly', label: 'Semanalmente', icon: 'calendar-week', description: 'Receba um lembrete uma vez por semana' },
+    { id: 'biweekly', label: 'A cada 15 dias', icon: 'calendar-range', description: 'Receba um lembrete a cada 15 dias' },
+    { id: 'monthly', label: 'Mensalmente', icon: 'calendar-month', description: 'Receba um lembrete uma vez por mês' },
 ];
 
 const ReminderFrequencyScreen = ({ navigation, route }) => {
-  const loggedUser = route.params?.user;
+    const loggedUser = route.params?.user;
 
-  const [selectedFrequency, setSelectedFrequency] = useState(
-    loggedUser?.reminder_frequency || 'biweekly'
-  );
-  const [isLoadingCurrent, setIsLoadingCurrent] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+    const [selectedFrequency, setSelectedFrequency] = useState(
+        loggedUser?.reminder_frequency || 'biweekly'
+    );
+    const [isLoadingCurrent, setIsLoadingCurrent] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Modal state
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalData, setModalData] = useState({
+        type: 'info',
+        title: '',
+        message: '',
+    });
 
-  // Busca a preferência atual do usuário no backend (caso não tenha vindo em route.params)
-  useEffect(() => {
-    if (loggedUser?.reminder_frequency || !loggedUser?.id) return;
+    // Busca a preferência atual do usuário no backend (caso não tenha vindo em route.params)
+    useEffect(() => {
+        if (loggedUser?.reminder_frequency || !loggedUser?.id) return;
 
-    const fetchCurrentFrequency = async () => {
-      try {
-        setIsLoadingCurrent(true);
-        const response = await axios.get(`${API_BASE_URL}/user/${loggedUser.id}/reminder-frequency`);
-        if (response.data?.frequency) {
-          setSelectedFrequency(response.data.frequency);
+        const fetchCurrentFrequency = async () => {
+            try {
+                setIsLoadingCurrent(true);
+                const response = await axios.get(`${API_BASE_URL}/user/${loggedUser.id}`);
+                if (response.data?.reminder_frequency) {
+                    setSelectedFrequency(response.data.reminder_frequency);
+                }
+            } catch (error) {
+                // Se a busca falhar, mantemos o default local silenciosamente
+                console.error('Erro ao buscar frequência atual:', error.response?.data || error.message);
+            } finally {
+                setIsLoadingCurrent(false);
+            }
+        };
+
+        fetchCurrentFrequency();
+    }, [loggedUser?.id]);
+
+    const handleSave = async () => {
+        if (!loggedUser?.id) {
+            setModalData({
+                type: 'error',
+                title: 'Erro',
+                message: 'Usuário não identificado. Faça login novamente.',
+            });
+            setModalVisible(true);
+            return;
         }
-      } catch (error) {
-        // Se a busca falhar, mantemos o default local silenciosamente
-        console.error('Erro ao buscar frequência atual:', error.response?.data || error.message);
-      } finally {
-        setIsLoadingCurrent(false);
-      }
+
+        try {
+            setIsSaving(true);
+            await axios.put(`${API_BASE_URL}/user/${loggedUser.id}`, {
+                reminder_frequency: selectedFrequency,
+            });
+
+            setModalData({
+                type: 'success',
+                title: 'Sucesso!',
+                message: 'Suas preferências de lembrete foram salvas.',
+            });
+            setModalVisible(true);
+        } catch (error) {
+            console.error('Erro ao salvar frequência:', error.response?.data || error.message);
+            setModalData({
+                type: 'error',
+                title: 'Erro',
+                message: 'Não foi possível salvar suas preferências agora. Tente novamente mais tarde.',
+            });
+            setModalVisible(true);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    fetchCurrentFrequency();
-  }, [loggedUser?.id]);
-
-  const handleSave = async () => {
-    if (!loggedUser?.id) {
-      Alert.alert('Erro', 'Usuário não identificado. Faça login novamente.');
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      await axios.put(`${API_BASE_URL}/user/${loggedUser.id}/reminder-frequency`, {
-        frequency: selectedFrequency,
-      });
-
-      Alert.alert('Sucesso', 'Suas preferências de lembrete foram salvas.');
-    } catch (error) {
-      console.error('Erro ao salvar frequência:', error.response?.data || error.message);
-      Alert.alert('Erro', 'Não foi possível salvar suas preferências agora. Tente novamente mais tarde.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <Header
-        showIcons={false}
-        navigation={navigation}
-        loggedUser={loggedUser}
-      />
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <Text style={styles.subtitle}>
-          Escolha com que frequência você deseja receber os lembretes
-        </Text>
-
-        {isLoadingCurrent ? (
-          <ActivityIndicator size="large" color="#FFCF00" style={{ marginTop: 20 }} />
-        ) : (
-          FREQUENCIES.map((freq) => (
-            <SelectableOptionCard
-              key={freq.id}
-              icon={freq.icon}
-              label={freq.label}
-              description={freq.description}
-              selected={selectedFrequency === freq.id}
-              onPress={() => setSelectedFrequency(freq.id)}
-              disabled={isSaving}
+    return (
+        <View style={styles.container}>
+            <BackHeader
+                title="Frequência dos Lembretes"
+                onBack={() => navigation.goBack()}
             />
-          ))
-        )}
 
-        <PrimaryButton
-          label="Salvar Preferências"
-          onPress={handleSave}
-          loading={isSaving}
-          disabled={isLoadingCurrent}
-        />
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+                <Text style={styles.subtitle}>
+                    Escolha com que frequência você deseja receber os lembretes
+                </Text>
 
-        <View style={styles.footerSpace} />
-      </ScrollView>
+                {isLoadingCurrent ? (
+                    <ActivityIndicator size="large" color="#FFCF00" style={{ marginTop: 20 }} />
+                ) : (
+                    FREQUENCIES.map((freq) => (
+                        <SelectableOptionCard
+                            key={freq.id}
+                            icon={freq.icon}
+                            label={freq.label}
+                            description={freq.description}
+                            selected={selectedFrequency === freq.id}
+                            onPress={() => setSelectedFrequency(freq.id)}
+                            disabled={isSaving}
+                        />
+                    ))
+                )}
 
-      <BottomNav navigation={navigation} user={loggedUser} activeScreen="Config" />
-    </View>
-  );
+                <PrimaryButton
+                    label="Salvar Preferências"
+                    onPress={handleSave}
+                    loading={isSaving}
+                    disabled={isLoadingCurrent}
+                />
+
+                <View style={styles.footerSpace} />
+            </ScrollView>
+
+            <BottomNav navigation={navigation} user={loggedUser} activeScreen="Config" />
+            <AMPAlertModal
+                visible={modalVisible}
+                type={modalData.type}
+                title={modalData.title}
+                message={modalData.message}
+                onClose={() => setModalVisible(false)}
+            />
+        </View>
+    );
 };
 
 const styles = StyleSheet.create({

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet, Platform, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
@@ -35,10 +36,9 @@ const PartsCatalogScreen = ({ navigation, route }) => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [planType, setPlanType] = useState(loggedUser?.plan_type || null);
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicle, setVehicle] = useState(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const vehicleCount = vehicles.length;
 
   useEffect(() => {
     fetchUserStatus();
@@ -59,12 +59,10 @@ const PartsCatalogScreen = ({ navigation, route }) => {
         console.error('Error fetching user details:', err);
       }
 
-      const vehiclesData = Array.isArray(response.data?.vehicles)
-        ? response.data.vehicles
-        : response.data?.vehicle
-        ? [response.data.vehicle]
-        : [];
-      setVehicles(vehiclesData);
+      const vehicleData = Array.isArray(response.data?.vehicles)
+        ? response.data.vehicles[0]
+        : response.data?.vehicle || null;
+      setVehicle(vehicleData);
 
       setStatus((prev) => ({
         ...prev,
@@ -91,19 +89,46 @@ const PartsCatalogScreen = ({ navigation, route }) => {
     setProfileForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleChangePhoto = () => {
-    Alert.alert('Alterar foto', 'Conecte o expo-image-picker aqui para trocar a foto do perfil.');
+  const handleChangePhoto = async () => {
+    try {
+      // Request permission first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão negada', 'Precisamos de acesso à galeria para trocar a foto.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 4],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled) {
+        const selectedImage = result.assets[0];
+        // Set as data URI (base64)
+        const base64Uri = `data:image/jpeg;base64,${selectedImage.base64}`;
+        setAvatarUri(base64Uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a foto.');
+    }
   };
 
   const handleSaveProfile = async () => {
     try {
       setSavingProfile(true);
       const userId = loggedUser?.id || 1;
-      await axios.put(`${API_BASE_URL}/user/${userId}`, {
-        full_name: profileForm.full_name,
-        email: profileForm.email,
-        phone: profileForm.phone,
-      });
+      const updateData = { ...profileForm };
+      // Include avatar if it's been changed
+      if (avatarUri) {
+        updateData.avatar = avatarUri;
+      }
+      await axios.put(`${API_BASE_URL}/user/${userId}`, updateData);
       setStatus((prev) => ({ ...prev, user_name: profileForm.full_name }));
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -172,9 +197,7 @@ const PartsCatalogScreen = ({ navigation, route }) => {
         onLogout={handleLogout}
         isPremium={status.is_premium}
         planType={planType}
-        vehicleCount={vehicleCount}
-        vehicles={vehicles}
-        onAddVehicle={handleAddVehicle}
+        vehicle={vehicle}
         navigation={navigation}
         loggedUser={loggedUser}
       />

@@ -263,12 +263,7 @@ def update_maintenance(maintenance_id):
         return jsonify({'error': str(e)}), 500
 
 
-@vehicle_bp.route('/vehicle/checklist/<int:vehicle_id>', methods=['GET'])
-def get_vehicle_checklist(vehicle_id):
-    vehicle = Vehicle.query.get(vehicle_id)
-    if not vehicle:
-        return jsonify({'error': 'Veículo não encontrado'}), 404
-
+def get_static_checklist(vehicle):
     current_km = vehicle.mileage
     checklist = []
     item_id = 1
@@ -285,11 +280,162 @@ def get_vehicle_checklist(vehicle_id):
         })
         item_id += 1
 
+    belt_diff = current_km - vehicle.last_belt_change
+    if belt_diff >= 50000:
+        checklist.append({
+            'id': item_id,
+            'name': 'Troca de Correia Dentada (ou Inspeção de Corrente)',
+            'description': f'Já se passaram {belt_diff}km desde a última troca/inspeção.',
+            'reason': 'Quebra da correia pode causar danos catastróficos no motor (valvas batendo nos pistões).',
+            'priority': 'URGENTE' if belt_diff >= 60000 else 'PRÓXIMOS 30 DIAS',
+            'image_url': ''
+        })
+        item_id += 1
+
+    brake_diff = current_km - vehicle.last_brake_change
+    if brake_diff >= 30000:
+        checklist.append({
+            'id': item_id,
+            'name': 'Troca de Pastilhas de Freio (ou Inspeção)',
+            'description': f'Já se passaram {brake_diff}km desde a última troca.',
+            'reason': 'Pastilhas desgastadas aumentam a distância de frenagem e danificam os discos.',
+            'priority': 'PRÓXIMOS 30 DIAS',
+            'image_url': ''
+        })
+        item_id += 1
+
+    # Add additional standard checks
+    checklist.append({
+        'id': item_id,
+        'name': 'Inspeção do Filtro de Ar',
+        'description': 'Verificar e limpar/trocar o filtro de ar do motor.',
+        'reason': 'Filtro de ar sujo reduz a performance e aumenta o consumo de combustível.',
+        'priority': 'PRÓXIMOS 30 DIAS',
+        'image_url': ''
+    })
+    item_id += 1
+
+    checklist.append({
+        'id': item_id,
+        'name': 'Verificação do Líquido de Arrefecimento',
+        'description': 'Checar o nível e a condição do líquido de arrefecimento.',
+        'reason': 'Baixo nível ou líquido contaminado pode causar superaquecimento do motor.',
+        'priority': 'PRÓXIMOS 60 DIAS',
+        'image_url': ''
+    })
+    item_id += 1
+
+    checklist.append({
+        'id': item_id,
+        'name': 'Inspeção dos Pneus e Calibragem',
+        'description': 'Verificar o desgaste dos pneus e calibrar a pressão correta.',
+        'reason': 'Pneus mal calibrados ou desgastados aumentam o consumo e o risco de acidentes.',
+        'priority': 'PRÓXIMOS 30 DIAS',
+        'image_url': ''
+    })
+    item_id += 1
+
+    checklist.append({
+        'id': item_id,
+        'name': 'Verificação dos Fluidos (Freio, Direção, Câmbio)',
+        'description': 'Checar o nível dos fluidos de freio, direção hidráulica e câmbio.',
+        'reason': 'Baixo nível de fluido pode comprometer o funcionamento seguro do veículo.',
+        'priority': 'PRÓXIMOS 60 DIAS',
+        'image_url': ''
+    })
+    item_id += 1
+
+    checklist.append({
+        'id': item_id,
+        'name': 'Inspeção das Luzes (Faróis, Lanternas, Setas)',
+        'description': 'Verificar se todas as luzes do veículo estão funcionando corretamente.',
+        'reason': 'Luzes quebradas comprometem a visibilidade e a segurança no trânsito.',
+        'priority': 'PRÓXIMOS 90 DIAS',
+        'image_url': ''
+    })
+
     return jsonify({
         'vehicle': f"{vehicle.brand} {vehicle.model}",
         'mileage': current_km,
         'checklist': checklist
     }), 200
+
+
+@vehicle_bp.route('/vehicle/checklist/<int:vehicle_id>', methods=['GET'])
+def get_vehicle_checklist(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Veículo não encontrado'}), 404
+    return get_static_checklist(vehicle)
+
+
+@vehicle_bp.route('/vehicle/checklist/ai/<int:vehicle_id>', methods=['GET'])
+def get_vehicle_checklist_ai(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Veículo não encontrado'}), 404
+
+    if not client:
+        print("OpenAI API Key missing. Falling back to static checklist.")
+        return get_static_checklist(vehicle)
+
+    prompt = f"""
+    Como um engenheiro mecânico automotivo sênior, gere um CHECKLIST DE MANUTENÇÃO PREVENTIVA ESPECÍFICO para o veículo abaixo.
+
+    Dados do veículo:
+    - Marca: {vehicle.brand}
+    - Modelo: {vehicle.model}
+    - Ano: {vehicle.year}
+    - Transmissão: {vehicle.transmission}
+    - Motorização: {vehicle.engine_type}
+    - Combustível: {vehicle.fuel_type}
+    - Quilometragem atual: {vehicle.mileage} km
+    - Última troca de óleo: {vehicle.last_oil_change} km
+    - Última troca de correia dentada: {vehicle.last_belt_change} km
+    - Última troca de freios: {vehicle.last_brake_change} km
+
+    Instruções:
+    1. Gere de 5 a 10 itens de manutenção preventiva específicos para este veículo
+    2. Cada item deve ter:
+       - Nome claro e direto
+       - Descrição detalhada do que precisa ser feito
+       - Razão para fazer a manutenção (risco de não fazer)
+       - Prioridade (URGENTE, PRÓXIMOS 30 DIAS, PRÓXIMOS 60 DIAS, PRÓXIMOS 90 DIAS)
+    3. Priorize itens com base na quilometragem atual e nas últimas manutenções
+    4. Use linguagem clara e acessível
+
+    Retorne APENAS um JSON no seguinte formato:
+    {{
+        "checklist": [
+            {{
+                "id": 1,
+                "name": "Nome do item",
+                "description": "Descrição detalhada",
+                "reason": "Risco de não fazer",
+                "priority": "PRIORIDADE_AQUI",
+                "image_url": ""
+            }}
+        ]
+    }}
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": "Você é um mecânico sênior especialista em manutenção preventiva."},
+                      {"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        ai_data = json.loads(response.choices[0].message.content)
+
+        return jsonify({
+            'vehicle': f"{vehicle.brand} {vehicle.model}",
+            'mileage': vehicle.mileage,
+            'checklist': ai_data['checklist']
+        }), 200
+    except Exception as e:
+        print(f"AI Checklist Error: {str(e)}. Falling back to static data.")
+        return get_static_checklist(vehicle)
 
 
 def get_static_maintenance_tips(vehicle):
@@ -405,7 +551,7 @@ def get_vehicle_parts(vehicle_id):
             'name': 'Filtro de Óleo',
             'category': 'Filtros',
             'subcategory': 'Manutenção Preventiva',
-            'description': f'Filtra as impurezas do óleo. Se não trocado, o óleo sujo causa atrito excessivo e pode fundir o motor {vehicle.engine_type}.',
+            'description': f'Filtra as impurezas do óleo. Se não trocado, o óleo sujo causa atrito excessivo e pode danificar o motor {vehicle.engine_type}.',
             'details': {
                 'purpose': 'Manter a pureza do lubrificante para proteger bronzinas e pistões.',
                 'location': 'Parte inferior do motor, próximo ao cárter.',
@@ -413,8 +559,203 @@ def get_vehicle_parts(vehicle_id):
                 'maintenance_interval': '10.000km ou 1 ano'
             },
             'image_url': ''
+        },
+        {
+            'id': 2,
+            'name': 'Filtro de Ar do Motor',
+            'category': 'Filtros',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Filtra impurezas do ar que entra no motor. Filtro sujo reduz a potência e aumenta o consumo.',
+            'details': {
+                'purpose': 'Garantir ar limpo para a combustão eficiente.',
+                'location': 'Caixa de filtro de ar, geralmente no canto superior do motor.',
+                'common_problems': 'Perda de potência, aumento do consumo, dificuldade de partida.',
+                'maintenance_interval': '10.000 a 15.000km'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 3,
+            'name': 'Filtro de Combustível',
+            'category': 'Filtros',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Filtra impurezas do combustível antes de chegar ao injetor ou carburador.',
+            'details': {
+                'purpose': 'Proteger o sistema de injeção ou carburador de sujeiras.',
+                'location': 'Na linha de combustível, próximo ao tanque ou ao motor.',
+                'common_problems': 'Dificuldade de partida, falhas na aceleração, aumento do consumo.',
+                'maintenance_interval': '20.000 a 30.000km'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 4,
+            'name': 'Filtro de Cabine (Ar Condicionado)',
+            'category': 'Filtros',
+            'subcategory': 'Conforto',
+            'description': 'Filtra o ar que entra no interior do veículo, removendo poeira e poluentes.',
+            'details': {
+                'purpose': 'Garantir ar limpo para os ocupantes do veículo.',
+                'location': 'Geralmente abaixo do painel ou no capô, próximo à entrada de ar.',
+                'common_problems': 'Mau cheiro no ar-condicionado, redução da vazão de ar.',
+                'maintenance_interval': '15.000 a 20.000km'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 5,
+            'name': 'Pastilhas de Freio (Dianteiras)',
+            'category': 'Freios',
+            'subcategory': 'Segurança',
+            'description': 'Componentes que aplicam atrito nos discos de freio para parar o veículo.',
+            'details': {
+                'purpose': 'Garantir a parada segura do veículo.',
+                'location': 'Nas pinças de freio, junto aos discos.',
+                'common_problems': 'Barulho de raspagem, aumento da distância de frenagem.',
+                'maintenance_interval': '20.000 a 40.000km'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 6,
+            'name': 'Pastilhas de Freio (Traseiras)',
+            'category': 'Freios',
+            'subcategory': 'Segurança',
+            'description': 'Componentes de freio traseiro, muitas vezes menores que as dianteiras.',
+            'details': {
+                'purpose': 'Auxiliar na parada segura e equilibrada do veículo.',
+                'location': 'Nas pinças ou tambores de freio traseiros.',
+                'common_problems': 'Barulho de raspagem, desgaste irregular.',
+                'maintenance_interval': '30.000 a 50.000km'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 7,
+            'name': 'Fluído de Freio',
+            'category': 'Fluidos',
+            'subcategory': 'Segurança',
+            'description': 'Fluído que transmite a força do pedal aos freios. Absorve umidade com o tempo.',
+            'details': {
+                'purpose': 'Garantir a transmissão eficiente da força de freio.',
+                'location': 'Reservatório no compartimento do motor e circuito hidráulico.',
+                'common_problems': 'Pedal de freio "frouxo", redução da eficácia de frenagem.',
+                'maintenance_interval': '2 anos ou 40.000km'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 8,
+            'name': 'Líquido de Arrefecimento',
+            'category': 'Fluidos',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Fluído que mantém a temperatura do motor dentro do ideal.',
+            'details': {
+                'purpose': 'Evitar superaquecimento e congelamento do motor.',
+                'location': 'Radiador, mangueiras e reservatório de expansão.',
+                'common_problems': 'Superaquecimento, vazamentos, ferrugem no sistema.',
+                'maintenance_interval': '2 a 4 anos ou 40.000 a 80.000km'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 9,
+            'name': 'Óleo do Câmbio',
+            'category': 'Fluidos',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Lubrifica as engrenagens do câmbio, garantindo trocas suaves.',
+            'details': {
+                'purpose': 'Proteger as engrenagens e garantir trocas de marcha suaves.',
+                'location': 'Câmbio do veículo.',
+                'common_problems': 'Dificuldade em trocar marchas, ruídos no câmbio, vazamentos.',
+                'maintenance_interval': '40.000 a 80.000km (varia por tipo de câmbio)'
+            },
+            'image_url': ''
+        },
+        {
+            'id': 10,
+            'name': 'Velas de Ignição',
+            'category': 'Ignição',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Produz a centelha que ignita a mistura ar-combustível no motor.',
+            'details': {
+                'purpose': 'Garantir a combustão eficiente no motor.',
+                'location': 'No cabeçote do motor, uma por cilindro.',
+                'common_problems': 'Dificuldade de partida, falhas na aceleração, aumento do consumo.',
+                'maintenance_interval': '30.000 a 60.000km (varia por tipo de vela)'
+            },
+            'image_url': ''
         }
     ]
+    
+    # Add transmission-specific parts
+    if is_automatic:
+        parts_catalog.extend([
+            {
+                'id': 11,
+                'name': 'Filtro do Câmbio Automático',
+                'category': 'Câmbio',
+                'subcategory': 'Manutenção Preventiva',
+                'description': 'Filtra impurezas do óleo do câmbio automático para proteger componentes internos.',
+                'details': {
+                    'purpose': 'Manter o óleo do câmbio limpo para prolongar a vida útil.',
+                    'location': 'Dentro ou próximo ao cárter do câmbio automático.',
+                    'common_problems': 'Trocas de marcha lentas ou bruscas, patinação do câmbio.',
+                    'maintenance_interval': '40.000 a 60.000km'
+                },
+                'image_url': ''
+            }
+        ])
+    else:
+        parts_catalog.extend([
+            {
+                'id': 11,
+                'name': 'Kit de Embreagem',
+                'category': 'Câmbio',
+                'subcategory': 'Manutenção Preventiva',
+                'description': 'Conjunto de disco, platô e rolamento que permite trocar marchas.',
+                'details': {
+                    'purpose': 'Permitir a conexão e desconexão do motor com o câmbio.',
+                    'location': 'Entre o motor e o câmbio manual.',
+                    'common_problems': 'Dificuldade em trocar marchas, cheiro de queimado, patinação.',
+                    'maintenance_interval': '80.000 a 150.000km (varia por uso)'
+                },
+                'image_url': ''
+            }
+        ])
+    
+    # Check for timing belt or chain
+    engine_str = (vehicle.engine_type or '').lower()
+    if 'fire' in engine_str or 'e.torq' in engine_str or 'flex' in engine_str:
+        parts_catalog.append({
+            'id': 12,
+            'name': 'Corrente de Distribuição',
+            'category': 'Motor',
+            'subcategory': 'Inspeção',
+            'description': 'Componente que sincroniza a rotação do virabrequim e do cabeçote.',
+            'details': {
+                'purpose': 'Garantir o sincronismo correto das valvas e pistões.',
+                'location': 'Interna ao motor, necessita de inspeção periódica.',
+                'common_problems': 'Ruído de "plástico" no motor, vibrações.',
+                'maintenance_interval': 'Inspeção a cada 60.000km'
+            },
+            'image_url': ''
+        })
+    else:
+        parts_catalog.append({
+            'id': 12,
+            'name': 'Correia Dentada',
+            'category': 'Motor',
+            'subcategory': 'Manutenção Preventiva',
+            'description': 'Correia que sincroniza a rotação do virabrequim e do cabeçote, crítica para evitar danos graves.',
+            'details': {
+                'purpose': 'Garantir o sincronismo correto para evitar danos no motor.',
+                'location': 'Externa ou interna ao motor, com proteção.',
+                'common_problems': 'Quebra repentina (causa danos graves), rachaduras na correia.',
+                'maintenance_interval': '50.000 a 80.000km'
+            },
+            'image_url': ''
+        })
     
     return jsonify({
         'vehicle': f"{vehicle.brand} {vehicle.model} ({vehicle.year}) - {vehicle.transmission} - {vehicle.engine_type}",

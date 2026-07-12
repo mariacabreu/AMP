@@ -13,9 +13,6 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
@@ -27,17 +24,10 @@
         "BLUETOOTH_CONNECT",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "BLUETOOTH",
-        "BLUETOOTH_ADMIN",
-        "BLUETOOTH_SCAN",
-        "BLUETOOTH_CONNECT",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
       ],
       "package": "com.anonymous.ampmobile"
-    },
-    "web": {
-      "favicon": "./src/assets/logo.png"
     },
     "extra": {
       "eas": {
@@ -47,7 +37,19 @@
     "owner": "ampproject",
     "plugins": [
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Precisamos de acesso à galeria para trocar a foto do perfil."
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyC5Y2D1lq5Z0e4p9r2X7v4Y9w3Q1a2Z0x"
+        }
+      ]
     ]
   }
 }

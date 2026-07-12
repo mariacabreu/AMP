@@ -23,115 +23,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# User Model
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    is_premium = db.Column(db.Boolean, default=False)
-    plan_type = db.Column(db.String(20), default='free')  # 'free', 'mensal', 'trimestral', 'anual'
-    reminder_frequency = db.Column(db.String(50), default='biweekly')
-    phone = db.Column(db.String(20), nullable=True)
-    vehicles = db.relationship('Vehicle', backref='owner', lazy=True, cascade='all, delete-orphan')
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'full_name': self.full_name,
-            'email': self.email,
-            'phone': self.phone,
-            'is_premium': self.is_premium,
-            'plan_type': self.plan_type,
-            'reminder_frequency': self.reminder_frequency
-        }
-
-# Vehicle Model
-class Vehicle(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    brand = db.Column(db.String(50), nullable=False)
-    model = db.Column(db.String(50), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    transmission = db.Column(db.String(20))
-    mileage = db.Column(db.Integer)
-    fuel_type = db.Column(db.String(20))
-    engine_type = db.Column(db.String(50)) # Ex: 1.3 Firefly, 1.0 Turbo 200
-    usage_type = db.Column(db.String(50))  # Ex: Urbano, Rodoviário, Misto
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
-    # Novas colunas para manutenção preventiva
-    last_oil_change = db.Column(db.Integer, default=0)
-    last_belt_change = db.Column(db.Integer, default=0)
-    last_brake_change = db.Column(db.Integer, default=0)
-
-
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'brand': self.brand,
-            'model': self.model,
-            'year': self.year,
-            'transmission': self.transmission,
-            'mileage': self.mileage,
-            'fuel_type': self.fuel_type,
-            'engine_type': self.engine_type,
-            'usage_type': self.usage_type,
-            'last_oil_change': self.last_oil_change,
-            'last_belt_change': self.last_belt_change,
-            'last_brake_change': self.last_brake_change,
-            'maintenance_history': [h.to_dict() for h in self.maintenance_history]
-        }
-
-# Maintenance History Model
-class MaintenanceHistory(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
-    item = db.Column(db.String(100), nullable=False) # e.g., "Troca de Óleo", "Troca de Pneus"
-    last_km = db.Column(db.Integer, nullable=False)
-    last_date = db.Column(db.String(20)) # e.g., "2024-01-01"
-    cost = db.Column(db.Float, default=0.0)
-    liters = db.Column(db.Float, default=0.0)
-    
-    vehicle = db.relationship('Vehicle', backref=db.backref('maintenance_history', lazy=True, cascade='all, delete-orphan'))
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'item': self.item,
-            'last_km': self.last_km,
-            'last_date': self.last_date,
-            'cost': self.cost,
-            'liters': self.liters
-        }
-
-# OBD Scan Model
-class OBDScan(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
-    scan_date = db.Column(db.String(50), nullable=False)
-    dtc_codes = db.Column(db.JSON, default=[])
-    live_data = db.Column(db.JSON, default={})
-    connected_device = db.Column(db.String(100))
-    
-    vehicle = db.relationship('Vehicle', backref=db.backref('obd_scans', lazy=True, cascade='all, delete-orphan'))
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'vehicle_id': self.vehicle_id,
-            'scan_date': self.scan_date,
-            'dtc_codes': self.dtc_codes,
-            'live_data': self.live_data,
-            'connected_device': self.connected_device
-        }
+# Import models
+from app.models.models import User, Vehicle, MaintenanceHistory, OBDScan
 
 # Plan Vehicle Limits
 PLAN_VEHICLE_LIMITS = {
     'free': 1,
     'mensal': 1,
-    'trimestral': 3,
-    'anual': 5
+    'trimestral': 1,
+    'anual': 1
 }
 
 def get_vehicle_limit(plan_type):
@@ -841,6 +741,51 @@ def save_maintenance():
         print(f"Erro ao salvar no banco: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/vehicle/maintenance/<int:maintenance_id>', methods=['GET', 'PUT', 'PATCH', 'DELETE'])
+def get_update_delete_maintenance(maintenance_id):
+    # First find the maintenance entry
+    maintenance_entry = MaintenanceHistory.query.get(maintenance_id)
+    if not maintenance_entry:
+        return jsonify({'error': 'Registro de manutenção não encontrado'}), 404
+
+    if request.method == 'GET':
+        # Return the single entry
+        return jsonify(maintenance_entry.to_dict()), 200
+
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(maintenance_entry)
+            db.session.commit()
+            return jsonify({'message': 'Registro de manutenção excluído com sucesso'}), 200
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro ao excluir registro: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    # PUT/PATCH request
+    data = request.json
+    try:
+        if 'item' in data:
+            maintenance_entry.item = data['item']
+        if 'last_km' in data:
+            maintenance_entry.last_km = data['last_km']
+        if 'last_date' in data:
+            maintenance_entry.last_date = data['last_date']
+        if 'cost' in data:
+            maintenance_entry.cost = float(data['cost'])
+        if 'liters' in data:
+            maintenance_entry.liters = float(data['liters'])
+        
+        db.session.commit()
+        return jsonify({
+            'message': 'Registro de manutenção atualizado com sucesso',
+            'maintenance': maintenance_entry.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao atualizar registro: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/user/report/<int:user_id>', methods=['GET'])
 def get_user_report(user_id):
     user = User.query.get(user_id)
@@ -913,7 +858,7 @@ def get_or_update_user(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'Usuário não encontrado'}), 404
-    
+
     if request.method in ['PUT', 'PATCH']:
         data = request.json
         if 'full_name' in data:
@@ -924,25 +869,33 @@ def get_or_update_user(user_id):
             user.phone = data['phone']
         if 'reminder_frequency' in data:
             user.reminder_frequency = data['reminder_frequency']
-        
+        if 'avatar' in data:
+            user.avatar = data['avatar']
+
         db.session.commit()
         return jsonify({'message': 'Usuário atualizado com sucesso', 'user': user.to_dict()}), 200
-    
+
     # GET request
     return jsonify(user.to_dict()), 200
 
 @app.route('/user/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
+    print(f"=== Tentando excluir usuário com ID: {user_id} ===")
     user = User.query.get(user_id)
     if not user:
+        print(f"Erro: Usuário com ID {user_id} não encontrado")
         return jsonify({'error': 'Usuário não encontrado'}), 404
     
     try:
+        print(f"Usuário encontrado: {user.email}")
+        print(f"Veículos associados: {len(user.vehicles)}")
         db.session.delete(user)
         db.session.commit()
+        print(f"Usuário {user.email} excluído com sucesso")
         return jsonify({'message': 'Usuário excluído com sucesso'}), 200
     except Exception as e:
         db.session.rollback()
+        print(f"Erro ao excluir usuário: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/users', methods=['GET'])

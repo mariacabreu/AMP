@@ -15,15 +15,11 @@ const ProfileModal = ({
   onLogout,
   isPremium = false,
   planType,
-  vehicleCount = 0,
-  vehicles = [], // ex: [{ id, brand, model, plate }]
-  onAddVehicle,
+  vehicle = null, // Single vehicle instead of list
   navigation,
   loggedUser
 }) => {
   const planInfo = getPlanInfo(planType);
-  const canAdd = canAddVehicle(planType, vehicleCount);
-  const limitLabel = getVehicleLimitLabel(planType, vehicleCount);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -75,51 +71,31 @@ const ProfileModal = ({
             </View>
 
             {/*
-              Card de veículos: aparece para QUALQUER plano, inclusive Free.
-              O botão de adicionar só fica ativo se o plano ainda tiver vaga
-              (canAdd vem de planLimits.js, que centraliza os limites).
+              Card de veículo: mostra apenas o veículo cadastrado na conta
             */}
             <View style={styles.vehicleLimitCard}>
               <View style={styles.vehicleLimitInfo}>
-                <MaterialCommunityIcons name="car-multiple" size={22} color="#1A1A1A" />
+                <MaterialCommunityIcons name="car" size={22} color="#1A1A1A" />
                 <View style={styles.vehicleLimitTextWrap}>
-                  <Text style={styles.vehicleLimitTitle}>Veículos cadastrados</Text>
-                  <Text style={styles.vehicleLimitCount}>{limitLabel}</Text>
+                  <Text style={styles.vehicleLimitTitle}>Meu veículo</Text>
                 </View>
               </View>
 
-              {vehicles.length > 0 && (
+              {vehicle && (
                 <View style={styles.vehicleList}>
-                  {vehicles.map((v) => (
-                    <View key={v.id} style={styles.vehicleListItem}>
-                      <MaterialCommunityIcons name="car" size={16} color="#666" />
-                      <Text style={styles.vehicleListItemText}>
-                        {v.brand ? `${v.brand} ${v.model || ''}`.trim() : v.model || 'Veículo'}
-                        {v.plate ? ` • ${v.plate}` : ''}
-                      </Text>
-                    </View>
-                  ))}
+                  <View style={styles.vehicleListItem}>
+                    <MaterialCommunityIcons name="car" size={16} color="#666" />
+                    <Text style={styles.vehicleListItemText}>
+                      {vehicle.brand ? `${vehicle.brand} ${vehicle.model || ''}`.trim() : vehicle.model || 'Veículo'}
+                      {vehicle.plate ? ` • ${vehicle.plate}` : ''}
+                    </Text>
+                  </View>
                 </View>
               )}
 
-              <TouchableOpacity
-                style={[styles.addVehicleButton, !canAdd && styles.addVehicleButtonDisabled]}
-                onPress={onAddVehicle}
-                disabled={!canAdd}
-              >
-                <MaterialCommunityIcons
-                  name="plus"
-                  size={16}
-                  color={!canAdd ? '#999' : '#FFCF00'}
-                />
-                <Text style={[styles.addVehicleButtonText, !canAdd && styles.addVehicleButtonTextDisabled]}>
-                  {!canAdd
-                    ? planInfo.maxVehicles === 0
-                      ? 'Assine um plano'
-                      : 'Limite atingido'
-                    : 'Adicionar veículo'}
-                </Text>
-              </TouchableOpacity>
+              {!vehicle && (
+                <Text style={styles.noVehicleText}>Nenhum veículo cadastrado</Text>
+              )}
             </View>
 
             <Text style={styles.inputLabel}>Nome completo</Text>
@@ -338,8 +314,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 6
   },
-  addVehicleButtonTextDisabled: {
-    color: '#999'
+  noVehicleText: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 8
   },
   inputLabel: {
     fontSize: 12,
