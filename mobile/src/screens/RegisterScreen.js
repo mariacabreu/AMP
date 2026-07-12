@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Platform, Modal, ActivityIndicator } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../api';
 
@@ -9,21 +9,45 @@ const RegisterScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState('success'); // 'success' or 'error'
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const showModal = (type, title, message) => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setModalVisible(false);
+    if (modalType === 'success') {
+      navigation.navigate('VehicleRegistration', { user: modalUser });
+    } else {
+      navigation.navigate('Initial');
+    }
+  };
+
+  const [modalUser, setModalUser] = useState(null);
 
   const handleRegister = async () => {
     console.log('Iniciando processo de cadastro...');
     if (!fullName || !email || !password || !confirmPassword) {
       console.log('Erro: Campos não preenchidos');
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      showModal('error', 'Erro', 'Por favor, preencha todos os campos');
       return;
     }
 
     if (password !== confirmPassword) {
       console.log('Erro: Senhas não coincidem');
-      Alert.alert('Erro', 'As senhas não coincidem');
+      showModal('error', 'Erro', 'As senhas não coincidem');
       return;
     }
 
+    setIsLoading(true);
     try {
       const apiUrl = `${API_BASE_URL}/register`;
       console.log('Enviando requisição para:', apiUrl);
@@ -37,15 +61,15 @@ const RegisterScreen = ({ navigation }) => {
       console.log('Resposta do servidor:', response.data);
       
       const newUser = response.data.user;
-      
-      // No web, o Alert.alert pode ser bloqueado ou não chamar o callback.
-      // Vamos navegar diretamente se for sucesso.
-      navigation.navigate('VehicleRegistration', { user: newUser });
+      setModalUser(newUser);
+      showModal('success', 'Conta criada com sucesso!', 'Sua conta foi criada. Vamos cadastrar seu veículo.');
       
     } catch (error) {
       console.error('Erro no cadastro:', error.response?.data || error.message);
       const message = error.response?.data?.error || 'Erro ao realizar cadastro. Verifique se o servidor está rodando.';
-      Alert.alert('Erro', message);
+      showModal('error', 'Erro no cadastro', message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -108,8 +132,12 @@ const RegisterScreen = ({ navigation }) => {
             />
           </View>
           
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-            <Text style={styles.registerButtonText}>Cadastrar</Text>
+          <TouchableOpacity style={styles.registerButton} onPress={handleRegister} disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.registerButtonText}>Cadastrar</Text>
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -117,6 +145,24 @@ const RegisterScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Custom Modal */}
+      <Modal animationType="fade" transparent visible={modalVisible} onRequestClose={handleModalClose}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {modalType === 'success' ? (
+              <MaterialCommunityIcons name="check-circle" size={50} color="#4CAF50" />
+            ) : (
+              <MaterialCommunityIcons name="alert-circle" size={50} color="#FF5722" />
+            )}
+            <Text style={styles.modalTitle}>{modalTitle}</Text>
+            <Text style={styles.modalText}>{modalMessage}</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={handleModalClose}>
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -216,6 +262,50 @@ const styles = StyleSheet.create({
     color: '#333',
     textDecorationLine: 'underline',
     textAlign: 'center',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'center',
+    width: '85%',
+    ...Platform.select({
+      web: {
+        maxWidth: 400,
+      }
+    })
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 15,
+    marginBottom: 10,
+    color: '#000',
+  },
+  modalText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 25,
+    lineHeight: 20,
+  },
+  modalButton: {
+    backgroundColor: '#2D2D2D',
+    borderRadius: 10,
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

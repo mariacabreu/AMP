@@ -298,7 +298,9 @@ const OBDScreen = ({ navigation, route }) => {
       return;
     }
 
+    console.log('Android Version:', Platform.Version);
     const hasPermissions = await requestBluetoothPermissions();
+    console.log('Permissões concedidas:', hasPermissions);
 
     if (!hasPermissions) {
       Alert.alert('Permissão Negada', 'As permissões de Bluetooth são necessárias para conectar.');
@@ -311,7 +313,7 @@ const OBDScreen = ({ navigation, route }) => {
     try {
       if (BluetoothClassic) {
         const devices = await BluetoothClassic.getBondedDevices();
-        console.log('Dispositivos pareados:', devices);
+        console.log('Dispositivos encontrados:', devices);
         // Filter only devices that look like OBD2/ELM327
         const obdDevices = devices.filter(d => 
           d.name && d.name.toLowerCase().includes('obd') || 

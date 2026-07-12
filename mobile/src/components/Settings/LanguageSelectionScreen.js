@@ -15,16 +15,9 @@ const LanguageSelectionScreen = ({ navigation, route }) => {
     { code: 'es', name: 'Español', flag: '🇪🇸' }
   ];
 
-  // Estado local só pra deixar o usuário escolher antes de confirmar
-  const [selectedLanguage, setSelectedLanguage] = useState(language);
-
-  const handleSave = () => {
-    setLanguage(selectedLanguage); // <- isso muda o app inteiro, instantaneamente
-    Alert.alert(
-      t('preferences_saved_title'),
-      `${t('preferences_saved_message')} ${languages.find(l => l.code === selectedLanguage)?.name}`,
-      [{ text: t('ok'), onPress: () => navigation.goBack() }]
-    );
+  // When language is selected, apply it immediately!
+  const handleSelectLanguage = (langCode) => {
+    setLanguage(langCode);
   };
 
   return (
@@ -44,18 +37,18 @@ const LanguageSelectionScreen = ({ navigation, route }) => {
             key={lang.code}
             style={[
               styles.languageCard,
-              selectedLanguage === lang.code && styles.selectedCard
+              language === lang.code && styles.selectedCard
             ]}
-            onPress={() => setSelectedLanguage(lang.code)}
+            onPress={() => handleSelectLanguage(lang.code)}
           >
             <Text style={styles.flag}>{lang.flag}</Text>
             <Text style={[
               styles.languageName,
-              selectedLanguage === lang.code && styles.selectedName
+              language === lang.code && styles.selectedName
             ]}>
               {lang.name}
             </Text>
-            {selectedLanguage === lang.code && (
+            {language === lang.code && (
               <MaterialCommunityIcons
                 name="check-circle"
                 size={28}
@@ -64,10 +57,6 @@ const LanguageSelectionScreen = ({ navigation, route }) => {
             )}
           </TouchableOpacity>
         ))}
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>{t('save_preferences')}</Text>
-        </TouchableOpacity>
 
         <View style={styles.footerSpace} />
       </ScrollView>
@@ -156,18 +145,6 @@ const styles = StyleSheet.create({
     color: '#000'
   },
   selectedName: {
-    fontWeight: '800'
-  },
-  saveButton: {
-    backgroundColor: '#2E2E2E',
-    borderRadius: 15,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: 20
-  },
-  saveButtonText: {
-    color: '#FFCF00',
-    fontSize: 16,
     fontWeight: '800'
   },
   footerSpace: {
