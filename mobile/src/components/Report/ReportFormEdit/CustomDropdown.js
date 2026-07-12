@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import sharedStyles from './SharedStyles';
 
@@ -55,6 +55,8 @@ const CustomDropdown = ({ label, items, selectedValue, onSelect, isOpen, setIsOp
                   border: '1px solid #E0E0E0',
                   boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                   zIndex: 1000000,
+                  maxHeight: 220,
+                  overflowY: 'auto',
                 }}
               >
                 {items.map((item, index) => (
@@ -84,7 +86,12 @@ const CustomDropdown = ({ label, items, selectedValue, onSelect, isOpen, setIsOp
               </div>
             ),
             default: (
-              <View style={styles.dropdownList}>
+              <ScrollView
+                style={styles.dropdownList}
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}
+              >
                 {items.map((item, index) => (
                   <TouchableOpacity
                     key={index}
@@ -108,7 +115,7 @@ const CustomDropdown = ({ label, items, selectedValue, onSelect, isOpen, setIsOp
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
             ),
           })}
       </View>
@@ -149,6 +156,7 @@ const styles = StyleSheet.create({
     top: 52,
     left: 0,
     right: 0,
+    maxHeight: 220,
     backgroundColor: '#ffffff',
     borderRadius: 8,
     borderWidth: 1,
