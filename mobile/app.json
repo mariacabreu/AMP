@@ -30,7 +30,7 @@
       ],
       "package": "com.anonymous.ampmobile"
     },
-    "owner": "ampp",
+    "owner": "amp-project",
     "plugins": [
       "expo-font",
       "@react-native-community/datetimepicker",
@@ -43,7 +43,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "47f42b23-b393-40fa-9398-f3978edcc045"
+        "projectId": "a19a0554-7a5b-498d-a8bd-233e5567088e"
       }
     }
   }
