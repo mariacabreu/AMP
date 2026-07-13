@@ -9,10 +9,10 @@ import {
   Modal,
   Alert,
   TextInput,
+  Image
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import BottomNav from '../NavBar/BottomNav';
-import BackHeader from '../Common/BackHeader';
 import CustomCalendarModal from '../Common/CustomCalendarModal';
 import CustomSwitch from '../Settings/CustomSwitch';
 
@@ -132,10 +132,20 @@ const RemindersScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <BackHeader
-        title="Lembretes Programáveis"
-        onBack={() => navigation.goBack()}
-      />
+      {/* Header Fixo */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <View style={styles.logoContainer} pointerEvents="none">
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>LEMBRETES PROGRAMÁVEIS</Text>
+        </View>
+      </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>
@@ -263,6 +273,20 @@ const styles = StyleSheet.create({
       default: { flex: 1 },
     }),
   },
+  header: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    width: 40,
+    zIndex: 2,
+    alignSelf: 'flex-start',
+  },
   scrollView: {
     flex: 1,
     ...Platform.select({ web: { overflowY: 'scroll' } }),
@@ -271,6 +295,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 100,
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 40,
+    bottom: 16,
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 120,
+    height: 60,
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000',
+    marginTop: 6,
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 14,

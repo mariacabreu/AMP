@@ -67,13 +67,15 @@ const styles = StyleSheet.create({
   titleContainer: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',       // 'flex-start' em vez de 'center', melhor quando o título quebra em 2 linhas
     justifyContent: 'space-between',
   },
   itemName: {
+    flex: 1,                        // 👈 permite encolher/quebrar
     fontSize: 16,
     fontWeight: '700',
     color: '#000',
+    marginRight: 8,                 // 👈 espaço entre título e badge
   },
   cardBody: {
     flexDirection: 'row',

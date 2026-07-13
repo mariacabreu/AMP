@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, ActivityIndicator, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
 import BottomNav from '../NavBar/BottomNav';
-import BackHeader from '../Common/BackHeader';
 import SelectableOptionCard from '../Common/SelectableOptionCard';
 import PrimaryButton from '../Common/PrimaryButton';
 import AMPAlertModal from '../Common/AMPAlertModal';
@@ -92,10 +92,20 @@ const ReminderFrequencyScreen = ({ navigation, route }) => {
 
     return (
         <View style={styles.container}>
-            <BackHeader
-                title="Frequência dos Lembretes"
-                onBack={() => navigation.goBack()}
-            />
+            {/* Header Fixo */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color="#000" />
+                </TouchableOpacity>
+                <View style={styles.logoContainer} pointerEvents="none">
+                    <Image
+                        source={require('../../assets/logo.png')}
+                        style={styles.headerLogo}
+                        resizeMode="contain"
+                    />
+                    <Text style={styles.headerTitle}>FREQUÊNCIA DOS LEMBRETES</Text>
+                </View>
+            </View>
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
                 <Text style={styles.subtitle}>
@@ -160,6 +170,40 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  header: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    width: 40,
+    zIndex: 2,
+    alignSelf: 'flex-start',
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 40,
+    bottom: 16,
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 120,
+    height: 60,
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000',
+    marginTop: 6,
+    letterSpacing: 0.5,
+  },
   scrollView: {
     flex: 1,
     ...Platform.select({
@@ -168,6 +212,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 100,
   },
   subtitle: {

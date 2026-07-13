@@ -14,24 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 const MOCK_NOTIFICATIONS = [
   {
     id: '1',
-    title: 'Troca de óleo recomendada',
-    description: 'Seu veículo está próximo do prazo ideal para troca de óleo.',
-    time: 'Há 2 horas',
+    title: 'Bem-vindo(a) ao AMP!',
+    description: 'Assine o plano premium para obter todas as funcionalidades do AMP.',
+    time: 'Agora mesmo',
     read: false
-  },
-  {
-    id: '2',
-    title: 'Diagnóstico OBD concluído',
-    description: 'Nenhuma falha crítica encontrada no último escaneamento.',
-    time: 'Ontem',
-    read: true
-  },
-  {
-    id: '3',
-    title: 'Bem-vindo ao app!',
-    description: 'Cadastre seu veículo para liberar todas as funcionalidades.',
-    time: 'Há 3 dias',
-    read: true
   }
 ];
 

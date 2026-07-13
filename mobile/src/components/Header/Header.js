@@ -130,7 +130,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     height: 70,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    overflow: 'visible'
   },
   headerWithIcons: {
     justifyContent: 'space-between'
@@ -144,23 +145,27 @@ const styles = StyleSheet.create({
   },
   headerIcons: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    overflow: 'visible'
   },
   iconButton: {
     marginLeft: 18,
-    position: 'relative'
+    position: 'relative',
+    overflow: 'visible'
   },
   badge: {
     position: 'absolute',
     top: -4,
     right: -6,
-    backgroundColor: '#D32F2F',
+    backgroundColor: '#FFCF00',
     borderRadius: 9,
     minWidth: 16,
     height: 16,
     paddingHorizontal: 3,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    zIndex: 10,
+    elevation: 10 
   },
   badgeText: {
     color: '#fff',
