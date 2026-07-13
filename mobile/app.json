@@ -40,7 +40,12 @@
           "photosPermission": "Precisamos de acesso à galeria para trocar a foto do perfil."
         }
       ],
-      "react-native-maps"
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "SUA_CHAVE_API_AQUI"
+        }
+      ]
     ],
     "extra": {
       "eas": {
