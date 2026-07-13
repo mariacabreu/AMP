@@ -28,19 +28,63 @@ SUPPORTED_BRANDS = {
         'start_year': 2010,
     },
     'Chevrolet': {
-        'models': ['Onix', 'Prisma', 'Cruze', 'S10', 'Tracker', 'Spin', 'Montana', 'Equinox', 'Trailblazer', 'Camaro'],
+        'models': ['Onix', 'Prisma', 'Cruze', 'S10', 'Tracker', 'Spin', 'Montana', 'Equinox', 'Trailblazer', 'Camaro', 'Cobalt', 'Classic', 'Celta'],
         'engines': {
             'Onix': ['1.0 Aspirado', '1.0 Turbo', '1.4 Aspirado'],
         },
         'start_year': 2011,
     },
     'Volkswagen': {
-        'models': ['Gol', 'Polo', 'Golf', 'T-Cross', 'Amarok', 'Virtus', 'Nivus', 'Taos', 'Jetta', 'Tiguan', 'Voyage', 'Saveiro'],
+        'models': ['Gol', 'Polo', 'Golf', 'T-Cross', 'Amarok', 'Virtus', 'Nivus', 'Taos', 'Jetta', 'Tiguan', 'Voyage', 'Saveiro', 'Fox', 'CrossFox'],
         'start_year': 2010,
     },
     'Toyota': {
-        'models': ['Corolla', 'Hilux', 'Yaris', 'Etios', 'SW4', 'Rav4', 'Camry', 'Prius', 'Corolla Cross'],
+        'models': ['Corolla', 'Hilux', 'Yaris', 'Etios', 'SW4', 'Rav4', 'Camry', 'Prius', 'Corolla Cross', 'Innova', 'Land Cruiser'],
         'start_year': 2012,
+    },
+    'Hyundai': {
+        'models': ['HB20', 'Creta', 'Tucson', 'i30', 'Santa Fe', 'Elantra', 'Sonata', 'Azera', 'HR', 'iX35'],
+        'start_year': 2012,
+    },
+    'Honda': {
+        'models': ['Civic', 'Fit', 'City', 'HR-V', 'CR-V', 'Accord', 'WR-V', 'Pilot'],
+        'start_year': 2010,
+    },
+    'Nissan': {
+        'models': ['Versa', 'March', 'Kicks', 'Sentra', 'Altima', 'Frontier', 'X-Trail', 'Livina'],
+        'start_year': 2012,
+    },
+    'Renault': {
+        'models': ['Sandero', 'Logan', 'Duster', 'Kwid', 'Captur', 'Clio', 'Fluence', 'Oroch'],
+        'start_year': 2011,
+    },
+    'Fiat': {
+        'models': ['Uno', 'Palio', 'Argo', 'Cronos', 'Mobi', 'Toro', 'Strada', 'Fiorino', 'Doblo'],
+        'start_year': 2010,
+    },
+    'Jeep': {
+        'models': ['Renegade', 'Compass', 'Wrangler', 'Cherokee', 'Grand Cherokee', 'Commander'],
+        'start_year': 2015,
+    },
+    'BMW': {
+        'models': ['3 Series', '5 Series', 'X1', 'X3', 'X5', 'X6', '1 Series', '2 Series'],
+        'start_year': 2012,
+    },
+    'Mercedes-Benz': {
+        'models': ['C-Class', 'E-Class', 'GLA', 'GLC', 'GLE', 'A-Class', 'CLA'],
+        'start_year': 2013,
+    },
+    'Audi': {
+        'models': ['A3', 'A4', 'Q3', 'Q5', 'Q7', 'A1', 'A6'],
+        'start_year': 2012,
+    },
+    'Peugeot': {
+        'models': ['208', '308', '2008', '3008', '5008', 'Partner'],
+        'start_year': 2014,
+    },
+    'Citroën': {
+        'models': ['C3', 'C4 Cactus', 'Aircross', 'C4 Lounge', 'Jumpy'],
+        'start_year': 2013,
     },
 }
 
