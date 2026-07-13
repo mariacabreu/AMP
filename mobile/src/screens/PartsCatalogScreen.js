@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet, Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
 import Header from '../components/Header/Header';
@@ -84,6 +85,19 @@ const PartsCatalogScreen = ({ navigation, route }) => {
       console.error('Error fetching notifications:', error);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loggedUser?.id) {
+        return undefined;
+      }
+
+      fetchUserStatus();
+      fetchNotifications();
+
+      return undefined;
+    }, [loggedUser?.id])
+  );
 
   const handleProfileFieldChange = (field, value) => {
     setProfileForm((prev) => ({ ...prev, [field]: value }));

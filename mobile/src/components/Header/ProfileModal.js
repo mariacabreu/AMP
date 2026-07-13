@@ -74,20 +74,26 @@ const ProfileModal = ({
               Card de veículo: mostra apenas o veículo cadastrado na conta
             */}
             <View style={styles.vehicleLimitCard}>
-              {vehicle && (
-                <View style={styles.vehicleList}>
-                  <View style={styles.vehicleListItem}>
-                    <MaterialCommunityIcons name="car" size={16} color="#666" />
-                    <Text style={styles.vehicleListItemText}>
-                      {vehicle.brand ? `${vehicle.brand} ${vehicle.model || ''}`.trim() : vehicle.model || 'Veículo'}
-                      {vehicle.plate ? ` • ${vehicle.plate}` : ''}
-                    </Text>
+              {vehicle ? (
+                <View style={styles.vehicleCard}>
+                  <View style={styles.vehicleIconContainer}>
+                    <MaterialCommunityIcons
+                      name="car-sports"
+                      size={24}
+                      color="#FFCF00"
+                    />
                   </View>
-                </View>
-              )}
 
-              {!vehicle && (
-                <Text style={styles.noVehicleText}>Nenhum veículo cadastrado</Text>
+                  <Text style={styles.vehicleName}>
+                    {vehicle.brand
+                      ? `${vehicle.brand} ${vehicle.model || ''}`.trim()
+                      : vehicle.model || 'Veículo'}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.noVehicleText}>
+                  Nenhum veículo cadastrado
+                </Text>
               )}
             </View>
 
@@ -255,8 +261,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
     borderWidth: 1,
     borderColor: '#EDEDED',
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 12,
     marginBottom: 20
   },
   vehicleLimitInfo: {
@@ -277,20 +283,33 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2
   },
-  vehicleList: {
-    marginBottom: 12
-  },
-  vehicleListItem: {
+  vehicleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#EEEEEE'
   },
-  vehicleListItemText: {
-    fontSize: 12,
-    color: '#333',
-    marginLeft: 8
+
+  vehicleIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1A1A1A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14
   },
-  addVehicleButton: {
+
+  vehicleName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000'
+  },
+    addVehicleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

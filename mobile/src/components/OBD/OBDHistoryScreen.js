@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../../api';
 import BottomNav from '../NavBar/BottomNav';
 
@@ -51,6 +52,17 @@ const OBDHistoryScreen = ({ navigation, route }) => {
       setLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loggedUser?.id) {
+        return undefined;
+      }
+
+      fetchVehicleAndScans();
+      return undefined;
+    }, [loggedUser?.id])
+  );
 
   const formatDate = (isoString) => {
     if (!isoString) return 'Data desconhecida';
@@ -287,7 +299,7 @@ const styles = StyleSheet.create({
   },
   headerLogo: {
     width: 120,
-    height: 40
+    height: 60
   },
   headerTitle: {
     fontSize: 14,

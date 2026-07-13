@@ -1,9 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  Pressable
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Mock usado apenas como fallback caso nenhuma notificação real seja passada
-// (ex: durante desenvolvimento, antes do endpoint de notificações estar pronto).
 const MOCK_NOTIFICATIONS = [
   {
     id: '1',
@@ -31,48 +38,106 @@ const MOCK_NOTIFICATIONS = [
 const NotificationsModal = ({
   visible,
   onClose,
-  notifications = MOCK_NOTIFICATIONS,
+  notifications,
   unreadCount,
   onMarkAllAsRead
 }) => {
+  // Usa as notificações reais se existirem; caso contrário, usa os mocks
+  const effectiveNotifications =
+    notifications?.length > 0
+      ? notifications
+      : MOCK_NOTIFICATIONS;
+
   const effectiveUnreadCount =
-    unreadCount ?? notifications.filter((n) => !n.read).length;
+    unreadCount ??
+    effectiveNotifications.filter((n) => !n.read).length;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.notificationModalCard} onPress={() => {}}>
+        <Pressable
+          style={styles.notificationModalCard}
+          onPress={() => {}}
+        >
           <View style={styles.modalHandle} />
 
           <View style={styles.modalHeaderRow}>
             <Text style={styles.modalTitle}>Notificações</Text>
+
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={26} color="#000000" />
+              <Ionicons
+                name="close"
+                size={26}
+                color="#000000"
+              />
             </TouchableOpacity>
           </View>
 
           {effectiveUnreadCount > 0 && (
-            <TouchableOpacity onPress={onMarkAllAsRead} style={styles.markAllButton}>
-              <Text style={styles.markAllButtonText}>Marcar todas como lidas</Text>
+            <TouchableOpacity
+              onPress={onMarkAllAsRead}
+              style={styles.markAllButton}
+            >
+              <Text style={styles.markAllButtonText}>
+                Marcar todas como lidas
+              </Text>
             </TouchableOpacity>
           )}
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {notifications.length === 0 ? (
-              <Text style={styles.emptyNotificationsText}>Nenhuma notificação por aqui.</Text>
+            {effectiveNotifications.length === 0 ? (
+              <Text style={styles.emptyNotificationsText}>
+                Nenhuma notificação por aqui.
+              </Text>
             ) : (
-              notifications.map((item) => (
+              effectiveNotifications.map((item) => (
                 <View
                   key={item.id}
-                  style={[styles.notificationItem, !item.read && styles.notificationItemUnread]}
+                  style={[
+                    styles.notificationItem,
+                    !item.read &&
+                      styles.notificationItemUnread
+                  ]}
                 >
                   <View style={styles.notificationDot}>
-                    {!item.read && <View style={styles.notificationDotActive} />}
+                    {!item.read && (
+                      <View
+                        style={
+                          styles.notificationDotActive
+                        }
+                      />
+                    )}
                   </View>
+
                   <View style={styles.notificationTextWrap}>
-                    <Text style={styles.notificationItemTitle}>{item.title}</Text>
-                    <Text style={styles.notificationItemDescription}>{item.description}</Text>
-                    <Text style={styles.notificationItemTime}>{item.time}</Text>
+                    <Text
+                      style={
+                        styles.notificationItemTitle
+                      }
+                    >
+                      {item.title}
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.notificationItemDescription
+                      }
+                    >
+                      {item.description}
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.notificationItemTime
+                      }
+                    >
+                      {item.time}
+                    </Text>
                   </View>
                 </View>
               ))
@@ -110,7 +175,7 @@ const styles = StyleSheet.create({
     color: '#000000'
   },
   notificationModalCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,

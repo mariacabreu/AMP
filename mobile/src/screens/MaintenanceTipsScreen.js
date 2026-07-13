@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
 
@@ -32,6 +33,18 @@ const MaintenanceTipsScreen = ({ navigation, route }) => {
       setLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loggedUser?.id) {
+        return undefined;
+      }
+
+      setLoading(true);
+      fetchTips();
+      return undefined;
+    }, [loggedUser?.id])
+  );
 
   if (loading) {
     return (
@@ -144,7 +157,7 @@ const styles = StyleSheet.create({
   },
   headerLogo: {
     width: 120,
-    height: 40,
+    height: 60,
   },
   headerTitle: {
     fontSize: 14,

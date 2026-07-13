@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
 
@@ -125,6 +126,17 @@ const OBDScreen = ({ navigation, route }) => {
       console.error('Erro ao buscar dados do veículo:', error);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loggedUser?.id) {
+        return undefined;
+      }
+
+      fetchVehicleData();
+      return undefined;
+    }, [loggedUser?.id])
+  );
 
   const requestBluetoothPermissions = async () => {
     if (Platform.OS === 'android') {
@@ -1008,7 +1020,7 @@ const styles = StyleSheet.create({
   },
   headerLogo: {
     width: 120,
-    height: 40,
+    height: 60,
   },
   iconButton: {
     marginLeft: 10,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
 
@@ -41,6 +42,17 @@ const usePartsCatalog = (loggedUser) => {
   useEffect(() => {
     fetchParts();
   }, [fetchParts]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loggedUser?.id) {
+        return undefined;
+      }
+
+      fetchParts();
+      return undefined;
+    }, [fetchParts, loggedUser?.id])
+  );
 
   return {
     loading,

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Alert } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
 import Header from '../components/Header/Header';
@@ -98,6 +99,19 @@ const ReportFormScreen = ({ navigation, route }) => {
       console.error('Error fetching notifications:', error);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loggedUser?.id) {
+        return undefined;
+      }
+
+      fetchUserStatus();
+      fetchNotifications();
+
+      return undefined;
+    }, [loggedUser?.id])
+  );
 
   const handleProfileFieldChange = (field, value) => {
     setProfileForm((prev) => ({ ...prev, [field]: value }));

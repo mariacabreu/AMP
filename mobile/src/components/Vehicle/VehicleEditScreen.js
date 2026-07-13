@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../../api';
 import CustomDropdown from '../Vehicle/CustomDropDown';
 
@@ -68,6 +69,17 @@ const VehicleEditScreen = ({ navigation, route }) => {
     fetchVehicles();
     fetchBrands();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) {
+        return undefined;
+      }
+
+      fetchVehicles();
+      return undefined;
+    }, [user?.id])
+  );
 
   const fetchVehicles = async () => {
     if (!user?.id) {
@@ -193,7 +205,7 @@ const VehicleEditScreen = ({ navigation, route }) => {
 
     try {
       setSavingVehicle(true);
-      await axios.put(`${API_BASE_URL}/vehicle/${vehicle.id}`, {
+      const response = await axios.put(`${API_BASE_URL}/vehicle/${vehicle.id}`, {
         brand: selectedBrand,
         model: selectedModel,
         year: parseInt(selectedYear),
@@ -205,6 +217,9 @@ const VehicleEditScreen = ({ navigation, route }) => {
         user_id: user?.id
       });
 
+      if (response.data?.vehicle) {
+        setVehicle(response.data.vehicle);
+      }
       Alert.alert('Sucesso', 'Veículo atualizado com sucesso!');
       closeEditForm();
       fetchVehicles();
@@ -459,7 +474,7 @@ const styles = StyleSheet.create({
   },
   headerLogo: {
     width: 120,
-    height: 40
+    height: 60
   },
   headerTitle: {
     fontSize: 14,

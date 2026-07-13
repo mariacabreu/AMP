@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
 import Header from '../components/Header/Header';
@@ -72,6 +73,19 @@ const SettingsScreen = ({ navigation, route }) => {
             console.error('Erro ao buscar notificações:', error);
         }
     };
+
+    useFocusEffect(
+        useCallback(() => {
+            if (!loggedUser?.id) {
+                return undefined;
+            }
+
+            fetchNotifications();
+            fetchUserData();
+
+            return undefined;
+        }, [loggedUser?.id])
+    );
 
     const handleMarkAllAsRead = async () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

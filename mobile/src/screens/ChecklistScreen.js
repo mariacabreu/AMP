@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../api';
 import Header from '../components/Header/Header';
 import BottomNav from '../components/NavBar/BottomNav';
@@ -132,6 +133,19 @@ const ChecklistScreen = ({ navigation, route }) => {
       console.error('Erro ao buscar notificações:', error);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loggedUser?.id) {
+        return undefined;
+      }
+
+      fetchChecklist();
+      fetchNotifications();
+
+      return undefined;
+    }, [loggedUser?.id])
+  );
 
   const handleMarkAllAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
   },
   headerLogo: {
     width: 120,
-    height: 40,
+    height: 60,
   },
   headerTitle: {
     fontSize: 14,

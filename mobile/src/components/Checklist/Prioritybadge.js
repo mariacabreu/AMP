@@ -16,7 +16,14 @@ const getPriorityColor = (priority) => {
 const PriorityBadge = ({ priority }) => {
   return (
     <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(priority) }]}>
-      <Text style={styles.priorityText}>{priority}</Text>
+      <Text
+        style={styles.priorityText}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {priority}
+      </Text>
     </View>
   );
 };
@@ -24,13 +31,20 @@ const PriorityBadge = ({ priority }) => {
 const styles = StyleSheet.create({
   priorityBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,        // era 2 — aumentado pra dar espaço vertical
     borderRadius: 4,
+    alignSelf: 'flex-start',   // impede que o badge estique/encolha errado
+    flexShrink: 0,             // impede que o container "espreme" o badge num row
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   priorityText: {
     color: '#fff',
     fontSize: 9,
+    lineHeight: 13,            // fontSize * ~1.4, dá espaço pros acentos (Ó, Ú etc.)
     fontWeight: '900',
+    includeFontPadding: false, // Android: remove padding "fantasma" que às vezes desalinha
+    textAlignVertical: 'center',
   },
 });
 

@@ -17,7 +17,7 @@ const Header = ({
   onRightIconPress,
   leftIcon,
   rightIcon,
-  notifications = [],
+  notifications,
   notificationCount = 0,
   onMarkAllAsRead,
   avatarUri,
@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   logo: {
-  width: 160,
-  height: 80,
+  width: 120,
+  height: 60,
   },
   headerIcons: {
     flexDirection: 'row',

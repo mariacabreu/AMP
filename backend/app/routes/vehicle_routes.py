@@ -146,6 +146,12 @@ def get_or_update_vehicle(vehicle_id):
         return jsonify({'error': 'Veículo não encontrado'}), 404
 
     try:
+        if 'brand' in data:
+            vehicle.brand = data['brand']
+        if 'model' in data:
+            vehicle.model = data['model']
+        if 'year' in data:
+            vehicle.year = data['year']
         if 'mileage' in data:
             vehicle.mileage = data['mileage']
         if 'last_oil_change' in data:
