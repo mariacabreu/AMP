@@ -74,13 +74,6 @@ const ProfileModal = ({
               Card de veículo: mostra apenas o veículo cadastrado na conta
             */}
             <View style={styles.vehicleLimitCard}>
-              <View style={styles.vehicleLimitInfo}>
-                <MaterialCommunityIcons name="car" size={22} color="#1A1A1A" />
-                <View style={styles.vehicleLimitTextWrap}>
-                  <Text style={styles.vehicleLimitTitle}>Meu veículo</Text>
-                </View>
-              </View>
-
               {vehicle && (
                 <View style={styles.vehicleList}>
                   <View style={styles.vehicleListItem}>

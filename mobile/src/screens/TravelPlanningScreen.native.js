@@ -599,32 +599,16 @@ export default function TravelPlanningScreen(props) {
               
               return (
                 <View style={styles.mapPreviewWrapper}>
-                  <MapView
-                    ref={mapRef}
-                    style={styles.mapImage}
-                    initialRegion={mapRegion}
-                    onRegionChangeComplete={(newRegion) => {
-                      if (newRegion) {
-                        setMapRegion(newRegion);
-                      }
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: "red",
+                      justifyContent: "center",
+                      alignItems: "center"
                     }}
                   >
-                    {coords?.latitude && coords?.longitude && (
-                      <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
-                    )}
-                    {dest?.latitude && dest?.longitude && (
-                      <Marker coordinate={dest} title="Destino" pinColor="#FF5722" />
-                    )}
-                    {routeCoordinates.length > 0 && (
-                      <Polyline
-                        coordinates={routeCoordinates.filter((c) => 
-                          Number.isFinite(c.latitude) && Number.isFinite(c.longitude)
-                        )}
-                        strokeColor="#1f6feb"
-                        strokeWidth={5}
-                      />
-                    )}
-                  </MapView>
+                    <Text>Mapa calculado</Text>
+                  </View>
                   <View style={styles.mapOverlay}>
                     <View style={styles.routeBadge}>
                       <Text style={styles.routeBadgeText}>{distance}</Text>
