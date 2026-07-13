@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   logo: {
-    width: 180,
-    height: 90
+  width: 160,
+  height: 80,
   },
   headerIcons: {
     flexDirection: 'row',
