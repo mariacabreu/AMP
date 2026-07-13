@@ -24,7 +24,6 @@ export default function TravelPlanningScreen(props) {
   const [mapRegion, setMapRegion] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
-  const [loading, setLoading] = useState(true);
 
   const formatDistance = (distanceInMeters) => {
     return `${(distanceInMeters / 1000).toFixed(1)} KM`;
@@ -207,7 +206,6 @@ export default function TravelPlanningScreen(props) {
 
   const handleResetToCurrentLocation = async () => {
     console.log('=== handleResetToCurrentLocation CALLED ===');
-    setLoading(true);
     setSelectedStartLocation(null);
     setStartSuggestions([]);
     setShowStartSuggestions(false);
@@ -257,6 +255,8 @@ export default function TravelPlanningScreen(props) {
     return () => clearTimeout(timeoutId);
   }, [endLocation, selectedDestination]);
 
+  const [calculatingRoute, setCalculatingRoute] = useState(false);
+
   const getCurrentLocation = async () => {
     console.log('=== getCurrentLocation STARTING ===');
     try {
@@ -282,7 +282,6 @@ export default function TravelPlanningScreen(props) {
       console.log('✅ Setting startLocation to:', label);
       setStartLocation(label);
       setRouteStatus('Localização atual obtida. Escolha um destino para traçar a rota');
-      setLoading(false);
       return;
     } catch (error) {
       console.error('❌ Error in getCurrentLocation, using fallback:', error);
@@ -305,7 +304,6 @@ export default function TravelPlanningScreen(props) {
     }
     setStartLocation(label);
     setRouteStatus('Usando localização aproximada. Ative a geolocalização para rota mais precisa');
-    setLoading(false);
     console.log('=== getCurrentLocation DONE ===');
   };
 
@@ -393,7 +391,7 @@ export default function TravelPlanningScreen(props) {
   const handleCalculateDistance = async () => {
     const origin = selectedStartLocation || currentLocation;
 
-    if (!origin) {
+    if (!origin?.latitude || !origin?.longitude) {
       Alert.alert('Aviso', 'Aguardando localização de partida...');
       return;
     }
@@ -403,13 +401,13 @@ export default function TravelPlanningScreen(props) {
       return;
     }
 
-    if (!selectedDestination) {
+    if (!selectedDestination?.latitude || !selectedDestination?.longitude) {
       Alert.alert('Aviso', 'Selecione um destino sugerido para calcular a distância');
       return;
     }
 
     try {
-      setLoading(true);
+      setCalculatingRoute(true);
       setRouteStatus('Calculando rota...');
 
       const routeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${selectedDestination.longitude},${selectedDestination.latitude}?overview=full&geometries=geojson&steps=false`;
@@ -432,7 +430,12 @@ export default function TravelPlanningScreen(props) {
       }
 
       const geoJsonCoords = routeData.geometry?.coordinates || [];
-      const nativeCoords = geoJsonCoords.map(([lon, lat]) => ({ latitude: lat, longitude: lon }));
+      const nativeCoords = geoJsonCoords.map(([lon, lat]) => {
+        if (typeof lat === 'number' && typeof lon === 'number') {
+          return { latitude: lat, longitude: lon };
+        }
+        return null;
+      }).filter(Boolean);
       setRouteCoordinates(nativeCoords);
 
       // Calculate and set map region with safe deltas
@@ -475,7 +478,7 @@ export default function TravelPlanningScreen(props) {
       setRouteStatus('Não foi possível obter a rota pela API no momento');
       Alert.alert('Erro', 'Não foi possível calcular a rota e a distância');
     } finally {
-      setLoading(false);
+      setCalculatingRoute(false);
     }
   };
 
@@ -544,15 +547,6 @@ export default function TravelPlanningScreen(props) {
     navigation.navigate('TripHistory', { user: loggedUser, newTrip: newTrip });
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFCF00" />
-        <Text style={styles.loadingText}>Carregando...</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -581,6 +575,15 @@ export default function TravelPlanningScreen(props) {
             const origin = selectedStartLocation || currentLocation;
             const hasRouteData = origin && selectedDestination && mapRegion;
             
+            if (calculatingRoute) {
+              return (
+                <View style={styles.mapPlaceholder}>
+                  <ActivityIndicator size="large" color="#FFCF00" />
+                  <Text style={styles.mapText}>{routeStatus}</Text>
+                </View>
+              );
+            }
+            
             if (hasRouteData) {
               const coords = origin;
               const dest = selectedDestination;
@@ -590,13 +593,23 @@ export default function TravelPlanningScreen(props) {
                   <MapView
                     style={styles.mapImage}
                     region={mapRegion}
-                    onRegionChangeComplete={(newRegion) => setMapRegion(newRegion)}
+                    onRegionChangeComplete={(newRegion) => {
+                      if (newRegion) {
+                        setMapRegion(newRegion);
+                      }
+                    }}
                   >
-                    <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
-                    <Marker coordinate={dest} title="Destino" pinColor="#FF5722" />
+                    {coords?.latitude && coords?.longitude && (
+                      <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
+                    )}
+                    {dest?.latitude && dest?.longitude && (
+                      <Marker coordinate={dest} title="Destino" pinColor="#FF5722" />
+                    )}
                     {routeCoordinates.length > 0 && (
                       <Polyline
-                        coordinates={routeCoordinates}
+                        coordinates={routeCoordinates.filter(
+                          (c) => c.latitude && c.longitude
+                        )}
                         strokeColor="#1f6feb"
                         strokeWidth={5}
                       />
@@ -619,7 +632,7 @@ export default function TravelPlanningScreen(props) {
                 <View style={styles.mapPlaceholder}>
                   <FontAwesome5 name="map-marked-alt" size={60} color="#2C2C2C" />
                   <Text style={styles.mapText}>{routeStatus}</Text>
-                  {currentLocation && (
+                  {currentLocation?.latitude && currentLocation?.longitude && (
                     <View style={styles.locationInfoContainer}>
                       <MaterialIcons name="my-location" size={20} color="#4CAF50" />
                       <Text style={styles.locationInfo}>
@@ -723,9 +736,9 @@ export default function TravelPlanningScreen(props) {
               <TouchableOpacity
                 style={styles.calculateButton}
                 onPress={handleCalculateDistance}
-                disabled={loading}
+                disabled={calculatingRoute}
               >
-                {loading ? (
+                {calculatingRoute ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
                   <Text style={styles.calculateButtonText}>Calcular Km</Text>
