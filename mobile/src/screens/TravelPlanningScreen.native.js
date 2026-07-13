@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import BottomNav from '../components/NavBar/BottomNav';
+import LeafletMap from '../components/Map/LeafletMap';
 
 export default function TravelPlanningScreen(props) {
   const { navigation, route } = props;
@@ -594,14 +595,12 @@ export default function TravelPlanningScreen(props) {
               
               return (
                 <View style={styles.mapPreviewWrapper}>
-                  <View style={{
-                    flex: 1,
-                    backgroundColor: "red",
-                    justifyContent: "center",
-                    alignItems: "center"
-                  }}>
-                    <Text>Mapa carregado (sem MapView)</Text>
-                  </View>
+                  <LeafletMap
+                    region={mapRegion}
+                    origin={coords}
+                    destination={dest}
+                    routeCoordinates={routeCoordinates}
+                  />
                   <View style={styles.mapOverlay}>
                     <View style={styles.routeBadge}>
                       <Text style={styles.routeBadgeText}>{distance}</Text>
