@@ -3,7 +3,7 @@ import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, Alert } fro
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
-import CustomDropdown from '../Report/ReportFormEdit/CustomDropdown';
+import CustomDropdown from '../Vehicle/CustomDropDown';
 import { styles } from '../Vehicle/VehicleFormStyles';
 
 const VehicleRegistrationScreen = ({ navigation, route }) => {

@@ -21,7 +21,7 @@ export default function TravelPlanningScreen(props) {
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [distance, setDistance] = useState('0.0 KM');
   const [duration, setDuration] = useState('');
-  const [mapPreviewUrl, setMapPreviewUrl] = useState('');
+  const [mapRegion, setMapRegion] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
   const [loading, setLoading] = useState(true);
@@ -189,7 +189,7 @@ export default function TravelPlanningScreen(props) {
     setSelectedStartLocation(null);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
+    setMapRegion(null);
     setRouteStatus('Selecione um local de partida sugerido para calcular a rota');
     setShowStartSuggestions(true);
   };
@@ -201,7 +201,7 @@ export default function TravelPlanningScreen(props) {
     setShowStartSuggestions(false);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
+    setMapRegion(null);
     setRouteStatus('Partida selecionada. Selecione um destino para traçar a rota');
   };
 
@@ -213,7 +213,7 @@ export default function TravelPlanningScreen(props) {
     setShowStartSuggestions(false);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
+    setMapRegion(null);
     await getCurrentLocation();
   };
 
@@ -374,7 +374,7 @@ export default function TravelPlanningScreen(props) {
     setSelectedDestination(null);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
+    setMapRegion(null);
     setRouteStatus('Selecione um destino sugerido para calcular a rota');
     setShowDestinationSuggestions(true);
   };
@@ -386,7 +386,7 @@ export default function TravelPlanningScreen(props) {
     setShowDestinationSuggestions(false);
     setDistance('0.0 KM');
     setDuration('');
-    setMapPreviewUrl('');
+    setMapRegion(null);
     setRouteStatus('Destino selecionado. Toque em "Calcular Km" para buscar a rota');
   };
 
@@ -435,6 +435,34 @@ export default function TravelPlanningScreen(props) {
       const nativeCoords = geoJsonCoords.map(([lon, lat]) => ({ latitude: lat, longitude: lon }));
       setRouteCoordinates(nativeCoords);
 
+      // Calculate and set map region with safe deltas
+      const midLat = (origin.latitude + selectedDestination.latitude) / 2;
+      const midLon = (origin.longitude + selectedDestination.longitude) / 2;
+      const latDelta = Math.max(
+        Math.abs(origin.latitude - selectedDestination.latitude) * 1.5,
+        0.02
+      );
+      const lonDelta = Math.max(
+        Math.abs(origin.longitude - selectedDestination.longitude) * 1.5,
+        0.02
+      );
+
+      console.log({
+        origin: origin,
+        destination: selectedDestination,
+        midLat,
+        midLon,
+        latDelta,
+        lonDelta,
+      });
+
+      setMapRegion({
+        latitude: midLat,
+        longitude: midLon,
+        latitudeDelta: latDelta,
+        longitudeDelta: lonDelta,
+      });
+
       setDistance(formatDistance(routeData.distance));
       setDuration(formatDuration(routeData.duration));
       setRouteStatus('Rota calculada com sucesso');
@@ -442,8 +470,8 @@ export default function TravelPlanningScreen(props) {
       console.error('Error calculating distance:', error);
       setDistance('0.0 KM');
       setDuration('');
-      setMapPreviewUrl('');
       setRouteCoordinates([]);
+      setMapRegion(null);
       setRouteStatus('Não foi possível obter a rota pela API no momento');
       Alert.alert('Erro', 'Não foi possível calcular a rota e a distância');
     } finally {
@@ -551,26 +579,18 @@ export default function TravelPlanningScreen(props) {
         <View style={styles.mapContainer}>
           {(() => {
             const origin = selectedStartLocation || currentLocation;
-            const hasRouteData = origin && selectedDestination;
+            const hasRouteData = origin && selectedDestination && mapRegion;
             
             if (hasRouteData) {
               const coords = origin;
               const dest = selectedDestination;
-              const midLat = (coords.latitude + dest.latitude) / 2;
-              const midLon = (coords.longitude + dest.longitude) / 2;
-              const latDelta = Math.abs(coords.latitude - dest.latitude) * 1.5 + 0.01;
-              const lonDelta = Math.abs(coords.longitude - dest.longitude) * 1.5 + 0.01;
               
               return (
                 <View style={styles.mapPreviewWrapper}>
                   <MapView
                     style={styles.mapImage}
-                    initialRegion={{
-                      latitude: midLat,
-                      longitude: midLon,
-                      latitudeDelta: latDelta,
-                      longitudeDelta: lonDelta,
-                    }}
+                    region={mapRegion}
+                    onRegionChangeComplete={(newRegion) => setMapRegion(newRegion)}
                   >
                     <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
                     <Marker coordinate={dest} title="Destino" pinColor="#FF5722" />

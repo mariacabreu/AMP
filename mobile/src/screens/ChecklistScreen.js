@@ -86,12 +86,12 @@ const ChecklistScreen = ({ navigation, route }) => {
       const selectedVehicle = Array.isArray(vehiclesData) ? vehiclesData[0] : vehicleData;
       setVehicle(selectedVehicle);
 
-      if (vehicle && vehicle.id) {
-        setVehicleId(vehicle.id);
-        setCurrentMileage(Number(vehicle.mileage) || 0);
+      if (selectedVehicle && selectedVehicle.id) {
+        setVehicleId(selectedVehicle.id);
+        setCurrentMileage(Number(selectedVehicle.mileage) || 0);
 
         // Usando o endpoint de IA para recomendações personalizadas
-        const response = await axios.get(`${API_BASE_URL}/vehicle/checklist/ai/${vehicle.id}`);
+        const response = await axios.get(`${API_BASE_URL}/vehicle/checklist/ai/${selectedVehicle.id}`);
         const checklistData = Array.isArray(response.data?.checklist) ? response.data.checklist : [];
 
         // Garantir que cada item seja válido

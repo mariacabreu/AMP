@@ -11,33 +11,18 @@ import {
   Platform,
   StyleSheet
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
 import CustomDropdown from '../Vehicle/CustomDropDown';
 
-// Limites de veículos por plano (igual ao backend)
-const PLAN_VEHICLE_LIMITS = {
-  free: 1,
-  mensal: 1,
-  trimestral: 3,
-  anual: 5
-};
-
-const getVehicleLimit = (planType) => {
-  return PLAN_VEHICLE_LIMITS[(planType || 'free').toLowerCase()] || 1;
-};
-
 const VehicleEditScreen = ({ navigation, route }) => {
   const user = route.params?.user;
 
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicle, setVehicle] = useState(null);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
-  const [isPremium, setIsPremium] = useState(user?.is_premium || false);
-  const [planType, setPlanType] = useState(user?.plan_type || null);
 
-  // ----- Estado do formulário de edição (aberto ao tocar em um card) -----
-  const [editingVehicle, setEditingVehicle] = useState(null);
+  // ----- Estado do formulário de edição -----
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
   const [engines, setEngines] = useState([]);
@@ -53,6 +38,7 @@ const VehicleEditScreen = ({ navigation, route }) => {
   const [fuelType, setFuelType] = useState('Gasolina');
   const [openDropdown, setOpenDropdown] = useState(null);
   const [savingVehicle, setSavingVehicle] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const transmissionOptions = [
     { label: 'Selecione o Câmbio', value: '' },
@@ -78,26 +64,10 @@ const VehicleEditScreen = ({ navigation, route }) => {
     { label: 'Elétrico', value: 'Elétrico' }
   ];
 
-  const vehicleLimit = getVehicleLimit(planType);
-  const canAddVehicle = vehicles.length < vehicleLimit;
-  const isLockedPlan = !isPremium || vehicleLimit <= 1;
-
   useEffect(() => {
-    fetchUserPlan();
     fetchVehicles();
     fetchBrands();
   }, []);
-
-  const fetchUserPlan = async () => {
-    if (!user?.id) return;
-    try {
-      const response = await axios.get(`${API_BASE_URL}/user/${user.id}`);
-      setIsPremium(response.data.is_premium);
-      setPlanType(response.data.plan_type || null);
-    } catch (error) {
-      console.error('Erro ao buscar plano do usuário:', error);
-    }
-  };
 
   const fetchVehicles = async () => {
     if (!user?.id) {
@@ -107,10 +77,12 @@ const VehicleEditScreen = ({ navigation, route }) => {
     try {
       setLoadingVehicles(true);
       const response = await axios.get(`${API_BASE_URL}/user/vehicles/${user.id}`);
-      setVehicles(response.data.vehicles || []);
+      const vehicles = response.data.vehicles || [];
+      if (vehicles.length > 0) {
+        setVehicle(vehicles[0]);
+      }
     } catch (error) {
       console.error('Erro ao buscar veículos:', error);
-      setVehicles([]);
     } finally {
       setLoadingVehicles(false);
     }
@@ -188,28 +160,28 @@ const VehicleEditScreen = ({ navigation, route }) => {
     }
   };
 
-  const openEditForm = useCallback(async (vehicle) => {
-    setEditingVehicle(vehicle);
-    setSelectedBrand(vehicle.brand);
-    setSelectedModel(vehicle.model);
-    setSelectedYear(vehicle.year ? vehicle.year.toString() : '');
-    setTransmission(vehicle.transmission || '');
-    setEngineType(vehicle.engine_type || '');
-    setUsageType(vehicle.usage_type || 'Misto');
-    setMileage(vehicle.mileage ? vehicle.mileage.toString() : '');
-    setFuelType(vehicle.fuel_type || 'Gasolina');
+  const openEditForm = useCallback(async (vehicleData) => {
+    setIsEditing(true);
+    setSelectedBrand(vehicleData.brand);
+    setSelectedModel(vehicleData.model);
+    setSelectedYear(vehicleData.year ? vehicleData.year.toString() : '');
+    setTransmission(vehicleData.transmission || '');
+    setEngineType(vehicleData.engine_type || '');
+    setUsageType(vehicleData.usage_type || 'Misto');
+    setMileage(vehicleData.mileage ? vehicleData.mileage.toString() : '');
+    setFuelType(vehicleData.fuel_type || 'Gasolina');
 
-    if (vehicle.brand) {
-      await fetchModels(vehicle.brand);
+    if (vehicleData.brand) {
+      await fetchModels(vehicleData.brand);
     }
-    if (vehicle.brand && vehicle.model) {
-      await fetchEngines(vehicle.brand, vehicle.model);
-      await fetchYears(vehicle.brand, vehicle.model);
+    if (vehicleData.brand && vehicleData.model) {
+      await fetchEngines(vehicleData.brand, vehicleData.model);
+      await fetchYears(vehicleData.brand, vehicleData.model);
     }
   }, []);
 
   const closeEditForm = () => {
-    setEditingVehicle(null);
+    setIsEditing(false);
     setOpenDropdown(null);
   };
 
@@ -221,7 +193,7 @@ const VehicleEditScreen = ({ navigation, route }) => {
 
     try {
       setSavingVehicle(true);
-      await axios.put(`${API_BASE_URL}/vehicle/${editingVehicle.id}`, {
+      await axios.put(`${API_BASE_URL}/vehicle/${vehicle.id}`, {
         brand: selectedBrand,
         model: selectedModel,
         year: parseInt(selectedYear),
@@ -245,25 +217,6 @@ const VehicleEditScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleAddVehicle = () => {
-    if (!canAddVehicle) {
-      Alert.alert(
-        'Recurso Premium',
-        isPremium
-          ? `Seu plano atual (${planType || 'mensal'}) não permite adicionar mais veículos. Faça upgrade para Trimestral (até 3) ou Anual (até 5).`
-          : 'Assine um plano Premium Trimestral ou Anual para cadastrar mais de um veículo.'
-      );
-      return;
-    }
-    navigation.navigate('VehicleRegistration', { user });
-  };
-
-  const planLabel = () => {
-    if (!isPremium) return 'FREE';
-    if (!planType) return 'PREMIUM';
-    return planType.toUpperCase();
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -276,7 +229,7 @@ const VehicleEditScreen = ({ navigation, route }) => {
             style={styles.headerLogo}
             resizeMode="contain"
           />
-          <Text style={styles.headerTitle}>GERENCIAMENTO DE VEÍCULOS</Text>
+          <Text style={styles.headerTitle}>MEU VEÍCULO</Text>
         </View>
       </View>
 
@@ -286,42 +239,24 @@ const VehicleEditScreen = ({ navigation, route }) => {
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
       >
-        {!editingVehicle && (
+        {!isEditing && (
           <>
-            <View style={styles.planBadgeRow}>
-              <View style={[styles.planBadge, isPremium ? styles.planBadgePremium : styles.planBadgeFree]}>
-                <MaterialCommunityIcons
-                  name={isPremium ? 'crown' : 'lock-outline'}
-                  size={14}
-                  color={isPremium ? '#2C2C2C' : '#999'}
-                />
-                <Text style={[styles.planBadgeText, isPremium ? styles.planBadgeTextPremium : styles.planBadgeTextFree]}>
-                  {planLabel()}
-                </Text>
-              </View>
-              {vehicleLimit > 0 && (
-                <Text style={styles.vehicleCountText}>
-                  {vehicles.length} de {vehicleLimit} veículos
-                </Text>
-              )}
-            </View>
-
             {loadingVehicles ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#2C2C2C" />
-                <Text style={styles.loadingText}>Carregando veículos...</Text>
+                <Text style={styles.loadingText}>Carregando veículo...</Text>
               </View>
             ) : (
               <>
-                {vehicles.length === 0 && (
+                {!vehicle && (
                   <View style={styles.emptyState}>
                     <FontAwesome5 name="car-side" size={40} color="#CCC" />
                     <Text style={styles.emptyStateText}>Nenhum veículo cadastrado ainda.</Text>
                   </View>
                 )}
 
-                {vehicles.map((vehicle) => (
-                  <View key={vehicle.id} style={styles.vehicleCard}>
+                {vehicle && (
+                  <View style={styles.vehicleCard}>
                     <View style={styles.vehicleCardIcon}>
                       <FontAwesome5 name="car" size={22} color="#2C2C2C" />
                     </View>
@@ -343,44 +278,18 @@ const VehicleEditScreen = ({ navigation, route }) => {
                       <Ionicons name="create-outline" size={20} color="#2C2C2C" />
                     </TouchableOpacity>
                   </View>
-                ))}
-
-                <TouchableOpacity
-                  style={[styles.addVehicleCard, !canAddVehicle && styles.addVehicleCardDisabled]}
-                  onPress={handleAddVehicle}
-                  activeOpacity={canAddVehicle ? 0.7 : 1}
-                >
-                  <MaterialCommunityIcons
-                    name={canAddVehicle ? 'plus-circle-outline' : 'lock-outline'}
-                    size={26}
-                    color={canAddVehicle ? '#2C2C2C' : '#AAAAAA'}
-                  />
-                  <View style={styles.addVehicleTextContainer}>
-                    <Text style={[styles.addVehicleTitle, !canAddVehicle && styles.addVehicleTitleDisabled]}>
-                      Adicionar Veículo
-                    </Text>
-                    <Text style={styles.addVehicleSubtitle}>
-                      {isPremium
-                        ? vehicleLimit > 0
-                          ? canAddVehicle
-                            ? `Você pode adicionar até ${vehicleLimit} veículos no plano ${planType}.`
-                            : `Limite de ${vehicleLimit} veículos do plano ${planType} atingido.`
-                          : 'Faça upgrade para Trimestral ou Anual para adicionar mais veículos.'
-                        : 'Disponível apenas para planos Premium (Trimestral ou Anual).'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                )}
               </>
             )}
           </>
         )}
 
-        {editingVehicle && (
+        {isEditing && (
           <View style={styles.formCard}>
             <View style={styles.formHeader}>
               <TouchableOpacity onPress={closeEditForm} style={styles.formBackButton}>
                 <Ionicons name="arrow-back" size={20} color="#2C2C2C" />
-                <Text style={styles.formBackButtonText}>Voltar para a lista</Text>
+                <Text style={styles.formBackButtonText}>Voltar</Text>
               </TouchableOpacity>
             </View>
 
@@ -573,42 +482,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 100
   },
-  planBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20
-  },
-  planBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20
-  },
-  planBadgePremium: {
-    backgroundColor: '#FFCF00'
-  },
-  planBadgeFree: {
-    backgroundColor: '#F0F0F0'
-  },
-  planBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginLeft: 6,
-    letterSpacing: 0.5
-  },
-  planBadgeTextPremium: {
-    color: '#2C2C2C'
-  },
-  planBadgeTextFree: {
-    color: '#999'
-  },
-  vehicleCountText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '600'
-  },
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: 60
@@ -671,39 +544,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0'
   },
-  addVehicleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#2C2C2C',
-    borderStyle: 'dashed',
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 4,
-    marginBottom: 20
-  },
-  addVehicleCardDisabled: {
-    borderColor: '#DDDDDD',
-    backgroundColor: '#FAFAFA'
-  },
-  addVehicleTextContainer: {
-    flex: 1,
-    marginLeft: 12
-  },
-  addVehicleTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A1A1A'
-  },
-  addVehicleTitleDisabled: {
-    color: '#AAAAAA'
-  },
-  addVehicleSubtitle: {
-    fontSize: 11,
-    color: '#888',
-    marginTop: 3,
-    lineHeight: 15
-  },
   formCard: {
     borderWidth: 1,
     borderColor: '#00000022',
@@ -729,21 +569,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontStyle: 'italic'
   },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2C2C2C',
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginBottom: 20
-  },
-  editButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8
-  },
   inputContainer: {
     marginBottom: 20
   },
@@ -760,10 +585,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15
-  },
-  disabledInput: {
-    backgroundColor: '#F5F5F5',
-    color: '#999'
   },
   actionButtonsContainer: {
     flexDirection: 'row',

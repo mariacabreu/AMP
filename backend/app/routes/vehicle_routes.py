@@ -140,7 +140,7 @@ def register_vehicle():
     if not user:
         return jsonify({'error': 'Usuário não encontrado'}), 404
 
-    PLAN_VEHICLE_LIMITS = {'free': 1, 'mensal': 1, 'trimestral': 3, 'anual': 5}
+    PLAN_VEHICLE_LIMITS = {'free': 1, 'mensal': 1, 'trimestral': 1, 'anual': 1}
     current_vehicle_count = Vehicle.query.filter_by(user_id=user.id).count()
     vehicle_limit = PLAN_VEHICLE_LIMITS.get(user.plan_type, 1)
 
@@ -785,6 +785,16 @@ def get_vehicle_parts_ai(vehicle_id):
     - Combustível: {vehicle.fuel_type}
     - Perfil de Uso: {vehicle.usage_type}
 
+    Categorias válidas para usar:
+    - Filtros
+    - Freios
+    - Fluidos
+    - Ignição
+    - Câmbio
+    - Motor
+    - Conforto
+    - Segurança
+
     Instruções críticas:
     1. Seja específico para este veículo exato:
        - Verifique se o motor usa CORRENTE DE DISTRIBUIÇÃO ou CORREIA DENTADA
@@ -795,14 +805,16 @@ def get_vehicle_parts_ai(vehicle_id):
        - Inclua "Guias da Corrente de Distribuição"
        - Inclua "Tensor da Corrente de Distribuição"
        - Marque esses itens como "Inspecção" em vez de troca periódica obrigatória
+    3. Gere de 8 a 15 peças relevantes para manutenção preventiva deste veículo
+    4. Para cada peça, use uma das categorias válidas listadas acima
 
     Retorne APENAS um JSON no formato:
     {{
         "parts": [
             {{
-                "id": increment_id,
+                "id": 1,
                 "name": "Nome da Peça de Manutenção",
-                "category": "Uma das categorias acima",
+                "category": "Uma das categorias válidas",
                 "subcategory": "Tipo de manutenção (Preventiva/Inspecção)",
                 "description": "Explicação clara da função e o risco de não realizar a manutenção para este veículo",
                 "image_url": "",
@@ -825,6 +837,13 @@ def get_vehicle_parts_ai(vehicle_id):
             response_format={"type": "json_object"}
         )
         ai_data = json.loads(response.choices[0].message.content)
+        
+        # Ensure all parts have valid categories and subcategories
+        for part in ai_data.get('parts', []):
+            if 'category' not in part or not part['category']:
+                part['category'] = 'Geral'
+            if 'subcategory' not in part or not part['subcategory']:
+                part['subcategory'] = 'Manutenção Preventiva'
         
         ai_data = validate_and_fix_images(ai_data, 'parts')
         

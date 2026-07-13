@@ -119,10 +119,12 @@ def get_user_status(user_id):
     if not user:
         return jsonify({'error': 'Usuário não encontrado'}), 404
 
-    vehicle = Vehicle.query.filter_by(user_id=user_id).order_by(Vehicle.id.desc()).first()
+    vehicles = Vehicle.query.filter_by(user_id=user_id).all()
+    vehicle = vehicles[0] if vehicles else None
     status = {
         'user': user.to_dict(),
         'vehicle': vehicle.to_dict() if vehicle else None,
+        'vehicles': [v.to_dict() for v in vehicles],  # Always an array
         'recommendation': 'Nenhuma recomendação no momento.'
     }
 
@@ -130,10 +132,10 @@ def get_user_status(user_id):
         current_km = vehicle.mileage
         oil_diff = current_km - vehicle.last_oil_change
         if oil_diff >= 9000:
-            status['recommendation'] = f"Seu carro está com {current_km} km. Troca de óleo necessária (última há {oil_diff} km)!"
+            status['recommendation'] = f'Seu carro está com {current_km} km. Troca de óleo necessária (última há {oil_diff} km)!'
         else:
             next_change = vehicle.last_oil_change + 10000
-            status['recommendation'] = f"Próxima troca de óleo estimada aos {next_change} km."
+            status['recommendation'] = f'Próxima troca de óleo estimada aos {next_change} km.'
 
     return jsonify(status), 200
 
@@ -198,6 +200,25 @@ def delete_user(user_id):
         db.session.rollback()
         print(f"Erro ao excluir usuário: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+@user_bp.route('/user/notifications/<int:user_id>', methods=['GET'])
+def get_user_notifications(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+
+    notifications = []  # Placeholder for notifications
+    return jsonify({'notifications': notifications}), 200
+
+
+@user_bp.route('/user/notifications/<int:user_id>/read-all', methods=['PATCH'])
+def mark_all_notifications_read(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+
+    return jsonify({'message': 'Notificações marcadas como lidas'}), 200
 
 
 @user_bp.route('/user/set-plan/<int:user_id>', methods=['POST'])

@@ -86,36 +86,38 @@ const CustomDropdown = ({ label, items, selectedValue, onSelect, isOpen, setIsOp
               </div>
             ),
             default: (
-              <ScrollView
-                style={styles.dropdownList}
-                nestedScrollEnabled={true}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={true}
-              >
-                {items.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.dropdownItem,
-                      selectedValue === item.value && styles.selectedDropdownItem,
-                      index === items.length - 1 && { borderBottomWidth: 0 },
-                    ]}
-                    onPress={() => {
-                      onSelect(item.value);
-                      setIsOpen(false);
-                    }}
-                  >
-                    <Text
+              <View style={[styles.dropdownList, { overflow: 'hidden' }]}>
+                <ScrollView
+                  nestedScrollEnabled={true}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={true}
+                  contentContainerStyle={{ paddingVertical: 4 }}
+                >
+                  {items.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
                       style={[
-                        styles.dropdownItemText,
-                        selectedValue === item.value && styles.selectedDropdownItemText,
+                        styles.dropdownItem,
+                        selectedValue === item.value && styles.selectedDropdownItem,
+                        index === items.length - 1 && { borderBottomWidth: 0 },
                       ]}
+                      onPress={() => {
+                        onSelect(item.value);
+                        setIsOpen(false);
+                      }}
                     >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selectedValue === item.value && styles.selectedDropdownItemText,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
             ),
           })}
       </View>

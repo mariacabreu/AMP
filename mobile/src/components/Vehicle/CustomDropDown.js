@@ -81,8 +81,13 @@ const CustomDropdown = ({ label, items, selectedValue, onSelect, placeholder, en
             </div>
           ),
           default: (
-            <View style={styles.dropdownList}>
-              <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+            <View style={[styles.dropdownList, { maxHeight: 220, overflow: 'hidden' }]}>
+              <ScrollView 
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingVertical: 4 }}
+              >
                 {items.map((item, index) => {
                   const itemValue = typeof item === 'object' ? item.value : item;
                   const itemLabel = typeof item === 'object' ? item.label : item;

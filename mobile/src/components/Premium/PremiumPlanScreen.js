@@ -141,7 +141,7 @@ const PremiumPlanScreen = ({ navigation, route }) => {
         { text: 'Notificações inteligentes', icon: 'bell-ring' },
         { text: 'Captura automática de dados', icon: 'cloud-sync' },
         { text: 'Backup em nuvem', icon: 'cloud-check' },
-        { text: 'Cadastro de até 3 veículos', icon: 'car-multiple' }
+        { text: 'Cadastro de 1 veículo', icon: 'car' }
       ],
       buttonText: 'Assinar'
     },
@@ -152,7 +152,7 @@ const PremiumPlanScreen = ({ navigation, route }) => {
       planType: 'anual',
       benefits: [
         { text: 'Tudo dos outros planos', icon: 'all-inclusive' },
-        { text: 'Cadastro de até 5 veículos', icon: 'car-multiple' },
+        { text: 'Cadastro de 1 veículo', icon: 'car' },
         { text: 'Prioridade no suporte', icon: 'headset' },
         { text: 'Economia de 10%', icon: 'percent' },
         { text: 'Futuras funcionalidades Premium incluídas', icon: 'star' }
@@ -176,9 +176,6 @@ const PremiumPlanScreen = ({ navigation, route }) => {
         onLogout={handleLogout}
         isPremium={isPremium}
         planType={planType}
-        vehicleCount={vehicleCount}
-        vehicles={vehicles}
-        onAddVehicle={handleAddVehicle}
         navigation={navigation}
         loggedUser={loggedUser}
       />
