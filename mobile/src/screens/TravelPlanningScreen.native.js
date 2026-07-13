@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import BottomNav from '../components/NavBar/BottomNav';
 export default function TravelPlanningScreen(props) {
   const { navigation, route } = props;
   const loggedUser = route.params?.user;
+  const mapRef = useRef(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
@@ -410,7 +411,7 @@ export default function TravelPlanningScreen(props) {
       setCalculatingRoute(true);
       setRouteStatus('Calculando rota...');
 
-      const routeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${selectedDestination.longitude},${selectedDestination.latitude}?overview=full&geometries=geojson&steps=false`;
+      const routeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${selectedDestination.longitude},${selectedDestination.latitude}?overview=simplified&geometries=geojson&steps=false`;
       const response = await fetch(routeUrl, {
         headers: {
           Accept: 'application/json',
@@ -436,6 +437,9 @@ export default function TravelPlanningScreen(props) {
         }
         return null;
       }).filter(Boolean);
+      console.log('nativeCoords.length:', nativeCoords.length);
+      console.log('nativeCoords[0]:', nativeCoords[0]);
+      console.log('nativeCoords last:', nativeCoords[nativeCoords.length - 1]);
       setRouteCoordinates(nativeCoords);
 
       // Calculate and set map region with safe deltas
@@ -459,12 +463,17 @@ export default function TravelPlanningScreen(props) {
         lonDelta,
       });
 
-      setMapRegion({
+      const newRegion = {
         latitude: midLat,
         longitude: midLon,
         latitudeDelta: latDelta,
         longitudeDelta: lonDelta,
-      });
+      };
+
+      setMapRegion(newRegion);
+      
+      // Animate to region on map
+      mapRef.current?.animateToRegion(newRegion, 1000);
 
       setDistance(formatDistance(routeData.distance));
       setDuration(formatDuration(routeData.duration));
@@ -591,8 +600,9 @@ export default function TravelPlanningScreen(props) {
               return (
                 <View style={styles.mapPreviewWrapper}>
                   <MapView
+                    ref={mapRef}
                     style={styles.mapImage}
-                    region={mapRegion}
+                    initialRegion={mapRegion}
                     onRegionChangeComplete={(newRegion) => {
                       if (newRegion) {
                         setMapRegion(newRegion);
@@ -607,8 +617,8 @@ export default function TravelPlanningScreen(props) {
                     )}
                     {routeCoordinates.length > 0 && (
                       <Polyline
-                        coordinates={routeCoordinates.filter(
-                          (c) => c.latitude && c.longitude
+                        coordinates={routeCoordinates.filter((c) => 
+                          Number.isFinite(c.latitude) && Number.isFinite(c.longitude)
                         )}
                         strokeColor="#1f6feb"
                         strokeWidth={5}
