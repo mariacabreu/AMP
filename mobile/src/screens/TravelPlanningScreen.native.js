@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
-import MapView, { Polyline, Marker } from 'react-native-maps';
+import MapView, { Polyline, Marker, UrlTile } from 'react-native-maps';
 import BottomNav from '../components/NavBar/BottomNav';
 
 export default function TravelPlanningScreen(props) {
@@ -602,7 +602,6 @@ export default function TravelPlanningScreen(props) {
                   <MapView
                     ref={mapRef}
                     style={styles.mapImage}
-                    provider="google"
                     initialRegion={mapRegion}
                     onRegionChangeComplete={(newRegion) => {
                       if (newRegion) {
@@ -610,6 +609,11 @@ export default function TravelPlanningScreen(props) {
                       }
                     }}
                   >
+                    {/* OpenStreetMap tiles */}
+                    <UrlTile
+                      urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      maximumZ={19}
+                    />
                     {coords?.latitude && coords?.longitude && (
                       <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
                     )}
@@ -619,8 +623,8 @@ export default function TravelPlanningScreen(props) {
                     {routeCoordinates.length > 0 && (
                       <Polyline
                         coordinates={routeCoordinates.filter((c) => 
-                          Number.isFinite(c.latitude) && Number.isFinite(c.longitude)
-                        )}
+                        Number.isFinite(c.latitude) && Number.isFinite(c.longitude)
+                      )}
                         strokeColor="#1f6feb"
                         strokeWidth={5}
                       />
