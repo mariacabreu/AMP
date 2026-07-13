@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
-import MapView, { Polyline, Marker, UrlTile } from 'react-native-maps';
 import BottomNav from '../components/NavBar/BottomNav';
 
 export default function TravelPlanningScreen(props) {
   const { navigation, route } = props;
   const loggedUser = route.params?.user;
-  const mapRef = useRef(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
@@ -471,9 +469,6 @@ export default function TravelPlanningScreen(props) {
       };
 
       setMapRegion(newRegion);
-      
-      // Animate to region on map
-      mapRef.current?.animateToRegion(newRegion, 1000);
 
       setDistance(formatDistance(routeData.distance));
       setDuration(formatDuration(routeData.duration));
@@ -599,37 +594,14 @@ export default function TravelPlanningScreen(props) {
               
               return (
                 <View style={styles.mapPreviewWrapper}>
-                  <MapView
-                    ref={mapRef}
-                    style={styles.mapImage}
-                    initialRegion={mapRegion}
-                    onRegionChangeComplete={(newRegion) => {
-                      if (newRegion) {
-                        setMapRegion(newRegion);
-                      }
-                    }}
-                  >
-                    {/* OpenStreetMap tiles */}
-                    <UrlTile
-                      urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      maximumZ={19}
-                    />
-                    {coords?.latitude && coords?.longitude && (
-                      <Marker coordinate={coords} title="Origem" pinColor="#4CAF50" />
-                    )}
-                    {dest?.latitude && dest?.longitude && (
-                      <Marker coordinate={dest} title="Destino" pinColor="#FF5722" />
-                    )}
-                    {routeCoordinates.length > 0 && (
-                      <Polyline
-                        coordinates={routeCoordinates.filter((c) => 
-                        Number.isFinite(c.latitude) && Number.isFinite(c.longitude)
-                      )}
-                        strokeColor="#1f6feb"
-                        strokeWidth={5}
-                      />
-                    )}
-                  </MapView>
+                  <View style={{
+                    flex: 1,
+                    backgroundColor: "red",
+                    justifyContent: "center",
+                    alignItems: "center"
+                  }}>
+                    <Text>Mapa carregado (sem MapView)</Text>
+                  </View>
                   <View style={styles.mapOverlay}>
                     <View style={styles.routeBadge}>
                       <Text style={styles.routeBadgeText}>{distance}</Text>
