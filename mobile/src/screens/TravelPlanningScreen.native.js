@@ -24,6 +24,7 @@ export default function TravelPlanningScreen(props) {
   const [mapRegion, setMapRegion] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [routeStatus, setRouteStatus] = useState('Selecione um destino e calcule a rota');
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   const formatDistance = (distanceInMeters) => {
     return `${(distanceInMeters / 1000).toFixed(1)} KM`;
@@ -572,6 +573,7 @@ export default function TravelPlanningScreen(props) {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={true}
+        scrollEnabled={scrollEnabled}
       >
         <Text style={styles.subtitle}>Planeje a sua viagem com segurança.</Text>
 
@@ -600,6 +602,8 @@ export default function TravelPlanningScreen(props) {
                     origin={coords}
                     destination={dest}
                     routeCoordinates={routeCoordinates}
+                    onTouchStart={() => setScrollEnabled(false)}
+                    onTouchEnd={() => setScrollEnabled(true)}
                   />
                   <View style={styles.mapOverlay}>
                     <View style={styles.routeBadge}>

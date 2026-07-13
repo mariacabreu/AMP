@@ -1,7 +1,7 @@
 import React from 'react';
 import { WebView } from 'react-native-webview';
 
-const LeafletMap = ({ region, origin, destination, routeCoordinates }) => {
+const LeafletMap = ({ region, origin, destination, routeCoordinates, onTouchStart, onTouchEnd }) => {
   const originLat = origin?.latitude;
   const originLng = origin?.longitude;
   const destLat = destination?.latitude;
@@ -55,7 +55,14 @@ const LeafletMap = ({ region, origin, destination, routeCoordinates }) => {
     </html>
   `;
 
-  return <WebView source={{ html: htmlContent }} style={{ flex: 1 }} />;
+  return (
+    <WebView
+      source={{ html: htmlContent }}
+      style={{ flex: 1 }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    />
+  );
 };
 
 export default LeafletMap;
