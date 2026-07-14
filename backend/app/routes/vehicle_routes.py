@@ -904,3 +904,149 @@ def get_vehicle_parts_ai(vehicle_id):
     except Exception as e:
         print(f"AI Parts Error: {str(e)}. Falling back to static data.")
         return get_vehicle_parts(vehicle_id)
+
+
+# OBD Scan Routes
+@vehicle_bp.route('/vehicle/obd-scans/<int:vehicle_id>', methods=['GET'])
+def get_obd_scans(vehicle_id):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Veículo não encontrado'}), 404
+    
+    scans = OBDScan.query.filter_by(vehicle_id=vehicle_id).order_by(OBDScan.scan_date.desc()).all()
+    
+    return jsonify({
+        'vehicle': vehicle.to_dict(),
+        'scans': [scan.to_dict() for scan in scans]
+    }), 200
+
+
+@vehicle_bp.route('/vehicle/obd-scan', methods=['POST'])
+def save_obd_scan():
+    from datetime import datetime
+    
+    print("\n=== NOVO SCAN OBD ===")
+    data = request.json
+    print(f"Dados recebidos: {data}")
+    
+    if not data or not data.get('vehicle_id'):
+        print("Erro: Dados obrigatórios ausentes")
+        return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
+    
+    try:
+        vehicle_id = data['vehicle_id']
+        vehicle = Vehicle.query.get(vehicle_id)
+        if not vehicle:
+            print(f"Erro: Veículo ID {vehicle_id} não encontrado no banco")
+            return jsonify({'error': 'Veículo não encontrado'}), 404
+        
+        new_scan = OBDScan(
+            vehicle_id=vehicle_id,
+            scan_date=data.get('scan_date', datetime.now().isoformat()),
+            dtc_codes=data.get('dtc_codes', []),
+            live_data=data.get('live_data', {}),
+            connected_device=data.get('connected_device')
+        )
+        
+        db.session.add(new_scan)
+        db.session.commit()
+        print("Scan salvo com sucesso!")
+        
+        return jsonify({
+            'message': 'Scan OBD salvo com sucesso',
+            'scan': new_scan.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao salvar scan: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@vehicle_bp.route('/vehicle/obd-scan/analyze/<int:scan_id>', methods=['GET'])
+def analyze_obd_scan(scan_id):
+    scan = OBDScan.query.get(scan_id)
+    if not scan:
+        return jsonify({'error': 'Scan não encontrado'}), 404
+    
+    vehicle = Vehicle.query.get(scan.vehicle_id)
+    if not vehicle:
+        return jsonify({'error': 'Veículo não encontrado'}), 404
+    
+    if not client:
+        print("OpenAI API Key missing. Falling back to static analysis.")
+        return jsonify({
+            'analysis': 'Análise AI não disponível sem chave OpenAI.',
+            'recommendations': []
+        }), 200
+    
+    previous_scans = OBDScan.query.filter(
+        OBDScan.vehicle_id == vehicle.id,
+        OBDScan.id != scan_id
+    ).order_by(OBDScan.scan_date.desc()).limit(5).all()
+    
+    prompt = f"""
+    Você é um mecânico automotivo sênior especializado em diagnóstico OBD-II.
+    Analise o scan OBD abaixo e forneça insights claros e práticos.
+
+    Dados do veículo:
+    - Marca: {vehicle.brand}
+    - Modelo: {vehicle.model}
+    - Ano: {vehicle.year}
+    - Motorização: {vehicle.engine_type}
+    - Quilometragem atual: {vehicle.mileage} km
+
+    Scan atual:
+    - Data: {scan.scan_date}
+    - Códigos de erro (DTC): {scan.dtc_codes}
+    - Dados em tempo real: {scan.live_data}
+    - Dispositivo conectado: {scan.connected_device}
+
+    Scans anteriores (últimos 5): {[s.to_dict() for s in previous_scans]}
+
+    Instruções:
+    1. Analise cada código de erro (se houver) e explique o que significa e qual é o risco
+    2. Verifique os dados em tempo real (como RPM, temperatura, nível de combustível, pressão do coletor, etc.) para identificar valores anômalos
+    3. Compare com os scans anteriores para ver padrões (como códigos que aparecem repetidamente)
+    4. Forneça recomendações práticas de manutenção preventiva ou reparo
+    5. Mencione o que deve ser melhorado em termos de acompanhamento do veículo
+
+    Retorne APENAS um JSON no seguinte formato:
+    {{
+        "analysis": "Texto principal da análise, com explicações claras",
+        "recommendations": [
+            {{
+                "priority": "alta", "média" ou "baixa",
+                "title": "Título da recomendação",
+                "description": "Explicação detalhada da recomendação"
+            }}
+        ],
+        "abnormal_values": [
+            {{
+                "parameter": "Nome do parâmetro",
+                "current_value": "Valor atual",
+                "expected_range": "Intervalo esperado",
+                "issue": "Qual é o problema"
+            }}
+        ]
+    }}
+    """
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Você é um mecânico automotivo sênior especializado em diagnóstico OBD-II."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        ai_data = json.loads(response.choices[0].message.content)
+        
+        return jsonify(ai_data), 200
+    except Exception as e:
+        print(f"AI Analysis Error: {str(e)}. Falling back to static analysis.")
+        return jsonify({
+            'analysis': 'Não foi possível gerar análise AI no momento.',
+            'recommendations': [],
+            'abnormal_values': []
+        }), 200

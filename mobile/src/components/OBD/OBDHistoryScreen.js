@@ -22,6 +22,8 @@ const OBDHistoryScreen = ({ navigation, route }) => {
   const [scans, setScans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  const [analyzingId, setAnalyzingId] = useState(null);
+  const [analysisData, setAnalysisData] = useState({}); // key: scanId, value: analysis data
 
   useEffect(() => {
     fetchVehicleAndScans();
@@ -88,6 +90,21 @@ const OBDHistoryScreen = ({ navigation, route }) => {
     if (severity === 'high') return '#FF5722';
     if (severity === 'medium') return '#FFC107';
     return '#8BC34A';
+  };
+  
+  const handleAnalyzeScan = async (scanId) => {
+    try {
+      setAnalyzingId(scanId);
+      const response = await axios.get(`${API_BASE_URL}/vehicle/obd-scan/analyze/${scanId}`);
+      setAnalysisData(prev => ({
+        ...prev,
+        [scanId]: response.data
+      }));
+    } catch (err) {
+      console.error('Erro ao analisar scan:', err);
+    } finally {
+      setAnalyzingId(null);
+    }
   };
 
   const renderConditionGrid = (liveData) => {
@@ -238,6 +255,67 @@ const OBDHistoryScreen = ({ navigation, route }) => {
                       <Text style={styles.deviceInfoText}>
                         Dispositivo: {scan.connected_device}
                       </Text>
+                    )}
+                    
+                    <TouchableOpacity
+                      style={styles.analyzeButton}
+                      onPress={() => handleAnalyzeScan(scan.id)}
+                      disabled={analyzingId === scan.id}
+                    >
+                      {analyzingId === scan.id ? (
+                        <ActivityIndicator size="small" color="#FFCF00" />
+                      ) : (
+                        <MaterialCommunityIcons name="robot" size={20} color="#FFCF00" />
+                      )}
+                      <Text style={styles.analyzeButtonText}>
+                        {analyzingId === scan.id ? 'Analisando...' : 'Analisar com IA'}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    {analysisData[scan.id] && (
+                      <View style={styles.analysisContainer}>
+                        <Text style={styles.sectionLabel}>Análise da IA</Text>
+                        <Text style={styles.analysisText}>{analysisData[scan.id].analysis}</Text>
+                        
+                        {analysisData[scan.id].abnormal_values && analysisData[scan.id].abnormal_values.length > 0 && (
+                          <>
+                            <Text style={[styles.sectionLabel, { marginTop: 12 }]}>Valores Anômalos</Text>
+                            {analysisData[scan.id].abnormal_values.map((item, idx) => (
+                              <View key={idx} style={styles.abnormalValueItem}>
+                                <Text style={styles.abnormalValueLabel}>{item.parameter}</Text>
+                                <Text style={styles.abnormalValueText}>
+                                  {item.current_value} (esperado: {item.expected_range})
+                                </Text>
+                                <Text style={styles.abnormalValueIssue}>{item.issue}</Text>
+                              </View>
+                            ))}
+                          </>
+                        )}
+                        
+                        {analysisData[scan.id].recommendations && analysisData[scan.id].recommendations.length > 0 && (
+                          <>
+                            <Text style={[styles.sectionLabel, { marginTop: 12 }]}>Recomendações</Text>
+                            {analysisData[scan.id].recommendations.map((rec, idx) => (
+                              <View key={idx} style={styles.recommendationItem}>
+                                <View 
+                                  style={[
+                                    styles.recommendationPriorityDot, 
+                                    { 
+                                      backgroundColor: 
+                                        rec.priority === 'alta' ? '#FF5722' : 
+                                        rec.priority === 'média' ? '#FFC107' : '#8BC34A' 
+                                    }
+                                  ]} 
+                                />
+                                <View style={styles.recommendationText}>
+                                  <Text style={styles.recommendationTitle}>{rec.title}</Text>
+                                  <Text style={styles.recommendationDesc}>{rec.description}</Text>
+                                </View>
+                              </View>
+                            ))}
+                          </>
+                        )}
+                      </View>
                     )}
                   </View>
                 )}
@@ -465,6 +543,84 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 12,
     fontStyle: 'italic'
+  },
+  analyzeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2E2E2E',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 16
+  },
+  analyzeButtonText: {
+    color: '#FFCF00',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8
+  },
+  analysisContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5'
+  },
+  analysisText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    marginTop: 8
+  },
+  abnormalValueItem: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8
+  },
+  abnormalValueLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#856404'
+  },
+  abnormalValueText: {
+    fontSize: 12,
+    color: '#856404',
+    marginTop: 4
+  },
+  abnormalValueIssue: {
+    fontSize: 12,
+    color: '#856404',
+    marginTop: 4,
+    fontStyle: 'italic'
+  },
+  recommendationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8
+  },
+  recommendationPriorityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 4,
+    marginRight: 12
+  },
+  recommendationText: {
+    flex: 1
+  },
+  recommendationTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#155724'
+  },
+  recommendationDesc: {
+    fontSize: 12,
+    color: '#155724',
+    marginTop: 4
   },
   bottomSpacer: {
     height: 60

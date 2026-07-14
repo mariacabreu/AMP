@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
 import Header from '../Header/Header';
+import AMPAlertModal from '../Common/AMPAlertModal';
 
 const QRCodeScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user || { id: 1, full_name: 'Demo User', email: 'demo@amp.com' };
   const planType = route.params?.planType || 'mensal';
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertModalData, setAlertModalData] = useState({
+    type: 'success',
+    title: '',
+    message: '',
+    confirmButtonText: 'Ok',
+    onConfirm: () => setAlertModalVisible(false),
+  });
 
   const handleCopyCode = () => {
     setShowPaymentModal(true);
@@ -18,13 +27,29 @@ const QRCodeScreen = ({ navigation, route }) => {
     setShowPaymentModal(false);
     try {
       const response = await axios.post(`${API_BASE_URL}/user/set-plan/${loggedUser.id}`, { plan_type: planType });
-      Alert.alert('Sucesso!', `Plano ${planType} ativado com sucesso!`);
-      navigation.navigate('Home', { 
-        user: response.data.user 
+      setAlertModalData({
+        type: 'success',
+        title: 'Sucesso!',
+        message: `Plano ${planType} ativado com sucesso!`,
+        confirmButtonText: 'Ok',
+        onConfirm: () => {
+          setAlertModalVisible(false);
+          navigation.navigate('Home', { 
+            user: response.data.user 
+          });
+        },
       });
+      setAlertModalVisible(true);
     } catch (error) {
       console.error('Erro ao ativar plano:', error);
-      Alert.alert('Erro', 'Não foi possível ativar o plano. Tente novamente.');
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível ativar o plano. Tente novamente.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     }
   };
 
@@ -98,6 +123,15 @@ const QRCodeScreen = ({ navigation, route }) => {
           <MaterialCommunityIcons name="steering" size={24} color="#FFCF00" />
         </View>
       </TouchableOpacity>
+
+      <AMPAlertModal
+        visible={alertModalVisible}
+        type={alertModalData.type}
+        title={alertModalData.title}
+        message={alertModalData.message}
+        confirmButtonText={alertModalData.confirmButtonText}
+        onConfirm={alertModalData.onConfirm}
+      />
     </View>
   );
 };

@@ -5,6 +5,7 @@ import BottomNav from '../NavBar/BottomNav';
 import Header from '../Header/Header';
 import axios from 'axios';
 import API_BASE_URL from '../../api';
+import AMPAlertModal from '../Common/AMPAlertModal';
 
 const PremiumPlanScreen = ({ navigation, route }) => {
   const loggedUser = route.params?.user;
@@ -17,6 +18,14 @@ const PremiumPlanScreen = ({ navigation, route }) => {
   const [vehicleCount, setVehicleCount] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
   const [planType, setPlanType] = useState('');
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertModalData, setAlertModalData] = useState({
+    type: 'success',
+    title: '',
+    message: '',
+    confirmButtonText: 'Ok',
+    onConfirm: () => setAlertModalVisible(false),
+  });
 
   const fetchUserStatus = async () => {
     try {
@@ -60,10 +69,24 @@ const PremiumPlanScreen = ({ navigation, route }) => {
       setSavingProfile(true);
       const userId = loggedUser?.id || 1;
       await axios.put(`${API_BASE_URL}/user/${userId}`, profileForm);
-      alert('Perfil atualizado com sucesso!');
+      setAlertModalData({
+        type: 'success',
+        title: 'Sucesso!',
+        message: 'Perfil atualizado com sucesso!',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Erro ao salvar perfil.');
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao salvar perfil.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } finally {
       setSavingProfile(false);
     }
@@ -74,7 +97,14 @@ const PremiumPlanScreen = ({ navigation, route }) => {
   };
 
   const handleChangePhoto = () => {
-    alert('Função de alterar foto em desenvolvimento');
+    setAlertModalData({
+      type: 'info',
+      title: 'Aviso',
+      message: 'Função de alterar foto em desenvolvimento',
+      confirmButtonText: 'Ok',
+      onConfirm: () => setAlertModalVisible(false),
+    });
+    setAlertModalVisible(true);
   };
 
   const handleLogout = () => {
@@ -246,6 +276,15 @@ const PremiumPlanScreen = ({ navigation, route }) => {
       </TouchableOpacity>
 
       <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
+
+      <AMPAlertModal
+        visible={alertModalVisible}
+        type={alertModalData.type}
+        title={alertModalData.title}
+        message={alertModalData.message}
+        confirmButtonText={alertModalData.confirmButtonText}
+        onConfirm={alertModalData.onConfirm}
+      />
     </SafeAreaView>
   );
 };

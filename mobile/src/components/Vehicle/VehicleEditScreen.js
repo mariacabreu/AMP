@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
   StyleSheet
@@ -16,6 +15,7 @@ import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../../api';
 import CustomDropdown from '../Vehicle/CustomDropDown';
+import AMPAlertModal from '../Common/AMPAlertModal';
 
 const VehicleEditScreen = ({ navigation, route }) => {
   const user = route.params?.user;
@@ -40,6 +40,14 @@ const VehicleEditScreen = ({ navigation, route }) => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [savingVehicle, setSavingVehicle] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertModalData, setAlertModalData] = useState({
+    type: 'info',
+    title: '',
+    message: '',
+    confirmButtonText: 'Ok',
+    onConfirm: () => setAlertModalVisible(false),
+  });
 
   const transmissionOptions = [
     { label: 'Selecione o Câmbio', value: '' },
@@ -199,7 +207,14 @@ const VehicleEditScreen = ({ navigation, route }) => {
 
   const handleSaveVehicle = async () => {
     if (!selectedBrand || !selectedModel || !selectedYear) {
-      Alert.alert('Erro', 'Por favor, preencha a marca, modelo e ano do veículo.');
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Por favor, preencha a marca, modelo e ano do veículo.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
       return;
     }
 
@@ -220,13 +235,30 @@ const VehicleEditScreen = ({ navigation, route }) => {
       if (response.data?.vehicle) {
         setVehicle(response.data.vehicle);
       }
-      Alert.alert('Sucesso', 'Veículo atualizado com sucesso!');
-      closeEditForm();
-      fetchVehicles();
+      
+      setAlertModalData({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Veículo atualizado com sucesso!',
+        confirmButtonText: 'Ok',
+        onConfirm: () => {
+          setAlertModalVisible(false);
+          closeEditForm();
+          fetchVehicles();
+        },
+      });
+      setAlertModalVisible(true);
     } catch (error) {
       console.error('Erro ao salvar veículo:', error.response?.data || error.message);
       const message = error.response?.data?.error || 'Erro ao salvar veículo';
-      Alert.alert('Erro', message);
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: message,
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } finally {
       setSavingVehicle(false);
     }
@@ -425,6 +457,15 @@ const VehicleEditScreen = ({ navigation, route }) => {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+      
+      <AMPAlertModal
+        visible={alertModalVisible}
+        type={alertModalData.type}
+        title={alertModalData.title}
+        message={alertModalData.message}
+        confirmButtonText={alertModalData.confirmButtonText}
+        onConfirm={alertModalData.onConfirm}
+      />
     </View>
   );
 };

@@ -30,6 +30,8 @@ const ReminderFrequencyScreen = ({ navigation, route }) => {
         type: 'info',
         title: '',
         message: '',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setModalVisible(false),
     });
 
     // Busca a preferência atual do usuário no backend (caso não tenha vindo em route.params)
@@ -60,6 +62,8 @@ const ReminderFrequencyScreen = ({ navigation, route }) => {
                 type: 'error',
                 title: 'Erro',
                 message: 'Usuário não identificado. Faça login novamente.',
+                confirmButtonText: 'Ok',
+                onConfirm: () => setModalVisible(false),
             });
             setModalVisible(true);
             return;
@@ -75,6 +79,8 @@ const ReminderFrequencyScreen = ({ navigation, route }) => {
                 type: 'success',
                 title: 'Sucesso!',
                 message: 'Suas preferências de lembrete foram salvas.',
+                confirmButtonText: 'Ok',
+                onConfirm: () => setModalVisible(false),
             });
             setModalVisible(true);
         } catch (error) {
@@ -83,6 +89,8 @@ const ReminderFrequencyScreen = ({ navigation, route }) => {
                 type: 'error',
                 title: 'Erro',
                 message: 'Não foi possível salvar suas preferências agora. Tente novamente mais tarde.',
+                confirmButtonText: 'Ok',
+                onConfirm: () => setModalVisible(false),
             });
             setModalVisible(true);
         } finally {
@@ -140,12 +148,13 @@ const ReminderFrequencyScreen = ({ navigation, route }) => {
 
             <BottomNav navigation={navigation} user={loggedUser} activeScreen="Config" />
             <AMPAlertModal
-                visible={modalVisible}
-                type={modalData.type}
-                title={modalData.title}
-                message={modalData.message}
-                onClose={() => setModalVisible(false)}
-            />
+        visible={modalVisible}
+        type={modalData.type}
+        title={modalData.title}
+        message={modalData.message}
+        confirmButtonText={modalData.confirmButtonText}
+        onConfirm={modalData.onConfirm}
+      />
         </View>
     );
 };

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  Alert,
   ActivityIndicator,
   Image,
   Modal,
@@ -17,6 +16,7 @@ import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
 import API_BASE_URL from '../api';
 import BottomNav from '../components/NavBar/BottomNav';
+import AMPAlertModal from '../components/Common/AMPAlertModal';
 
 const OBD_CONNECTION_OPTIONS = {
   connectorType: 'rfcomm',
@@ -76,6 +76,16 @@ const OBDScreen = ({ navigation, route }) => {
   const intervalRef = useRef(null);
   const connectionRef = useRef(null);
   const commandQueueRef = useRef(Promise.resolve());
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertModalData, setAlertModalData] = useState({
+    type: 'info',
+    title: '',
+    message: '',
+    confirmButtonText: 'Ok',
+    onConfirm: () => setAlertModalVisible(false),
+    cancelButtonText: 'Cancelar',
+    onCancel: () => setAlertModalVisible(false),
+  });
 
   const [liveData, setLiveData] = useState({
     rpm: 0,
@@ -173,14 +183,19 @@ const OBDScreen = ({ navigation, route }) => {
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
-      .filter((line) => line.toUpperCase().replace(/\s+/g, '') !== commandUpper)
+      .filter((line) => {
+        const lineUpper = line.toUpperCase().replace(/\s+/g, '');
+        return lineUpper !== commandUpper && lineUpper !== 'SEARCHING...' && lineUpper !== 'NO DATA' && lineUpper !== 'OK';
+      })
       .join(' ')
       .trim();
   };
 
   const extractResponseBytes = (response, expectedMode) => {
     const normalized = normalizeElmResponse(response).toUpperCase();
+    console.log('extractResponseBytes - normalized:', normalized);
     const compactHex = normalized.replace(/[^0-9A-F]/g, '');
+    console.log('extractResponseBytes - compactHex:', compactHex);
 
     if (compactHex.length < 2) {
       return null;
@@ -191,13 +206,31 @@ const OBDScreen = ({ navigation, route }) => {
       bytes.push(parseInt(compactHex.slice(index, index + 2), 16));
     }
 
+    console.log('extractResponseBytes - bytes:', bytes);
+
     if (bytes.length === 0) {
       return null;
     }
 
-    const responseStartIndex = bytes.findIndex((byte) => byte === expectedMode);
+    // Try to find expected mode, or default to first valid mode
+    let responseStartIndex = bytes.findIndex((byte) => byte === expectedMode);
+    console.log('extractResponseBytes - responseStartIndex:', responseStartIndex);
+    
     if (responseStartIndex === -1) {
-      return null;
+      // If not found, check for common modes and use first available
+      const commonModes = [0x41, 0x43, 0x42];
+      for (const mode of commonModes) {
+        const idx = bytes.findIndex((byte) => byte === mode);
+        if (idx !== -1) {
+          responseStartIndex = idx;
+          break;
+        }
+      }
+    }
+
+    if (responseStartIndex === -1) {
+      // If still not found, just try using from index 0 if it's a reasonable length
+      return bytes.length >= 2 ? bytes : null;
     }
 
     return bytes.slice(responseStartIndex);
@@ -233,6 +266,8 @@ const OBDScreen = ({ navigation, route }) => {
       return null;
     }
 
+    console.log('decodeDTCBytes - firstByte:', firstByte, 'secondByte:', secondByte);
+
     const system = DTC_SYSTEM_MAP[(firstByte & 0xC0) >> 6] || 'P';
     const code = [
       system,
@@ -242,6 +277,8 @@ const OBDScreen = ({ navigation, route }) => {
       (secondByte & 0x0F).toString(16).toUpperCase(),
     ].join('');
 
+    console.log('decodeDTCBytes - code:', code);
+
     return {
       code,
       description: DTC_DESCRIPTION_MAP[code] || getGenericDTCDescription(code),
@@ -250,12 +287,15 @@ const OBDScreen = ({ navigation, route }) => {
   };
 
   const parseDTCResponse = (response) => {
+    console.log('parseDTCResponse - response:', response);
     const bytes = extractResponseBytes(response, 0x43);
+    console.log('parseDTCResponse - bytes:', bytes);
     if (!bytes || bytes.length < 2) {
       return [];
     }
 
     const dtcPayload = bytes.slice(1);
+    console.log('parseDTCResponse - dtcPayload:', dtcPayload);
     if (dtcPayload.length === 0 || dtcPayload.every((byte) => byte === 0)) {
       return [];
     }
@@ -272,6 +312,7 @@ const OBDScreen = ({ navigation, route }) => {
       }
     }
 
+    console.log('parseDTCResponse - dtcList:', dtcList);
     return dtcList;
   };
 
@@ -331,11 +372,15 @@ const OBDScreen = ({ navigation, route }) => {
   };
 
   const parseOBDResponse = (response, expectedMode = 0x41) => {
+    console.log('parseOBDResponse - response:', response, 'expectedMode:', expectedMode);
     if (!response || response.includes('NO DATA') || response.includes('?')) {
+      console.log('parseOBDResponse - skipping (no data or ?)');
       return null;
     }
 
-    return extractResponseBytes(response, expectedMode);
+    const result = extractResponseBytes(response, expectedMode);
+    console.log('parseOBDResponse - result:', result);
+    return result;
   };
 
   const initializeOBDDevice = async () => {
@@ -418,9 +463,12 @@ const OBDScreen = ({ navigation, route }) => {
             waitAfterWriteMs: 300,
             readAttempts: 3,
           });
+          console.log(`readPid ${cmd} - resp:`, resp);
           const bytes = parseOBDResponse(resp);
-          if (bytes && bytes.length >= 3) {
+          console.log(`readPid ${cmd} - bytes:`, bytes);
+          if (bytes && bytes.length >= 2) {
             const parsedValues = parser(bytes);
+            console.log(`readPid ${cmd} - parsed:`, parsedValues);
             if (parsedValues && typeof parsedValues === 'object') {
               Object.assign(newData, parsedValues);
               gotRealData = true;
@@ -431,7 +479,7 @@ const OBDScreen = ({ navigation, route }) => {
         }
       };
 
-      await readPid('010C', b => ({ rpm: Math.round(((b[2] * 256) + b[3]) / 4) }));
+      await readPid('010C', b => ({ rpm: Math.round(((b[2] * 256 + b[3]) / 4)) }));
       await readPid('010D', b => ({ speed: b[2] }));
       await readPid('0105', b => ({ coolantTemp: b[2] - 40 }));
       await readPid('0104', b => ({ engineLoad: Math.round((b[2] * 100) / 255) }));
@@ -443,8 +491,14 @@ const OBDScreen = ({ navigation, route }) => {
       await readPid('0106', b => ({ fuelTrimShort: parseFloat(((b[2] - 128) * 100 / 128).toFixed(1)) }));
       await readPid('0107', b => ({ fuelTrimLong: parseFloat(((b[2] - 128) * 100 / 128).toFixed(1)) }));
 
+      console.log('readLiveDataFromOBD - newData:', newData, 'gotRealData:', gotRealData);
+
       if (gotRealData) {
         setLiveData(newData);
+        // Auto-save scan
+        if (vehicle?.id) {
+          await saveOBDScanRecord([]);
+        }
       }
     } catch (err) {
       console.error('Erro ao ler dados OBD:', err);
@@ -457,7 +511,14 @@ const OBDScreen = ({ navigation, route }) => {
     setIsLoadingDTC(true);
     try {
       if (!connectionRef.current) {
-        Alert.alert('Erro', 'Não conectado a um dispositivo OBD');
+        setAlertModalData({
+          type: 'error',
+          title: 'Erro',
+          message: 'Não conectado a um dispositivo OBD',
+          confirmButtonText: 'Ok',
+          onConfirm: () => setAlertModalVisible(false),
+        });
+        setAlertModalVisible(true);
         return;
       }
 
@@ -472,7 +533,14 @@ const OBDScreen = ({ navigation, route }) => {
     } catch (err) {
       console.error('Erro ao ler DTCs:', err);
       setDtcCodes([]);
-      Alert.alert('Erro', 'Falha ao ler códigos de erro');
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Falha ao ler códigos de erro',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } finally {
       setIsLoadingDTC(false);
     }
@@ -494,7 +562,14 @@ const OBDScreen = ({ navigation, route }) => {
 
   const handleScanDevices = async () => {
     if (Platform.OS !== 'android') {
-      Alert.alert('Plataforma Não Suportada', 'A conexão com scanner OBD2 é suportada apenas em dispositivos Android.');
+      setAlertModalData({
+        type: 'info',
+        title: 'Plataforma Não Suportada',
+        message: 'A conexão com scanner OBD2 é suportada apenas em dispositivos Android.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
       return;
     }
 
@@ -503,7 +578,14 @@ const OBDScreen = ({ navigation, route }) => {
     console.log('Permissões concedidas:', hasPermissions);
 
     if (!hasPermissions) {
-      Alert.alert('Permissão Negada', 'As permissões de Bluetooth são necessárias para conectar.');
+      setAlertModalData({
+        type: 'error',
+        title: 'Permissão Negada',
+        message: 'As permissões de Bluetooth são necessárias para conectar.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
       return;
     }
 
@@ -545,19 +627,31 @@ const OBDScreen = ({ navigation, route }) => {
           }))
         );
       } else {
-        Alert.alert('Erro', 'Biblioteca de Bluetooth não disponível.');
+        setAlertModalData({
+          type: 'error',
+          title: 'Erro',
+          message: 'Biblioteca de Bluetooth não disponível.',
+          confirmButtonText: 'Ok',
+          onConfirm: () => setAlertModalVisible(false),
+        });
+        setAlertModalVisible(true);
       }
     } catch (err) {
       console.error('Erro ao buscar dispositivos:', err);
-      Alert.alert('Erro', 'Falha ao buscar dispositivos Bluetooth');
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Falha ao buscar dispositivos Bluetooth',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } finally {
       setIsScanning(false);
     }
   };
 
   const handleConnectDevice = async (device) => {
-    Alert.alert('Conectando', `Conectando a ${device.name}...`);
-
     try {
       const connection = await BluetoothClassic.connectToDevice(device.address, OBD_CONNECTION_OPTIONS);
       connectionRef.current = connection;
@@ -575,17 +669,31 @@ const OBDScreen = ({ navigation, route }) => {
         clearInterval(intervalRef.current);
       }
 
+      // Read data immediately first!
+      await readLiveDataFromOBD();
+
       intervalRef.current = setInterval(() => {
         readLiveDataFromOBD();
       }, 2000);
 
-      Alert.alert('Conectado!', `Conectado com sucesso a ${device.name}`);
+      setAlertModalData({
+        type: 'success',
+        title: 'Conectado!',
+        message: `Conectado com sucesso a ${device.name}`,
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } catch (err) {
       console.error('Erro ao conectar:', err);
-      Alert.alert(
-        'Erro de Conexão',
-        `Falha ao conectar a ${device.name}.\n\nVerifique se o dispositivo está pareado corretamente e se o PIN foi digitado corretamente (1234, 0000, 7890 ou 1111).`
-      );
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro de Conexão',
+        message: `Falha ao conectar a ${device.name}.\n\nVerifique se o dispositivo está pareado corretamente e se o PIN foi digitado corretamente (1234, 0000, 7890 ou 1111).`,
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     }
   };
 
@@ -608,41 +716,69 @@ const OBDScreen = ({ navigation, route }) => {
     setShowDashboard(false);
     setDeviceList([]);
     setConnectedDevice(null);
-    Alert.alert('Desconectado', 'Dispositivo desconectado!');
+    
+    setAlertModalData({
+      type: 'info',
+      title: 'Desconectado',
+      message: 'Dispositivo desconectado!',
+      confirmButtonText: 'Ok',
+      onConfirm: () => setAlertModalVisible(false),
+    });
+    setAlertModalVisible(true);
   };
 
   const handleClearDTCs = () => {
-    Alert.alert(
-      'Confirmar',
-      'Tem certeza que deseja limpar os códigos de erro (apenas localmente no app)?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Limpar',
-          onPress: async () => {
-            setDtcCodes([]);
-            Alert.alert('Sucesso', 'Códigos limpos com sucesso!');
-          }
-        }
-      ]
-    );
+    setAlertModalData({
+      type: 'confirm',
+      title: 'Confirmar',
+      message: 'Tem certeza que deseja limpar os códigos de erro (apenas localmente no app)?',
+      confirmButtonText: 'Limpar',
+      cancelButtonText: 'Cancelar',
+      onConfirm: () => {
+        setDtcCodes([]);
+        setAlertModalVisible(false);
+        
+        setTimeout(() => {
+          setAlertModalData({
+            type: 'success',
+            title: 'Sucesso',
+            message: 'Códigos limpos com sucesso!',
+            confirmButtonText: 'Ok',
+            onConfirm: () => setAlertModalVisible(false),
+          });
+          setAlertModalVisible(true);
+        }, 100);
+      },
+      onCancel: () => setAlertModalVisible(false),
+    });
+    setAlertModalVisible(true);
   };
 
   const handleSolveDTC = (dtc, index) => {
-    Alert.alert(
-      'Solucionar Problema',
-      `Marcar o código ${dtc.code} como solucionado?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Marcar como Solucionado',
-          onPress: () => {
-            setDtcCodes(prev => prev.filter((_, i) => i !== index));
-            Alert.alert('Sucesso', `${dtc.code} marcado como solucionado!`);
-          }
-        }
-      ]
-    );
+    setAlertModalData({
+      type: 'confirm',
+      title: 'Solucionar Problema',
+      message: `Marcar o código ${dtc.code} como solucionado?`,
+      confirmButtonText: 'Marcar como Solucionado',
+      cancelButtonText: 'Cancelar',
+      onConfirm: () => {
+        setDtcCodes(prev => prev.filter((_, i) => i !== index));
+        setAlertModalVisible(false);
+        
+        setTimeout(() => {
+          setAlertModalData({
+            type: 'success',
+            title: 'Sucesso',
+            message: `${dtc.code} marcado como solucionado!`,
+            confirmButtonText: 'Ok',
+            onConfirm: () => setAlertModalVisible(false),
+          });
+          setAlertModalVisible(true);
+        }, 100);
+      },
+      onCancel: () => setAlertModalVisible(false),
+    });
+    setAlertModalVisible(true);
   };
 
   return (
@@ -716,7 +852,7 @@ const OBDScreen = ({ navigation, route }) => {
 
               <View style={styles.mainGaugesRow}>
                 <View style={styles.gaugeItem}>
-                  <MaterialCommunityIcons name="tachometer" size={40} color="#FFCF00" />
+                  <MaterialCommunityIcons name="tachometer-slow" size={40} color="#FFCF00" />
                   <Text style={styles.gaugeValue}>{liveData.rpm}</Text>
                   <Text style={styles.gaugeUnit}>RPM</Text>
                 </View>
@@ -958,6 +1094,17 @@ const OBDScreen = ({ navigation, route }) => {
       </Modal>
 
       <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
+      
+      <AMPAlertModal
+        visible={alertModalVisible}
+        type={alertModalData.type}
+        title={alertModalData.title}
+        message={alertModalData.message}
+        confirmButtonText={alertModalData.confirmButtonText}
+        cancelButtonText={alertModalData.cancelButtonText}
+        onConfirm={alertModalData.onConfirm}
+        onCancel={alertModalData.onCancel}
+      />
     </View>
   );
 };

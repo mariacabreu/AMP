@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import BottomNav from '../components/NavBar/BottomNav';
 import ChecklistItemCard from '../components/Checklist/Checklistitemcard';
 import EmptyChecklist from '../components/Checklist/Emptychecklist';
 import MaintenanceCostModal from '../components/Checklist/Maintenancecostmodal';
+import AMPAlertModal from '../components/Common/AMPAlertModal';
 
 // Ordem de prioridade (menor número = mais urgente = aparece primeiro)
 const PRIORITY_ORDER = {
@@ -36,6 +37,14 @@ const ChecklistScreen = ({ navigation, route }) => {
   const [isMarkingDone, setIsMarkingDone] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertModalData, setAlertModalData] = useState({
+    type: 'info',
+    title: '',
+    message: '',
+    confirmButtonText: 'Ok',
+    onConfirm: () => setAlertModalVisible(false),
+  });
   const isFetchingRef = useRef(false);
 
   // ----- Estado do Header (notificações + perfil) -----
@@ -168,7 +177,14 @@ const ChecklistScreen = ({ navigation, route }) => {
       // Request permission first
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permissão negada', 'Precisamos de acesso à galeria para trocar a foto.');
+        setAlertModalData({
+          type: 'error',
+          title: 'Permissão negada',
+          message: 'Precisamos de acesso à galeria para trocar a foto.',
+          confirmButtonText: 'Ok',
+          onConfirm: () => setAlertModalVisible(false),
+        });
+        setAlertModalVisible(true);
         return;
       }
 
@@ -189,7 +205,14 @@ const ChecklistScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Erro', 'Não foi possível selecionar a foto.');
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível selecionar a foto.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     }
   };
 
@@ -203,10 +226,25 @@ const ChecklistScreen = ({ navigation, route }) => {
         updateData.avatar = avatarUri;
       }
       await axios.patch(`${API_BASE_URL}/user/${userId}`, updateData);
-      Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
+      
+      setAlertModalData({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Perfil atualizado com sucesso!',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
-      Alert.alert('Erro', 'Não foi possível salvar o perfil. Tente novamente.');
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível salvar o perfil. Tente novamente.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => setAlertModalVisible(false),
+      });
+      setAlertModalVisible(true);
     } finally {
       setSavingProfile(false);
     }
@@ -217,20 +255,22 @@ const ChecklistScreen = ({ navigation, route }) => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Sair', 'Deseja realmente sair da conta?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair',
-        style: 'destructive',
-        onPress: () => {
-          // Limpe aqui qualquer token/estado de sessão salvo (AsyncStorage, contexto, etc.)
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }]
-          });
-        }
-      }
-    ]);
+    setAlertModalData({
+      type: 'confirm',
+      title: 'Sair',
+      message: 'Deseja realmente sair da conta?',
+      confirmButtonText: 'Sair',
+      cancelButtonText: 'Cancelar',
+      onConfirm: () => {
+        // Limpe aqui qualquer token/estado de sessão salvo (AsyncStorage, contexto, etc.)
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }]
+        });
+      },
+      onCancel: () => setAlertModalVisible(false),
+    });
+    setAlertModalVisible(true);
   };
 
   // ----- Checklist -----
@@ -279,26 +319,44 @@ const ChecklistScreen = ({ navigation, route }) => {
 
       await axios.post(`${API_BASE_URL}/vehicle/maintenance`, maintenanceData);
 
-      Alert.alert('Sucesso!', `${item.name || 'Item'} marcado como feito com sucesso!`);
-
       // 3. Fechar modal primeiro
       setIsMarkingDone(false);
       setModalVisible(false);
       setSelectedItem(null);
 
-      // 4. Atualizar o checklist após o modal fechar (para sincronizar com o servidor)
-      setTimeout(async () => {
-        await fetchChecklist();
-      }, 100);
+      // Show success modal
+      setAlertModalData({
+        type: 'success',
+        title: 'Sucesso!',
+        message: `${item.name || 'Item'} marcado como feito com sucesso!`,
+        confirmButtonText: 'Ok',
+        onConfirm: async () => {
+          setAlertModalVisible(false);
+          // 4. Atualizar o checklist após o modal fechar (para sincronizar com o servidor)
+          await fetchChecklist();
+        },
+      });
+      setAlertModalVisible(true);
+
     } catch (error) {
       console.error('Erro ao marcar como feito:', error);
       console.error('Detalhes do erro:', error.response?.data || error.message);
-      Alert.alert('Erro', 'Erro ao marcar como feito. Tente novamente.');
+      // Show error modal
+      setAlertModalData({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao marcar como feito. Tente novamente.',
+        confirmButtonText: 'Ok',
+        onConfirm: () => {
+          setAlertModalVisible(false);
+          // Se deu erro, restaurar o checklist original
+          fetchChecklist();
+        },
+      });
+      setAlertModalVisible(true);
       setIsMarkingDone(false);
       setModalVisible(false);
       setSelectedItem(null);
-      // Se deu erro, restaurar o checklist original
-      fetchChecklist();
     }
   };
 
@@ -370,6 +428,15 @@ const ChecklistScreen = ({ navigation, route }) => {
         isSubmitting={isMarkingDone}
         onCancel={cancelMarkAsDone}
         onConfirm={confirmMarkAsDone}
+      />
+
+      <AMPAlertModal
+        visible={alertModalVisible}
+        type={alertModalData.type}
+        title={alertModalData.title}
+        message={alertModalData.message}
+        confirmButtonText={alertModalData.confirmButtonText}
+        onConfirm={alertModalData.onConfirm}
       />
     </View>
   );

@@ -8,12 +8,12 @@ import {
   Modal,
   Platform,
   Pressable,
-  Alert,
   Image
 } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNav from '../components/NavBar/BottomNav';
+import AMPAlertModal from '../components/Common/AMPAlertModal';
 
 const STORAGE_KEY = 'trip_history';
 
@@ -22,6 +22,8 @@ const TripHistoryScreen = ({ navigation, route }) => {
   const [trips, setTrips] = useState([]);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState(null);
 
   // Carregar viagens do AsyncStorage ao montar a tela
   useEffect(() => {
@@ -83,22 +85,17 @@ const TripHistoryScreen = ({ navigation, route }) => {
   const handleDeleteTrip = (tripId, event) => {
     // Parar a propagação para não abrir o modal de detalhes
     event.stopPropagation();
-    
-    Alert.alert(
-      'Excluir Viagem',
-      'Tem certeza que deseja excluir essa viagem do histórico?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Excluir', 
-          style: 'destructive', 
-          onPress: () => {
-            const updatedTrips = trips.filter(trip => trip.id !== tripId);
-            saveTrips(updatedTrips);
-          }
-        }
-      ]
-    );
+    setTripToDelete(tripId);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDeleteTrip = () => {
+    if (tripToDelete) {
+      const updatedTrips = trips.filter(trip => trip.id !== tripToDelete);
+      saveTrips(updatedTrips);
+    }
+    setDeleteModalVisible(false);
+    setTripToDelete(null);
   };
 
   return (
@@ -253,6 +250,20 @@ const TripHistoryScreen = ({ navigation, route }) => {
       </Modal>
 
       <BottomNav navigation={navigation} user={loggedUser} activeScreen="Home" />
+      
+      <AMPAlertModal
+        visible={deleteModalVisible}
+        type="confirm"
+        title="Excluir Viagem"
+        message="Tem certeza que deseja excluir essa viagem do histórico?"
+        confirmButtonText="Excluir"
+        cancelButtonText="Cancelar"
+        onConfirm={confirmDeleteTrip}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setTripToDelete(null);
+        }}
+      />
     </View>
   );
 };
